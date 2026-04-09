@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "threejs-fundamentals": {
+      "source": "cloudai-x/threejs-skills",
+      "sourceType": "github",
+      "computedHash": "110044d18d358c235c3f938e7117ea0ccbcf72e0a8703567473e85c84b09ae99"
+    },
+    "threejs-game": {
+      "source": "natea/fitfinder",
+      "sourceType": "github",
+      "computedHash": "04b15a2c2b7c00c37834e9d6306e4a7b4e5c144828f2810235733c31b3150b36"
+    },
+    "threejs-graphics-optimizer": {
+      "source": "ovachiever/droid-tings",
+      "sourceType": "github",
+      "computedHash": "f92cff0e8e062c46b5504aab9e1300b6363aa51a2007b8472f0376e4ea403e36"
+    },
+    "threejs-loaders": {
+      "source": "cloudai-x/threejs-skills",
+      "sourceType": "github",
+      "computedHash": "ba08b24a9700c4e89f86155ee4f5f31709479ecb7c51bfe07306b3e2a5ad2e4a"
+    },
+    "threejs-shaders": {
+      "source": "cloudai-x/threejs-skills",
+      "sourceType": "github",
+      "computedHash": "d95f7e19b4aa4992d3d5dfbdbfeec0d21affd251dc2006dc0d4d4d1a317f1b04"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+coverage/
+storybook-static/
+
+# TypeScript / tooling caches
+*.tsbuildinfo
+.vite/
+.turbo/
+.cache/
+.eslintcache
+
+# Environment
+.env
+.env.*
+!.env.example
+*.local
+
+# Package manager files
+.npm/
+.pnpm-store/
+.yarn/
+
+# IDE / editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.user
+*.userossc
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# AI / assistant tooling
+.agents/
+.bolt/
+.claude/
+.codex/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+tmp/
+temp/
+*.tmp
