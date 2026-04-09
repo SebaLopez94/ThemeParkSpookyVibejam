@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Hammer, Map, Package, PartyPopper, Store, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
+import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'lucide-react';
 import { getAllCatalogItems, getPathDefinition } from '../data/buildings';
 import { BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
 
@@ -12,133 +12,197 @@ interface BuildMenuProps {
 
 type Tab = 'paths' | 'rides' | 'shops' | 'services' | 'decor';
 
-const TABS: Array<{ id: Tab; label: string; icon: typeof Map }> = [
-  { id: 'paths', label: 'Paths', icon: Map },
-  { id: 'rides', label: 'Rides', icon: PartyPopper },
-  { id: 'shops', label: 'Shops', icon: Store },
-  { id: 'services', label: 'Services', icon: Package },
-  { id: 'decor', label: 'Decor', icon: Hammer }
+const TABS: Array<{ id: Tab; label: string; Icon: typeof Map }> = [
+  { id: 'paths',    label: 'PATHS',    Icon: Map },
+  { id: 'rides',    label: 'RIDES',    Icon: PartyPopper },
+  { id: 'shops',    label: 'SHOPS',    Icon: Store },
+  { id: 'services', label: 'SERVICES', Icon: Package },
+  { id: 'decor',    label: 'DECOR',    Icon: TreePine },
 ];
 
-function getSizeLabel(definition: BuildingDefinition): string {
-  if (definition.type === BuildingType.RIDE && definition.subType) {
-    const size = RIDE_SIZES[definition.subType as RideType];
-    return `${size.width}x${size.height}`;
+function getSizeLabel(def: BuildingDefinition): string {
+  if (def.type === BuildingType.RIDE && def.subType) {
+    const s = RIDE_SIZES[def.subType as RideType];
+    return `${s.width}×${s.height}`;
   }
-  return '1x1';
+  return '1×1';
 }
 
 export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuildings }: BuildMenuProps) {
   const [activeTab, setActiveTab] = useState<Tab>('paths');
+  const [hovered, setHovered] = useState<BuildingDefinition | null>(null);
 
-  const catalog = useMemo(() => getAllCatalogItems(), []);
-  const unlockedSet = useMemo(() => new Set(unlockedBuildings), [unlockedBuildings]);
+  const catalog = getAllCatalogItems();
+  const unlockedSet = new Set(unlockedBuildings);
 
-  const groupedDefinitions = useMemo(() => {
-    const base: Record<Tab, BuildingDefinition[]> = {
-      paths: [getPathDefinition()],
-      rides: [],
-      shops: [],
-      services: [],
-      decor: []
-    };
+  const groups: Record<Tab, BuildingDefinition[]> = {
+    paths:    [getPathDefinition()],
+    rides:    [],
+    shops:    [],
+    services: [],
+    decor:    [],
+  };
 
-    catalog.forEach(item => {
-      if (item.type !== BuildingType.PATH && item.subType && !unlockedSet.has(item.subType)) {
-        return;
-      }
+  catalog.forEach(item => {
+    if (item.type !== BuildingType.PATH && item.subType && !unlockedSet.has(item.subType)) return;
+    if (item.type === BuildingType.RIDE)       groups.rides.push(item);
+    if (item.type === BuildingType.SHOP)       groups.shops.push(item);
+    if (item.type === BuildingType.SERVICE)    groups.services.push(item);
+    if (item.type === BuildingType.DECORATION) groups.decor.push(item);
+  });
 
-      if (item.type === BuildingType.RIDE) base.rides.push(item);
-      if (item.type === BuildingType.SHOP) base.shops.push(item);
-      if (item.type === BuildingType.SERVICE) base.services.push(item);
-      if (item.type === BuildingType.DECORATION) base.decor.push(item);
-    });
-
-    return base;
-  }, [catalog, unlockedSet]);
-
-  const current = groupedDefinitions[activeTab];
+  const items = groups[activeTab];
+  const info = hovered ?? items[0] ?? null;
 
   return (
     <div style={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 40 }}>
-      <div className="px-panel px-panel--build" style={{ minWidth: 940, maxWidth: '95vw', padding: 0 }}>
+      <div
+        className="px-panel px-panel--build"
+        style={{ width: 740, maxWidth: '96vw', padding: 0 }}
+      >
+
+        {/* ── Title bar ──────────────────────────────────────────────── */}
         <div className="px-titlebar px-titlebar--build">
           <span className="px-titlebar__label">
             <Hammer />
-            CONSTRUCTION BAY
+            CONSTRUCTION
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               className="px-btn px-btn--danger"
-              style={{ fontSize: 10, padding: '9px 14px' }}
-              onClick={() => onSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Sell a building', cost: 0, icon: '🗑️' })}
+              style={{ fontSize: 11, padding: '8px 14px' }}
+              onClick={() => onSelectBuilding({
+                type: BuildingType.DELETE, name: 'Banish',
+                description: 'Remove a building (50% refund)', cost: 0, icon: '🗑️'
+              })}
             >
-              <Trash2 />
-              Delete
+              <Trash2 size={16} /> DELETE
             </button>
-            <button className="px-btn" style={{ fontSize: 10, padding: '9px 14px' }} onClick={onCancel}>
-              <X />
-              Close
+            <button
+              className="px-btn"
+              style={{ fontSize: 11, padding: '8px 14px' }}
+              onClick={onCancel}
+            >
+              <X size={16} /> CLOSE
             </button>
           </div>
         </div>
 
-        <div style={{ padding: '12px 18px 18px' }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-            {TABS.map(tab => {
-              const Icon = tab.icon;
+        <div style={{ padding: '12px 16px 16px' }}>
+
+          {/* ── Category tabs ──────────────────────────────────────────── */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+            {TABS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                className={`px-btn ${activeTab === id ? 'px-btn--active' : ''}`}
+                style={{ fontSize: 11, padding: '9px 14px', flex: 1, justifyContent: 'center' }}
+                onClick={() => { setActiveTab(id); setHovered(null); }}
+              >
+                <Icon size={15} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Item row ───────────────────────────────────────────────── */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {items.map(def => {
+              const affordable = canAfford(def.cost);
+              const isHovered  = hovered === def;
               return (
                 <button
-                  key={tab.id}
-                  className={`px-btn ${activeTab === tab.id ? 'px-btn--active' : ''}`}
-                  style={{ fontSize: 10, padding: '10px 16px' }}
-                  onClick={() => setActiveTab(tab.id)}
+                  key={`${def.type}:${def.subType ?? def.name}`}
+                  className={`px-card${!affordable ? ' px-card--disabled' : ''}`}
+                  style={{
+                    width: 148,
+                    padding: '12px 10px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    outline: isHovered ? '2px solid var(--px-green)' : 'none',
+                    outlineOffset: 2,
+                  }}
+                  onMouseEnter={() => setHovered(def)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => affordable && onSelectBuilding(def)}
                 >
-                  <Icon />
-                  {tab.label}
+                  {/* icon */}
+                  <div className="px-emoji" style={{ fontSize: 30, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {def.icon}
+                  </div>
+
+                  {/* name */}
+                  <div style={{
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: 9,
+                    color: 'var(--px-text)',
+                    textAlign: 'center',
+                    lineHeight: 1.6,
+                    wordBreak: 'break-word',
+                  }}>
+                    {def.name}
+                  </div>
+
+                  {/* cost + size row */}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+                    <span style={{
+                      fontFamily: "'Press Start 2P', monospace",
+                      fontSize: 12,
+                      color: affordable ? 'var(--px-gold)' : 'var(--px-red)',
+                      textShadow: '1px 1px 0 #000',
+                    }}>
+                      ${def.cost}
+                    </span>
+                    <span style={{
+                      fontFamily: "'Press Start 2P', monospace",
+                      fontSize: 9,
+                      color: 'var(--px-muted)',
+                      background: 'rgba(0,0,0,0.35)',
+                      padding: '3px 5px',
+                    }}>
+                      {getSizeLabel(def)}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10 }}>
-            {current.map(definition => {
-              const affordable = canAfford(definition.cost);
-              return (
-                <button
-                  key={`${definition.type}:${definition.subType ?? definition.name}`}
-                  className={`px-card ${!affordable ? 'px-card--disabled' : ''}`}
-                  onClick={() => affordable && onSelectBuilding(definition)}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                    <div style={{ fontSize: 34, marginBottom: 8 }}>{definition.icon}</div>
-                    <div className="px-chip" style={{ fontSize: 8, padding: '6px 8px' }}>
-                      {getSizeLabel(definition)}
-                    </div>
+          {/* ── Info strip ─────────────────────────────────────────────── */}
+          <div style={{
+            marginTop: 12,
+            padding: '10px 14px',
+            background: 'rgba(0,0,0,0.35)',
+            border: '2px solid rgba(255,255,255,0.07)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            minHeight: 44,
+          }}>
+            {info ? (
+              <>
+                <span className="px-emoji" style={{ fontSize: 22, flexShrink: 0 }}>{info.icon}</span>
+                <div>
+                  <div style={{
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: 11,
+                    color: 'var(--px-green-hi)',
+                    marginBottom: 4,
+                  }}>
+                    {info.name}
                   </div>
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: 'var(--px-text)', marginBottom: 6, lineHeight: 1.8 }}>
-                    {definition.name}
+                  <div className="px-body" style={{ fontSize: 12 }}>
+                    {info.description || 'Hover an item to see details.'}
                   </div>
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-muted)', marginBottom: 10, lineHeight: 1.9, minHeight: 46 }}>
-                    {definition.description}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <div className="px-label">Build Cost</div>
-                    <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 14, color: affordable ? 'var(--px-gold)' : 'var(--px-red)', textShadow: '1px 1px 0 #000' }}>
-                      ${definition.cost}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+                </div>
+              </>
+            ) : (
+              <div className="px-body">Hover an item to see details.</div>
+            )}
           </div>
 
-          <div className="px-stat" style={{ marginTop: 14 }}>
-            <div className="px-label">Build Flow</div>
-            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-muted)', lineHeight: 1.9, marginTop: 8 }}>
-              Select a building, place it on a valid tile, rotate with `R`, and cancel instantly with right click or `Esc`.
-            </div>
-          </div>
         </div>
       </div>
     </div>

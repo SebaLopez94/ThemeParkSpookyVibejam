@@ -23,6 +23,13 @@
 
 * { image-rendering: pixelated; }
 
+/* Emojis should render natively — pixelated mode breaks them */
+.px-emoji {
+  image-rendering: auto;
+  display: inline-block;
+  line-height: 1.2;
+}
+
 .px-panel {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 18%),
@@ -68,6 +75,17 @@
     radial-gradient(circle at bottom right, rgba(251,191,36,0.12), transparent 38%),
     linear-gradient(180deg, #25130f 0%, #130c0b 100%);
   box-shadow: 0 0 0 1px rgba(251,146,60,0.16), 0 12px 24px var(--px-shadow), 4px 4px 0 #000;
+}
+
+.px-panel--park {
+  background:
+    radial-gradient(circle at top left, rgba(251,191,36,0.12), transparent 35%),
+    linear-gradient(180deg, #241610 0%, #130c07 100%);
+}
+
+.px-titlebar--park {
+  background: linear-gradient(180deg, #d97706 0%, #78350f 100%);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .px-panel--build {
@@ -263,10 +281,19 @@
 
 .px-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--px-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+/* Readable body text — used for descriptions, hints, tooltips.
+   System monospace scales cleanly at small sizes unlike Press Start 2P. */
+.px-body {
+  font-family: ui-monospace, 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--px-muted);
+  line-height: 1.7;
 }
 
 .px-divider {
@@ -306,7 +333,7 @@
   gap: 6px;
   padding: 7px 10px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--px-text);
   background: rgba(255,255,255,0.06);
   border: 2px solid rgba(255,255,255,0.1);

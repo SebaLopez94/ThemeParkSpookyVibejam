@@ -24,6 +24,11 @@ export class GameRenderer {
     this.renderer.shadowMap.enabled = !mobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    // EffectComposer renders to a linear render target — disable automatic sRGB
+    // conversion so values aren't gamma-corrected twice (or not at all).
+    // The final shader pass applies gamma manually via pow(color, 1/2.2).
+    this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+
     container.appendChild(this.renderer.domElement);
   }
 

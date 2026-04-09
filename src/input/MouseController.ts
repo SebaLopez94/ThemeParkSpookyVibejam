@@ -21,6 +21,8 @@ export class MouseController {
   public onGridClick: ((position: GridPosition) => void) | null = null;
   public onGridDrag: ((position: GridPosition) => void) | null = null;
   public onRightClick: (() => boolean) | null = null;
+  /** When set, scroll rotates the placement preview instead of zooming the camera. */
+  public onBuildRotate: ((direction: number) => void) | null = null;
 
   constructor(camera: THREE.Camera, domElement: HTMLElement) {
     this.camera = camera;
@@ -119,7 +121,11 @@ export class MouseController {
 
   private onMouseWheel = (event: WheelEvent): void => {
     event.preventDefault();
-    this.onCameraZoom?.(Math.sign(event.deltaY));
+    if (this.onBuildRotate) {
+      this.onBuildRotate(Math.sign(event.deltaY));
+    } else {
+      this.onCameraZoom?.(Math.sign(event.deltaY));
+    }
   };
 
   private onContextMenu = (event: MouseEvent): void => {

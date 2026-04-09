@@ -8,11 +8,17 @@ interface ChallengesPanelProps {
 }
 
 export function ChallengesPanel({ challenges, style }: ChallengesPanelProps) {
+  // Active challenges float to the top; claimed ones sink to the bottom
+  const sorted = [...challenges].sort((a, b) => {
+    if (a.claimed === b.claimed) return 0;
+    return a.claimed ? 1 : -1;
+  });
+
   return (
     <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '48vh', overflow: 'auto', ...style }}>
       <div className="px-panel px-panel--challenges" style={{ padding: 0 }}>
         <div style={{ padding: '16px 16px 18px', display: 'grid', gap: 10 }}>
-          {challenges.map(challenge => {
+          {sorted.map(challenge => {
             const goal = challenge.duration ?? challenge.target;
             const progress = Math.min(goal, challenge.progress);
             const percent = goal > 0 ? (progress / goal) * 100 : 0;

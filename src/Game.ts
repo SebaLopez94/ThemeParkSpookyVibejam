@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GameLoop } from './core/GameLoop';
 import { GameRenderer } from './core/Renderer';
 import { GameScene } from './core/Scene';
@@ -42,14 +43,29 @@ export class Game {
   private mouseController: MouseController;
   private cameraController: CameraController;
 
-  private previewMesh: THREE.Mesh | null = null;
+  // Preview group holds both the footprint indicator and the GLB ghost model
+  private previewGroup: THREE.Group | null = null;
+  private previewFloorMesh: THREE.Mesh | null = null;
   private previewEdges: THREE.LineSegments | null = null;
+  private previewModelMeshes: THREE.Mesh[] = [];
   private previewGreenMat: THREE.MeshStandardMaterial | null = null;
   private previewRedMat: THREE.MeshStandardMaterial | null = null;
   private previewEdgeGreenMat: THREE.LineBasicMaterial | null = null;
   private previewEdgeRedMat: THREE.LineBasicMaterial | null = null;
   private previewWidth = 1;
   private previewHeight = 1;
+
+  private static readonly previewLoader = new GLTFLoader();
+
+  private static readonly MODEL_PATHS: Partial<Record<string, string>> = {
+    [RideType.CAROUSEL]:         '/models/carusel.glb',
+    [RideType.FERRIS_WHEEL]:     '/models/noria.glb',
+    [RideType.ROLLER_COASTER]:   '/models/rusa.glb',
+    [ShopType.FOOD_STALL]:       '/models/food.glb',
+    [ShopType.DRINK_STAND]:      '/models/drinks.glb',
+    [ShopType.GIFT_SHOP]:        '/models/gift.glb',
+    [ServiceType.RESTROOM]:      '/models/wc.glb',
+  };
 
   private hoveredGridPosition: GridPosition | null = null;
   private selectedBuilding: BuildingDefinition | null = null;
@@ -129,11 +145,15 @@ export class Game {
 
   private keyHandler = (event: KeyboardEvent): void => {
     if ((event.key === 'r' || event.key === 'R') && this.selectedBuilding) {
-      this.buildRotation = (this.buildRotation + Math.PI / 2) % (Math.PI * 2);
-      this.onRotationChange?.(Math.round(this.buildRotation * 180 / Math.PI));
-      this.updatePreview();
+      this.rotateBuild(1);
     }
   };
+
+  private rotateBuild(direction: number): void {
+    this.buildRotation = (this.buildRotation + direction * Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+    this.onRotationChange?.(Math.round(this.buildRotation * 180 / Math.PI));
+    this.updatePreview();
+  }
 
   private setupWindowResize(): void {
     window.addEventListener('resize', this.resizeHandler);
@@ -365,41 +385,87 @@ export class Game {
     this.previewWidth = width;
     this.previewHeight = height;
 
-    const geometry = new THREE.BoxGeometry(width * GRID_SIZE - 0.2, 0.5, height * GRID_SIZE - 0.2);
+    this.previewGroup = new THREE.Group();
+    this.previewGroup.visible = false;
+
+    // Shared materials
     this.previewGreenMat = new THREE.MeshStandardMaterial({
-      color: 0x00ff88,
-      transparent: true,
-      opacity: 0.7,
-      emissive: 0x00ff88,
-      emissiveIntensity: 0.25,
-      metalness: 0.2,
-      roughness: 0.5
+      color: 0x00ff88, transparent: true, opacity: 0.28,
+      emissive: 0x00ff88, emissiveIntensity: 0.15, depthWrite: false
     });
     this.previewRedMat = new THREE.MeshStandardMaterial({
-      color: 0xff3355,
-      transparent: true,
-      opacity: 0.7,
-      emissive: 0xff3355,
-      emissiveIntensity: 0.25,
-      metalness: 0.2,
-      roughness: 0.5
+      color: 0xff3355, transparent: true, opacity: 0.28,
+      emissive: 0xff3355, emissiveIntensity: 0.15, depthWrite: false
     });
-    this.previewMesh = new THREE.Mesh(geometry, this.previewGreenMat);
-    this.previewMesh.visible = false;
-
-    const edgeGeometry = new THREE.EdgesGeometry(geometry);
     this.previewEdgeGreenMat = new THREE.LineBasicMaterial({ color: 0x00ff88 });
-    this.previewEdgeRedMat = new THREE.LineBasicMaterial({ color: 0xff3355 });
-    this.previewEdges = new THREE.LineSegments(edgeGeometry, this.previewEdgeGreenMat);
-    this.previewMesh.add(this.previewEdges);
+    this.previewEdgeRedMat  = new THREE.LineBasicMaterial({ color: 0xff3355 });
 
-    this.scene.scene.add(this.previewMesh);
+    // Thin footprint slab (floor indicator)
+    const footprintGeo = new THREE.BoxGeometry(width * GRID_SIZE - 0.15, 0.08, height * GRID_SIZE - 0.15);
+    this.previewFloorMesh = new THREE.Mesh(footprintGeo, this.previewGreenMat);
+    this.previewFloorMesh.position.y = 0.04;
+    this.previewGroup.add(this.previewFloorMesh);
+
+    const edgeGeo = new THREE.EdgesGeometry(footprintGeo);
+    this.previewEdges = new THREE.LineSegments(edgeGeo, this.previewEdgeGreenMat);
+    this.previewFloorMesh.add(this.previewEdges);
+
+    this.scene.scene.add(this.previewGroup);
+
+    // Load ghost model asynchronously (if available for this building type)
+    this.loadPreviewModel(width, height);
+  }
+
+  private loadPreviewModel(footprintW: number, footprintH: number): void {
+    const subType = this.selectedBuilding?.subType as string | undefined;
+    const path = subType ? Game.MODEL_PATHS[subType] : undefined;
+    if (!path) return;
+
+    const token = this.previewGroup; // capture to detect stale loads
+
+    Game.previewLoader.load(path, (gltf) => {
+      // Discard if a new preview was created while loading
+      if (this.previewGroup !== token || !this.previewGroup) return;
+
+      const model = gltf.scene;
+
+      // Scale to fit footprint
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.z);
+      const targetSize = Math.max(footprintW, footprintH) * GRID_SIZE * 0.88;
+      const scale = maxDim > 0.01 ? targetSize / maxDim : 1;
+      model.scale.setScalar(scale);
+
+      // Ground-align + centre on XZ
+      const scaled = new THREE.Box3().setFromObject(model);
+      const center = scaled.getCenter(new THREE.Vector3());
+      model.position.x -= center.x;
+      model.position.z -= center.z;
+      model.position.y -= scaled.min.y;
+
+      // Ghost tinted material — semi-transparent, coloured by validity
+      this.previewModelMeshes = [];
+      model.traverse(child => {
+        if (!(child instanceof THREE.Mesh)) return;
+        child.material = new THREE.MeshBasicMaterial({
+          color: 0x00ff88,
+          transparent: true,
+          opacity: 0.55,
+          depthWrite: false,
+        });
+        child.frustumCulled = false;
+        this.previewModelMeshes.push(child);
+      });
+
+      this.previewGroup!.add(model);
+    });
   }
 
   private updatePreview(): void {
-    if (!this.previewMesh) return;
+    if (!this.previewGroup) return;
     if (!this.selectedBuilding || !this.hoveredGridPosition) {
-      this.previewMesh.visible = false;
+      this.previewGroup.visible = false;
       return;
     }
 
@@ -412,35 +478,51 @@ export class Game {
       ) && this.economySystem.canAfford(this.selectedBuilding.cost);
     }
 
-    this.previewMesh.material = isValid ? this.previewGreenMat! : this.previewRedMat!;
+    // Update footprint slab + edges
+    if (this.previewFloorMesh) {
+      this.previewFloorMesh.material = isValid ? this.previewGreenMat! : this.previewRedMat!;
+    }
     if (this.previewEdges) {
       this.previewEdges.material = isValid ? this.previewEdgeGreenMat! : this.previewEdgeRedMat!;
     }
 
+    // Update ghost model tint
+    const tint = isValid ? 0x00ff88 : 0xff3355;
+    this.previewModelMeshes.forEach(mesh => {
+      (mesh.material as THREE.MeshBasicMaterial).color.setHex(tint);
+    });
+
     const worldPos = GridHelper.gridToWorld(this.hoveredGridPosition);
-    this.previewMesh.position.set(
+    this.previewGroup.position.set(
       worldPos.x + (this.previewWidth - 1) * GRID_SIZE / 2,
-      0.25,
+      0,
       worldPos.z + (this.previewHeight - 1) * GRID_SIZE / 2
     );
-    this.previewMesh.rotation.y = this.buildRotation;
-    this.previewMesh.visible = true;
+    this.previewGroup.rotation.y = this.buildRotation;
+    this.previewGroup.visible = true;
   }
 
   private disposePreview(): void {
-    if (!this.previewMesh) return;
-    this.scene.scene.remove(this.previewMesh);
-    this.previewMesh.traverse(child => {
+    if (!this.previewGroup) return;
+    this.scene.scene.remove(this.previewGroup);
+    this.previewGroup.traverse(child => {
       if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
         child.geometry.dispose();
+        if (Array.isArray(child.material)) {
+          child.material.forEach(m => m.dispose());
+        } else {
+          (child.material as THREE.Material).dispose();
+        }
       }
     });
     this.previewGreenMat?.dispose();
     this.previewRedMat?.dispose();
     this.previewEdgeGreenMat?.dispose();
     this.previewEdgeRedMat?.dispose();
-    this.previewMesh = null;
+    this.previewGroup = null;
+    this.previewFloorMesh = null;
     this.previewEdges = null;
+    this.previewModelMeshes = [];
     this.previewGreenMat = null;
     this.previewRedMat = null;
     this.previewEdgeGreenMat = null;
@@ -451,12 +533,14 @@ export class Game {
     this.selectedBuilding = definition;
     this.buildRotation = 0;
     this.onRotationChange?.(0);
+    this.mouseController.onBuildRotate = dir => this.rotateBuild(dir);
     this.createPreviewMesh();
     this.updatePreview();
   }
 
   public cancelBuildMode(): void {
     this.selectedBuilding = null;
+    this.mouseController.onBuildRotate = null;
     this.disposePreview();
   }
 

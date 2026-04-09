@@ -117,11 +117,11 @@ export class GameScene {
     const gridHelper = new THREE.GridHelper(
       GRID_WIDTH * GRID_SIZE,
       GRID_WIDTH,
-      0x2a1040,  // center lines — dark purple
-      0x1a0830   // cell lines  — barely visible
+      0x3d1f60,  // center lines — visible purple
+      0x1e0f38   // cell lines — subtle
     );
-    gridHelper.position.y = 0.01; // just above ground to avoid z-fighting
-    (gridHelper.material as THREE.Material).opacity = 0.35;
+    gridHelper.position.y = 0.01;
+    (gridHelper.material as THREE.Material).opacity = 0.22;
     (gridHelper.material as THREE.Material).transparent = true;
     this.scene.add(gridHelper);
   }

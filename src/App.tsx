@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, XCircle } from 'lucide-react';
 import { Game } from './Game';
+import { INITIAL_UNLOCKED_BUILDINGS } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
 import { BuildMenu } from './ui/BuildMenu';
 import { BuildingPanel } from './ui/BuildingPanel';
@@ -38,12 +39,15 @@ function App() {
   const [selectedBuilding, setSelectedBuilding] = useState<SelectedBuildingInfo | null>(null);
   const [buildRotation, setBuildRotation] = useState(0);
   const [isPlacing, setIsPlacing] = useState(false);
-  const [researchState, setResearchState] = useState<ResearchState>({
-    unlocked: [],
+  // Pre-populate with initial unlocked buildings so they show in the build
+  // menu immediately — the ResearchSystem fires its first notify() before
+  // game.onResearchUpdate is assigned, so React state would otherwise start empty.
+  const [researchState, setResearchState] = useState<ResearchState>(() => ({
+    unlocked: [...INITIAL_UNLOCKED_BUILDINGS],
     completed: [],
     activeResearchId: null,
     remainingTime: 0
-  });
+  }));
   const [researchNodes, setResearchNodes] = useState<ResearchNode[]>([]);
   const [challenges, setChallenges] = useState<ChallengeState[]>([]);
   const [localTicketPrice, setLocalTicketPrice] = useState(10);
@@ -298,21 +302,15 @@ function App() {
               <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
                 <div className="px-stat" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <MousePointer2 size={14} color="var(--px-green-hi)" />
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-muted)', lineHeight: 1.8 }}>
-                    Left click to place on a valid tile.
-                  </div>
+                  <div className="px-body">Left click to place on a valid tile.</div>
                 </div>
                 <div className="px-stat" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <RotateCw size={14} color="var(--px-cyan)" />
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-muted)', lineHeight: 1.8 }}>
-                    Press `R` to rotate. Current rotation: {buildRotation}°
-                  </div>
+                  <div className="px-body">Press R to rotate — current: {buildRotation}°</div>
                 </div>
                 <div className="px-stat" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <XCircle size={14} color="var(--px-red)" />
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-muted)', lineHeight: 1.8 }}>
-                    Cancel with right click or `Esc`.
-                  </div>
+                  <div className="px-body">Right click or Esc to cancel.</div>
                 </div>
               </div>
             </div>
@@ -320,16 +318,7 @@ function App() {
         </div>
       )}
 
-      {isPlacing && !selectedBuilding && (
-        <div style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 40 }}>
-          <div className="px-panel" style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 12, color: 'var(--px-muted)' }}>[R] ROTATE</span>
-            <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 15, color: 'var(--px-green-hi)', minWidth: 48, textAlign: 'right' }}>
-              {buildRotation}°
-            </span>
-          </div>
-        </div>
-      )}
+      {/* rotation hint is shown inside the build mode panel on the left */}
 
       {showHelp && (
         <div
@@ -357,7 +346,7 @@ function App() {
                 </tbody>
               </table>
               <hr className="px-divider" />
-              <p style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-muted)', lineHeight: 2, marginTop: 8 }}>
+              <p className="px-body" style={{ marginTop: 8 }}>
                 Build connected paths from the entrance, keep prices fair, and unlock stronger attractions through research.
               </p>
               <button className="px-btn" style={{ marginTop: 16, width: '100%', justifyContent: 'center' }} onClick={() => setShowHelp(false)}>
