@@ -18,6 +18,13 @@ export class MouseController {
   private isLeftDragging = false;
   private lastDragGridPosition: GridPosition | null = null;
 
+  // Touch state
+  private touchStartPos: THREE.Vector2 = new THREE.Vector2();
+  private touchStartTime = 0;
+  private lastTouchPos: THREE.Vector2 = new THREE.Vector2();
+  private lastPinchDistance = 0;
+  private lastPinchCenter: THREE.Vector2 = new THREE.Vector2();
+
   public onCameraMove: ((delta: THREE.Vector2) => void) | null = null;
   public onCameraZoom: ((delta: number) => void) | null = null;
   public onGridHover: ((position: GridPosition | null) => void) | null = null;
@@ -43,12 +50,21 @@ export class MouseController {
     this.domElement.addEventListener('mouseup', this.onMouseUp);
     this.domElement.addEventListener('wheel', this.onMouseWheel, { passive: false });
     this.domElement.addEventListener('contextmenu', this.onContextMenu);
+    this.domElement.addEventListener('touchstart', this.onTouchStart, { passive: false });
+    this.domElement.addEventListener('touchmove', this.onTouchMove, { passive: false });
+    this.domElement.addEventListener('touchend', this.onTouchEnd, { passive: false });
   }
 
   private updateMouseCoords(event: MouseEvent): void {
     const rect = this.domElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  }
+
+  private updateMouseCoordsFromTouch(touch: Touch): void {
+    const rect = this.domElement.getBoundingClientRect();
+    this.mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
   }
 
   private onMouseMove = (event: MouseEvent): void => {
@@ -135,6 +151,116 @@ export class MouseController {
     event.preventDefault();
   };
 
+  // ── Touch handlers ───────────────────────────────────────────────────────
+
+  private onTouchStart = (event: TouchEvent): void => {
+    event.preventDefault();
+
+    if (event.touches.length === 1) {
+      const t = event.touches[0];
+      this.touchStartPos.set(t.clientX, t.clientY);
+      this.lastTouchPos.set(t.clientX, t.clientY);
+      this.touchStartTime = Date.now();
+      this.updateMouseCoordsFromTouch(t);
+
+      if (this.onBuildRotate !== null) {
+        // Build mode — start drawing
+        const worldPos = this.getWorldPosition();
+        if (worldPos) {
+          const gridPos = GridHelper.worldToGrid(worldPos);
+          this.lastDragGridPosition = gridPos;
+          this.isLeftDragging = true;
+          this.onGridDrag?.(gridPos);
+          this.onGridHover?.(gridPos);
+        }
+      }
+    } else if (event.touches.length === 2) {
+      this.isLeftDragging = false;
+      this.lastDragGridPosition = null;
+      const dx = event.touches[0].clientX - event.touches[1].clientX;
+      const dy = event.touches[0].clientY - event.touches[1].clientY;
+      this.lastPinchDistance = Math.sqrt(dx * dx + dy * dy);
+      const cx = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+      const cy = (event.touches[0].clientY + event.touches[1].clientY) / 2;
+      this.lastPinchCenter.set(cx, cy);
+    }
+  };
+
+  private onTouchMove = (event: TouchEvent): void => {
+    event.preventDefault();
+
+    if (event.touches.length === 1) {
+      const t = event.touches[0];
+      this._currentPos.set(t.clientX, t.clientY);
+      this._delta.subVectors(this._currentPos, this.lastTouchPos);
+      this.lastTouchPos.copy(this._currentPos);
+      this.updateMouseCoordsFromTouch(t);
+
+      if (this.onBuildRotate !== null) {
+        // Build mode — draw path / update hover preview
+        const worldPos = this.getWorldPosition();
+        if (worldPos) {
+          const gridPos = GridHelper.worldToGrid(worldPos);
+          this.onGridHover?.(gridPos);
+          if (!this.lastDragGridPosition || !GridHelper.gridPositionEquals(this.lastDragGridPosition, gridPos)) {
+            this.lastDragGridPosition = gridPos;
+            this.onGridDrag?.(gridPos);
+          }
+        }
+      } else {
+        // Normal mode — pan camera
+        this.onCameraMove?.(this._delta);
+      }
+    } else if (event.touches.length === 2) {
+      const dx = event.touches[0].clientX - event.touches[1].clientX;
+      const dy = event.touches[0].clientY - event.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Pinch zoom
+      const pinchDelta = this.lastPinchDistance - dist;
+      if (Math.abs(pinchDelta) > 8) {
+        this.onCameraZoom?.(Math.sign(pinchDelta));
+        this.lastPinchDistance = dist;
+      }
+
+      // Two-finger pan
+      const cx = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+      const cy = (event.touches[0].clientY + event.touches[1].clientY) / 2;
+      this._delta.set(cx - this.lastPinchCenter.x, cy - this.lastPinchCenter.y);
+      if (this._delta.length() > 0.5) {
+        this.onCameraMove?.(this._delta);
+      }
+      this.lastPinchCenter.set(cx, cy);
+    }
+  };
+
+  private onTouchEnd = (event: TouchEvent): void => {
+    event.preventDefault();
+    this.isLeftDragging = false;
+
+    if (event.changedTouches.length === 1 && event.touches.length === 0) {
+      const t = event.changedTouches[0];
+      const dx = t.clientX - this.touchStartPos.x;
+      const dy = t.clientY - this.touchStartPos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const elapsed = Date.now() - this.touchStartTime;
+
+      // Tap = small movement + quick lift
+      if (dist < 14 && elapsed < 400) {
+        this.updateMouseCoordsFromTouch(t);
+        const worldPos = this.getWorldPosition();
+        if (worldPos) {
+          this.onGridClick?.(GridHelper.worldToGrid(worldPos));
+        }
+      }
+
+      this.lastDragGridPosition = null;
+      this.onGridHover?.(null);
+    }
+  };
+
+  // ────────────────────────────────────────────────────────────────────────
+
   private getWorldPosition(): WorldPosition | null {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const hit = this.raycaster.ray.intersectPlane(this.groundPlane, this._intersection);
@@ -148,5 +274,8 @@ export class MouseController {
     this.domElement.removeEventListener('mouseup', this.onMouseUp);
     this.domElement.removeEventListener('wheel', this.onMouseWheel);
     this.domElement.removeEventListener('contextmenu', this.onContextMenu);
+    this.domElement.removeEventListener('touchstart', this.onTouchStart);
+    this.domElement.removeEventListener('touchmove', this.onTouchMove);
+    this.domElement.removeEventListener('touchend', this.onTouchEnd);
   }
 }

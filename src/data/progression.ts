@@ -56,31 +56,22 @@ export const RESEARCH_NODES: ResearchNode[] = [
 ];
 
 export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
+  // ── Starter ──────────────────────────────────────────────────────────
   {
-    id: 'challenge_visitors',
-    title: 'Crowd Puller',
-    description: 'Reach 20 total visitors.',
-    type: 'visitor_count',
-    target: 20,
-    reward: { money: 250, rating: 2 }
-  },
-  {
-    id: 'challenge_happiness',
-    title: 'Happy Haunting',
-    description: 'Keep average happiness above 65 for 20 seconds.',
-    type: 'happiness_streak',
-    target: 65,
-    duration: 20,
-    reward: { money: 300, rating: 3 }
-  },
-  {
-    id: 'challenge_profit',
-    title: 'Black Ink Banisher',
-    description: 'Maintain positive net profit for 25 seconds.',
-    type: 'profit_streak',
+    id: 'challenge_first_ride',
+    title: 'First Thrills',
+    description: 'Build your first ride.',
+    type: 'ride_count',
     target: 1,
-    duration: 25,
-    reward: { money: 350, rating: 3 }
+    reward: { money: 500, rating: 5 }
+  },
+  {
+    id: 'challenge_visitors_10',
+    title: 'Open for Business',
+    description: 'Welcome 10 visitors to the park.',
+    type: 'visitor_count',
+    target: 10,
+    reward: { money: 200, rating: 2 }
   },
   {
     id: 'challenge_layout',
@@ -89,6 +80,93 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
     type: 'build_count',
     target: 3,
     reward: { money: 200, rating: 2 }
+  },
+  // ── Medium ────────────────────────────────────────────────────────────
+  {
+    id: 'challenge_visitors_25',
+    title: 'Crowd Puller',
+    description: 'Reach 25 total visitors.',
+    type: 'visitor_count',
+    target: 25,
+    reward: { money: 350, rating: 3 }
+  },
+  {
+    id: 'challenge_first_shop',
+    title: 'Cursed Commerce',
+    description: 'Open 2 shops to feed the hungry masses.',
+    type: 'shop_count',
+    target: 2,
+    reward: { money: 400, rating: 3 }
+  },
+  {
+    id: 'challenge_happiness',
+    title: 'Happy Haunting',
+    description: 'Keep average happiness above 65 for 20 seconds.',
+    type: 'happiness_streak',
+    target: 65,
+    duration: 20,
+    reward: { money: 400, rating: 4 }
+  },
+  {
+    id: 'challenge_profit',
+    title: 'Black Ink Banisher',
+    description: 'Maintain positive net profit for 30 seconds.',
+    type: 'profit_streak',
+    target: 1,
+    duration: 30,
+    reward: { money: 450, rating: 4 }
+  },
+  {
+    id: 'challenge_three_rides',
+    title: 'Thrill Dealer',
+    description: 'Build 3 different rides.',
+    type: 'ride_count',
+    target: 3,
+    reward: { money: 700, rating: 5 }
+  },
+  // ── Hard ─────────────────────────────────────────────────────────────
+  {
+    id: 'challenge_visitors_75',
+    title: 'Haunted Horde',
+    description: 'Attract 75 total visitors.',
+    type: 'visitor_count',
+    target: 75,
+    reward: { money: 800, rating: 6 }
+  },
+  {
+    id: 'challenge_happiness_hard',
+    title: 'Pure Joy of Fear',
+    description: 'Keep happiness above 75 for 30 seconds.',
+    type: 'happiness_streak',
+    target: 75,
+    duration: 30,
+    reward: { money: 900, rating: 6 }
+  },
+  {
+    id: 'challenge_rating',
+    title: 'Five-Star Nightmare',
+    description: 'Reach a park rating of 80.',
+    type: 'rating_threshold',
+    target: 80,
+    reward: { money: 1200, rating: 0 }
+  },
+  // ── Legendary ─────────────────────────────────────────────────────────
+  {
+    id: 'challenge_visitors_150',
+    title: 'Thousand Screams',
+    description: 'Attract 150 total visitors.',
+    type: 'visitor_count',
+    target: 150,
+    reward: { money: 2000, rating: 8 }
+  },
+  {
+    id: 'challenge_profit_hard',
+    title: 'Dark Fortune',
+    description: 'Stay profitable for 60 seconds straight.',
+    type: 'profit_streak',
+    target: 1,
+    duration: 60,
+    reward: { money: 1500, rating: 7 }
   }
 ];
 

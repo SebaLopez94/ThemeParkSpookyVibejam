@@ -6,12 +6,12 @@ export class EconomySystem {
 
   constructor() {
     this.state = {
-      money: 20000,
+      money: 5000,
       ticketPrice: 10,
       totalVisitors: 0,
       activeVisitors: 0,
-      parkRating: 50,
-      averageHappiness: 50,
+      parkRating: 10,
+      averageHappiness: 10,
       dailyIncome: 0,
       dailyExpenses: 0,
       netProfit: 0
@@ -29,15 +29,22 @@ export class EconomySystem {
     this.notifyListeners();
   }
 
+  /** One-time purchase — deducts money but does NOT count as recurring expense. */
   public spendMoney(amount: number): boolean {
     if (this.state.money >= amount) {
       this.state.money -= amount;
-      this.state.dailyExpenses += amount;
-      this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
       this.notifyListeners();
       return true;
     }
     return false;
+  }
+
+  /** Recurring maintenance — deducts money AND adds to dailyExpenses. */
+  public chargeMaintenance(amount: number): void {
+    this.state.money -= amount;
+    this.state.dailyExpenses += amount;
+    this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
+    this.notifyListeners();
   }
 
   public canAfford(amount: number): boolean {

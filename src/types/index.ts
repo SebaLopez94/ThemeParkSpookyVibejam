@@ -204,7 +204,10 @@ export type ChallengeType =
   | 'visitor_count'
   | 'happiness_streak'
   | 'profit_streak'
-  | 'build_count';
+  | 'build_count'
+  | 'ride_count'
+  | 'shop_count'
+  | 'rating_threshold';
 
 export interface ChallengeReward {
   money: number;
@@ -231,6 +234,9 @@ export interface SimulationSnapshot {
   totalVisitors: number;
   averageHappiness: number;
   netProfit: number;
+  parkRating: number;
   buildingCounts: Record<BuildingType, number>;
   serviceAndDecorationCount: number;
+  rideCount: number;
+  shopCount: number;
 }

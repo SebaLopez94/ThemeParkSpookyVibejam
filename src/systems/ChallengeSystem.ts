@@ -44,6 +44,15 @@ export class ChallengeSystem {
           challenge.progress = Math.min(current, challenge.duration ?? 0);
           break;
         }
+        case 'ride_count':
+          challenge.progress = Math.min(snapshot.rideCount, challenge.target);
+          break;
+        case 'shop_count':
+          challenge.progress = Math.min(snapshot.shopCount, challenge.target);
+          break;
+        case 'rating_threshold':
+          challenge.progress = Math.min(snapshot.parkRating, challenge.target);
+          break;
       }
 
       const targetValue = challenge.duration ?? challenge.target;

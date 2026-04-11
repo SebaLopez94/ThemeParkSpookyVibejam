@@ -93,7 +93,7 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     type: BuildingType.DECORATION,
     subType: DecorationType.SPOOKY_TREE,
     ...BUILDING_DISPLAY[DecorationType.SPOOKY_TREE],
-    cost: 75,
+    cost: 30,
     quality: 45,
     valueScore: 0
   },
@@ -101,7 +101,7 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     type: BuildingType.DECORATION,
     subType: DecorationType.JACK_O_LANTERN,
     ...BUILDING_DISPLAY[DecorationType.JACK_O_LANTERN],
-    cost: 125,
+    cost: 50,
     quality: 52,
     valueScore: 0,
     unlockRequirement: 'research_pumpkin_lights'
@@ -110,7 +110,7 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     type: BuildingType.DECORATION,
     subType: DecorationType.STONE,
     ...BUILDING_DISPLAY[DecorationType.STONE],
-    cost: 80,
+    cost: 20,
     quality: 48,
     valueScore: 0
   },
@@ -118,7 +118,7 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     type: BuildingType.DECORATION,
     subType: DecorationType.PUMPKIN,
     ...BUILDING_DISPLAY[DecorationType.PUMPKIN],
-    cost: 60,
+    cost: 15,
     quality: 46,
     valueScore: 0
   }

@@ -85,6 +85,7 @@ export class Game {
   public onRotationChange: ((deg: number) => void) | null = null;
   public onResearchUpdate: ((state: ResearchState) => void) | null = null;
   public onChallengesUpdate: ((state: ChallengeState[]) => void) | null = null;
+  public onChallengeCompleted: ((challenge: ChallengeState) => void) | null = null;
 
   private resizeHandler = (): void => {
     this.scene.onWindowResize();
@@ -564,14 +565,22 @@ export class Game {
         this.buildingSystem.getDecorationAppeal()
       );
 
+      // Recurring maintenance costs per second
+      const counts = this.buildingSystem.getBuildingCounts();
+      const maintenance =
+        counts[BuildingType.RIDE]    * 2 +
+        counts[BuildingType.SHOP]    * 1 +
+        counts[BuildingType.SERVICE] * 1;
+      if (maintenance > 0) this.economySystem.chargeMaintenance(maintenance);
       const completed = this.challengeSystem.update(this.RATING_UPDATE_INTERVAL, {
         totalVisitors: this.economySystem.getState().totalVisitors,
         averageHappiness: this.visitorSystem.getAverageHappiness(),
         netProfit: this.economySystem.getState().netProfit,
-        buildingCounts: this.buildingSystem.getBuildingCounts(),
-        serviceAndDecorationCount:
-          this.buildingSystem.getBuildingCounts()[BuildingType.SERVICE] +
-          this.buildingSystem.getBuildingCounts()[BuildingType.DECORATION]
+        parkRating: this.economySystem.getState().parkRating,
+        buildingCounts: counts,
+        serviceAndDecorationCount: counts[BuildingType.SERVICE] + counts[BuildingType.DECORATION],
+        rideCount: counts[BuildingType.RIDE],
+        shopCount: counts[BuildingType.SHOP]
       });
 
       completed.forEach(challenge => {
@@ -589,6 +598,7 @@ export class Game {
           );
         }
         this.showFloatingText(`Challenge +$${claimed.reward.money}`, { x: 24, z: 46 }, '#bef264');
+        this.onChallengeCompleted?.(claimed);
       });
     }
   }
