@@ -1,9 +1,7 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GridPosition, VisitorData, VisitorNeedType, VisitorThought } from '../types';
 import { GridHelper } from '../utils/GridHelper';
-
-const gltfLoader = new GLTFLoader();
+import { sharedGLTFLoader } from '../core/AssetLoader';
 
 export class Visitor {
   public mesh: THREE.Group;
@@ -41,7 +39,7 @@ export class Visitor {
   }
 
   private loadModel(): void {
-    gltfLoader.load('/models/kid1.glb', (gltf) => {
+    sharedGLTFLoader.load('/models/kid1.glb', (gltf) => {
       const model = gltf.scene;
       model.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(model);
@@ -54,10 +52,9 @@ export class Visitor {
       model.traverse(child => {
         if (child instanceof THREE.SkinnedMesh) {
           child.castShadow = true;
-          child.frustumCulled = false;
+          child.frustumCulled = false; // SkinnedMesh bounding sphere can be wrong mid-animation
         } else if (child instanceof THREE.Mesh) {
           child.castShadow = true;
-          child.frustumCulled = false;
         }
       });
 
@@ -201,6 +198,20 @@ export class Visitor {
   }
 
   public dispose(): void {
-    this.mixer?.stopAllAction();
+    if (this.mixer) {
+      this.mixer.stopAllAction();
+      this.mixer.uncacheRoot(this.mixer.getRoot());
+      this.mixer = null;
+    }
+    this.mesh.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        if (Array.isArray(child.material)) {
+          child.material.forEach(m => m.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
+    });
   }
 }

@@ -21,13 +21,15 @@ export enum BuildingType {
 export enum RideType {
   CAROUSEL = 'carousel',
   FERRIS_WHEEL = 'ferrisWheel',
-  ROLLER_COASTER = 'rollerCoaster'
+  ROLLER_COASTER = 'rollerCoaster',
+  HAUNTED_HOUSE = 'hauntedHouse'
 }
 
 export const RIDE_SIZES: Record<RideType, { width: number; height: number }> = {
   [RideType.CAROUSEL]: { width: 2, height: 2 },
   [RideType.FERRIS_WHEEL]: { width: 3, height: 3 },
-  [RideType.ROLLER_COASTER]: { width: 4, height: 4 }
+  [RideType.ROLLER_COASTER]: { width: 4, height: 4 },
+  [RideType.HAUNTED_HOUSE]: { width: 3, height: 3 }
 };
 
 export enum ShopType {
@@ -42,7 +44,9 @@ export enum ServiceType {
 
 export enum DecorationType {
   SPOOKY_TREE = 'spookyTree',
-  JACK_O_LANTERN = 'jackOLantern'
+  JACK_O_LANTERN = 'jackOLantern',
+  STONE = 'stone',
+  PUMPKIN = 'pumpkin'
 }
 
 export type PlaceableBuildingKind = RideType | ShopType | ServiceType | DecorationType;
@@ -57,12 +61,15 @@ export const BUILDING_DISPLAY: Record<PlaceableBuildingKind, BuildingDisplay> = 
   [RideType.CAROUSEL]: { name: 'Cursed Carousel', icon: '🎠', description: 'Spins visitors into gleeful dread' },
   [RideType.FERRIS_WHEEL]: { name: 'Eye of Doom', icon: '🎡', description: 'A towering view over the haunted grounds' },
   [RideType.ROLLER_COASTER]: { name: 'Terror Coaster', icon: '🎢', description: 'High thrill route through the underworld' },
+  [RideType.HAUNTED_HOUSE]: { name: 'Haunted House', icon: '👻', description: 'A walk-through horror experience that leaves guests screaming' },
   [ShopType.FOOD_STALL]: { name: 'Witch Cauldron', icon: '🍲', description: 'Warm stew that fights off hunger' },
   [ShopType.DRINK_STAND]: { name: 'Poison Stand', icon: '🧪', description: 'Toxic-looking drinks for thirsty guests' },
   [ShopType.GIFT_SHOP]: { name: 'Voodoo Shop', icon: '🔮', description: 'Souvenirs for guests who still have cash' },
   [ServiceType.RESTROOM]: { name: 'Haunted WC', icon: '🚻', description: 'Essential hygiene relief for brave souls' },
   [DecorationType.SPOOKY_TREE]: { name: 'Spooky Tree', icon: '🌲', description: 'Boosts appeal around nearby paths' },
-  [DecorationType.JACK_O_LANTERN]: { name: 'Jack-o-Lantern', icon: '🎃', description: 'Cheap ambience with a tiny local charm bonus' }
+  [DecorationType.JACK_O_LANTERN]: { name: 'Jack-o-Lantern', icon: '🎃', description: 'Cheap ambience with a tiny local charm bonus' },
+  [DecorationType.STONE]: { name: 'Gravestone', icon: '🪦', description: 'A weathered gravestone that adds dark atmosphere' },
+  [DecorationType.PUMPKIN]: { name: 'Pumpkin', icon: '🎃', description: 'A carved pumpkin that glows with spooky charm' }
 };
 
 export interface SelectedBuildingInfo {

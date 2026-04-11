@@ -1,10 +1,28 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GridPosition, ShopData, BuildingType, ShopType } from '../types';
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
+import { sharedGLTFLoader } from '../core/AssetLoader';
 
-const gltfLoader = new GLTFLoader();
+// Shared fallback primitive geometries & materials (only used when GLB fails to load)
+const sharedFallbackGeo = {
+  base: new THREE.BoxGeometry(GRID_SIZE * 0.9, 2, GRID_SIZE * 0.9),
+  roof: new THREE.ConeGeometry(GRID_SIZE * 0.7, 1, 4),
+  counter: new THREE.BoxGeometry(GRID_SIZE * 0.6, 0.8, 0.3),
+  plate: new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16),
+  cup: new THREE.CylinderGeometry(0.15, 0.1, 0.4, 16),
+  giftBox: new THREE.BoxGeometry(0.3, 0.3, 0.3),
+};
+const sharedFallbackMat = {
+  food: new THREE.MeshLambertMaterial({ color: 0xff8c42 }),
+  drink: new THREE.MeshLambertMaterial({ color: 0x42d4ff }),
+  gift: new THREE.MeshLambertMaterial({ color: 0xff42d4 }),
+  roof: new THREE.MeshLambertMaterial({ color: 0x8b4513 }),
+  counter: new THREE.MeshLambertMaterial({ color: 0xa0522d }),
+  plate: new THREE.MeshLambertMaterial({ color: 0xffffff }),
+  cup: new THREE.MeshLambertMaterial({ color: 0xff0000 }),
+  giftBoxAccent: new THREE.MeshLambertMaterial({ color: 0xffd700 }),
+};
 
 export class Shop {
   public mesh: THREE.Group;
@@ -55,7 +73,7 @@ export class Shop {
   }
 
   private loadGlbShop(path: string): void {
-    gltfLoader.load(path, (gltf) => {
+    sharedGLTFLoader.load(path, (gltf) => {
       const model = gltf.scene;
 
       const box = new THREE.Box3().setFromObject(model);
@@ -95,26 +113,21 @@ export class Shop {
       this.loadGlbShop('/models/gift.glb');
       return;
     }
-    const baseGeometry = new THREE.BoxGeometry(GRID_SIZE * 0.9, 2, GRID_SIZE * 0.9);
-    const baseMaterial = new THREE.MeshLambertMaterial({
-      color: this.getShopColor(type)
-    });
-    const base = new THREE.Mesh(baseGeometry, baseMaterial);
+    const baseMat = type === ShopType.FOOD_STALL ? sharedFallbackMat.food
+      : type === ShopType.DRINK_STAND ? sharedFallbackMat.drink
+      : sharedFallbackMat.gift;
+    const base = new THREE.Mesh(sharedFallbackGeo.base, baseMat);
     base.position.y = 1;
     base.castShadow = true;
     this.mesh.add(base);
 
-    const roofGeometry = new THREE.ConeGeometry(GRID_SIZE * 0.7, 1, 4);
-    const roofMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
-    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+    const roof = new THREE.Mesh(sharedFallbackGeo.roof, sharedFallbackMat.roof);
     roof.position.y = 2.5;
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
     this.mesh.add(roof);
 
-    const counterGeometry = new THREE.BoxGeometry(GRID_SIZE * 0.6, 0.8, 0.3);
-    const counterMaterial = new THREE.MeshLambertMaterial({ color: 0xa0522d });
-    const counter = new THREE.Mesh(counterGeometry, counterMaterial);
+    const counter = new THREE.Mesh(sharedFallbackGeo.counter, sharedFallbackMat.counter);
     counter.position.set(0, 0.4, GRID_SIZE * 0.3);
     counter.castShadow = true;
     this.mesh.add(counter);
@@ -122,39 +135,22 @@ export class Shop {
     this.addShopSpecificDetails(type);
   }
 
-  private getShopColor(type: ShopType): THREE.Color {
-    const colors: Record<ShopType, number> = {
-      [ShopType.FOOD_STALL]: 0xff8c42,
-      [ShopType.DRINK_STAND]: 0x42d4ff,
-      [ShopType.GIFT_SHOP]: 0xff42d4
-    };
-    return new THREE.Color(colors[type]);
-  }
-
   private addShopSpecificDetails(type: ShopType): void {
     switch (type) {
       case ShopType.FOOD_STALL: {
-        const plateGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16);
-        const plateMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
-        const plate = new THREE.Mesh(plateGeometry, plateMaterial);
+        const plate = new THREE.Mesh(sharedFallbackGeo.plate, sharedFallbackMat.plate);
         plate.position.set(0.3, 0.8, GRID_SIZE * 0.3);
         this.mesh.add(plate);
         break;
       }
-
       case ShopType.DRINK_STAND: {
-        const cupGeometry = new THREE.CylinderGeometry(0.15, 0.1, 0.4, 16);
-        const cupMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
-        const cup = new THREE.Mesh(cupGeometry, cupMaterial);
+        const cup = new THREE.Mesh(sharedFallbackGeo.cup, sharedFallbackMat.cup);
         cup.position.set(-0.3, 0.6, GRID_SIZE * 0.3);
         this.mesh.add(cup);
         break;
       }
-
       case ShopType.GIFT_SHOP: {
-        const boxGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-        const boxMaterial = new THREE.MeshLambertMaterial({ color: 0xffd700 });
-        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+        const box = new THREE.Mesh(sharedFallbackGeo.giftBox, sharedFallbackMat.giftBoxAccent);
         box.position.set(0, 0.95, GRID_SIZE * 0.3);
         box.rotation.y = Math.PI / 4;
         this.mesh.add(box);
@@ -164,13 +160,18 @@ export class Shop {
   }
 
   public dispose(): void {
+    // GLB-loaded children have unique geometry/materials — dispose those.
+    // Primitive fallback children share module-level resources — skip them.
     this.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
+        const isShared = (Object.values(sharedFallbackGeo) as THREE.BufferGeometry[]).includes(child.geometry);
+        if (!isShared) {
+          child.geometry.dispose();
+          if (Array.isArray(child.material)) {
+            child.material.forEach(m => m.dispose());
+          } else {
+            child.material.dispose();
+          }
         }
       }
     });

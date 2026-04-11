@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, XCircle } from 'lucide-react';
 import { Game } from './Game';
-import { INITIAL_UNLOCKED_BUILDINGS } from './data/buildings';
+import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
 import { BuildMenu } from './ui/BuildMenu';
 import { BuildingPanel } from './ui/BuildingPanel';
@@ -73,7 +73,6 @@ function App() {
 
     game.onEconomyUpdate = state => {
       setEconomy(state);
-      setLocalTicketPrice(state.ticketPrice);
     };
     game.onBuildingSelected = info => {
       setSelectedBuilding(info);
@@ -240,6 +239,17 @@ function App() {
       </div>
 
       <div style={{ position: 'fixed', bottom: 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: 10, zIndex: 40, alignItems: 'center' }}>
+        <button
+          className="px-btn px-btn--lg"
+          title="Place path (free)"
+          onClick={() => {
+            handleSelectBuilding(getPathDefinition());
+            setShowBuildMenu(false);
+          }}
+        >
+          <span className="px-emoji" style={{ fontSize: 22 }}>🛤️</span>
+          PATH
+        </button>
         <button
           className="px-btn px-btn--lg"
           onClick={() => {

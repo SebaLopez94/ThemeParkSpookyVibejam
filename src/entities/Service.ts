@@ -1,10 +1,8 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GridPosition, ServiceData, ServiceType, BuildingType } from '../types';
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
-
-const gltfLoader = new GLTFLoader();
+import { sharedGLTFLoader } from '../core/AssetLoader';
 
 export class Service {
   public mesh: THREE.Group;
@@ -35,7 +33,7 @@ export class Service {
   }
 
   private loadGlb(path: string): void {
-    gltfLoader.load(path, (gltf) => {
+    sharedGLTFLoader.load(path, (gltf) => {
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());

@@ -1,8 +1,6 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GRID_WIDTH, GRID_HEIGHT, GRID_SIZE } from '../utils/GridHelper';
-
-const gltfLoader = new GLTFLoader();
+import { sharedGLTFLoader } from './AssetLoader';
 
 function isMobile(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i.test(navigator.userAgent)
@@ -14,6 +12,9 @@ export class GameScene {
   public camera: THREE.PerspectiveCamera;
   public ambientLight: THREE.AmbientLight;
   public directionalLight: THREE.DirectionalLight;
+  private textureLoader = new THREE.TextureLoader();
+  private surroundingClones: THREE.Object3D[] = [];
+
 
   constructor() {
     this.scene = new THREE.Scene();
@@ -49,12 +50,16 @@ export class GameScene {
     this.scene.add(this.directionalLight);
 
     this.createGround();
+    this.createForestFloor();
+    this.createMountains();
     this.createGridLines();
     this.createEntranceGate();
+    this.createPerimeterFence();
+    this.createSurroundings();
   }
 
   private createEntranceGate(): void {
-    gltfLoader.load('/models/entrance.glb', (gltf) => {
+    sharedGLTFLoader.load('/models/entrance.glb', (gltf) => {
       const model = gltf.scene;
 
       const box = new THREE.Box3().setFromObject(model);
@@ -67,19 +72,19 @@ export class GameScene {
       const scaledBox = new THREE.Box3().setFromObject(model);
       const center = scaledBox.getCenter(new THREE.Vector3());
 
+      // Center on the double-wide entrance path (grid x=12+13 → world X=0)
       model.position.x -= center.x;
-      model.position.x += -1; // Align exactly between the 2 path lanes (-2 and 0)
-      
+
+      // Place OUTSIDE the grid — grid bottom edge is world Z=50, gate sits just beyond it
       model.position.z -= center.z;
-      model.position.z += 48; // Exactly matches worldZ for gridZ=49
+      model.position.z += 27;
 
       model.position.y -= scaledBox.min.y;
-      model.position.y += 0.1; // Lift above the path mesh to prevent clipping
 
       model.traverse(child => {
         if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
+          child.castShadow = false;
+          child.receiveShadow = false;
         }
       });
 
@@ -87,29 +92,261 @@ export class GameScene {
     });
   }
 
-  private createGround(): void {
-    const playableSize = Math.max(GRID_WIDTH, GRID_HEIGHT) * GRID_SIZE;
-    const infiniteMultiplier = 20;
-    const groundSize = playableSize * infiniteMultiplier;
-    
-    const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
-    
-    const textureLoader = new THREE.TextureLoader();
-    const terrainTexture = textureLoader.load('/models/terrain.png');
+  private createPerimeterFence(): void {
+    const halfW = (GRID_WIDTH * GRID_SIZE) / 2;  // 50
+    const halfH = (GRID_HEIGHT * GRID_SIZE) / 2; // 50
+    const spacing = 2;
+    const postH = 2.8;
+    const spikeH = 0.5;
+    const postW = 0.14;
+    const railH = 0.09;
+    const railD = 0.09;
+
+    const mat = new THREE.MeshStandardMaterial({ color: 0x0e0a06, roughness: 0.85, metalness: 0.3 });
+
+    // --- Posts (InstancedMesh) ---
+    const postPositions: [number, number][] = []; // [worldX, worldZ]
+    const entranceHalfW = 2.2; // gap in bottom fence for the entrance path
+
+    // Bottom edge — gap at entrance (X = -entranceHalfW .. +entranceHalfW)
+    for (let x = -halfW; x <= halfW; x += spacing) {
+      if (x > -entranceHalfW && x < entranceHalfW) continue;
+      postPositions.push([x, halfH]);
+    }
+    // Top edge
+    for (let x = -halfW; x <= halfW; x += spacing) {
+      postPositions.push([x, -halfH]);
+    }
+    // Left edge (skip corners already in top/bottom)
+    for (let z = -halfH + spacing; z < halfH; z += spacing) {
+      postPositions.push([-halfW, z]);
+    }
+    // Right edge
+    for (let z = -halfH + spacing; z < halfH; z += spacing) {
+      postPositions.push([halfW, z]);
+    }
+
+    // Post shafts
+    const postGeo = new THREE.BoxGeometry(postW, postH, postW);
+    const postMesh = new THREE.InstancedMesh(postGeo, mat, postPositions.length);
+    postMesh.castShadow = false;
+    const dummy = new THREE.Object3D();
+    postPositions.forEach(([x, z], i) => {
+      dummy.position.set(x, postH / 2, z);
+      dummy.updateMatrix();
+      postMesh.setMatrixAt(i, dummy.matrix);
+    });
+    postMesh.instanceMatrix.needsUpdate = true;
+    this.scene.add(postMesh);
+
+    // Spike tips on every post
+    const spikeGeo = new THREE.ConeGeometry(postW * 0.9, spikeH, 4);
+    const spikeMesh = new THREE.InstancedMesh(spikeGeo, mat, postPositions.length);
+    spikeMesh.castShadow = false;
+    postPositions.forEach(([x, z], i) => {
+      dummy.position.set(x, postH + spikeH / 2, z);
+      dummy.rotation.set(0, Math.PI / 4, 0);
+      dummy.updateMatrix();
+      spikeMesh.setMatrixAt(i, dummy.matrix);
+    });
+    spikeMesh.instanceMatrix.needsUpdate = true;
+    this.scene.add(spikeMesh);
+
+    // --- Rails (thin horizontal bars per side) ---
+    const addRailSpan = (x1: number, z1: number, x2: number, z2: number) => {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const len = Math.sqrt(dx * dx + dz * dz);
+      const angle = Math.atan2(dx, dz); // rotation around Y
+      const cx = (x1 + x2) / 2;
+      const cz = (z1 + z2) / 2;
+      const railGeo = new THREE.BoxGeometry(railD, railH, len);
+      for (const yFrac of [0.28, 0.72]) {
+        const rail = new THREE.Mesh(railGeo, mat);
+        rail.position.set(cx, postH * yFrac, cz);
+        rail.rotation.y = angle;
+        rail.castShadow = false;
+        this.scene.add(rail);
+      }
+    };
+
+    // Bottom left of entrance gap
+    addRailSpan(-halfW, halfH, -entranceHalfW, halfH);
+    // Bottom right of entrance gap
+    addRailSpan(entranceHalfW, halfH, halfW, halfH);
+    // Top
+    addRailSpan(-halfW, -halfH, halfW, -halfH);
+    // Left
+    addRailSpan(-halfW, -halfH, -halfW, halfH);
+    // Right
+    addRailSpan(halfW, -halfH, halfW, halfH);
+  }
+
+  private createSurroundings(): void {
+    let seed = 42;
+    const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+
+    const fence = (GRID_WIDTH * GRID_SIZE) / 2 + 4; // 54
+
+    const isValid = (x: number, z: number) =>
+      (Math.abs(x) >= fence || Math.abs(z) >= fence) && // outside fence
+      !(Math.abs(x) < 4 && z > fence);                  // only clear the path gap
+
+    const placeClones = (path: string, count: number, maxDist: number, targetH: number, scaleVar: number) => {
+      sharedGLTFLoader.load(path, (gltf) => {
+        const tmpl = gltf.scene;
+        const box  = new THREE.Box3().setFromObject(tmpl);
+        const s    = targetH / Math.max(box.getSize(new THREE.Vector3()).y, 0.01);
+        const gy   = -box.min.y * s;
+
+        for (let i = 0; i < count; i++) {
+          let x: number, z: number, tries = 0;
+          do {
+            // Bias positions toward the fence — sample in [fence, maxDist] per axis
+            const sign = rng() > 0.5 ? 1 : -1;
+            const axis = rng() > 0.5; // true = vary X, false = vary Z
+            x = axis ? (fence + rng() * (maxDist - fence)) * sign : (rng() * 2 - 1) * maxDist;
+            z = axis ? (rng() * 2 - 1) * maxDist : (fence + rng() * (maxDist - fence)) * sign;
+          } while (!isValid(x, z) && ++tries < 200);
+
+          const clone = tmpl.clone(true);
+          const sv = 1 + (rng() - 0.5) * scaleVar;
+          clone.scale.setScalar(s * sv);
+          clone.position.set(x, gy * sv, z);
+          clone.rotation.y = rng() * Math.PI * 2;
+          clone.traverse(c => {
+            if (c instanceof THREE.Mesh) { c.castShadow = false; c.receiveShadow = false; }
+          });
+          this.surroundingClones.push(clone);
+          this.scene.add(clone);
+        }
+      });
+    };
+
+    // Trees packed tight in a narrow band just outside the fence
+    placeClones('/models/tree.glb',    120, fence + 14, 6.0, 0.45);
+    placeClones('/models/tree2.glb',   120, fence + 14, 6.5, 0.45);
+    placeClones('/models/pumpkin.glb',  20, fence + 10, 0.5, 0.4);
+  }
+
+  private createMountains(): void {
+    let seed = 99;
+    const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+
+    // Two mountain materials — far peaks slightly lighter so they read against the sky
+    const montainTex = this.textureLoader.load('/models/montain.png');
+    montainTex.wrapS = THREE.RepeatWrapping;
+    montainTex.wrapT = THREE.RepeatWrapping;
+    montainTex.repeat.set(2, 2);
+
+    const matNear = new THREE.MeshStandardMaterial({ map: montainTex, color: 0x4a3d55, roughness: 1.0, metalness: 0.0, flatShading: true });
+    const matFar  = new THREE.MeshStandardMaterial({ map: montainTex, color: 0x6a5a78, roughness: 1.0, metalness: 0.0, flatShading: true });
+
+    // Instanced cones — 1 draw call per layer
+    const buildLayer = (
+      count: number,
+      minDist: number, maxDist: number,
+      minH: number, maxH: number,
+      minR: number, maxR: number,
+      mat: THREE.MeshStandardMaterial
+    ) => {
+      const geo  = new THREE.ConeGeometry(1, 1, 6); // unit cone, scaled per instance
+      const inst = new THREE.InstancedMesh(geo, mat, count);
+      inst.castShadow = false;
+      inst.receiveShadow = false;
+
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + rng() * 0.4;
+        const dist  = minDist + rng() * (maxDist - minDist);
+        const x     = Math.cos(angle) * dist;
+        const z     = Math.sin(angle) * dist;
+        const h     = minH + rng() * (maxH - minH);
+        const r     = minR + rng() * (maxR - minR);
+
+        dummy.position.set(x, h * 0.5 - 1, z);
+        dummy.scale.set(r, h, r);
+        dummy.rotation.set(0, rng() * Math.PI, 0);
+        dummy.updateMatrix();
+        inst.setMatrixAt(i, dummy.matrix);
+      }
+      inst.instanceMatrix.needsUpdate = true;
+      this.scene.add(inst);
+    };
+
+    // Close foothills — shorter, dense
+    buildLayer(60,  55,  80,  8, 18, 10, 20, matNear);
+    // Mid mountains — taller
+    buildLayer(40,  75, 105, 20, 40, 14, 28, matFar);
+    // Far peaks — tallest, visible above everything
+    buildLayer(24, 100, 130, 35, 60, 16, 30, matFar);
+  }
+
+  private createForestFloor(): void {
+    // Park interior terrain — sits above forest floor but below paths (y=0.05)
+    const parkSize = GRID_WIDTH * GRID_SIZE;
+    const parkGeo  = new THREE.PlaneGeometry(parkSize, parkSize, 1, 1);
+    const terrainTexture = this.textureLoader.load('/models/terrain.png');
     terrainTexture.wrapS = THREE.RepeatWrapping;
     terrainTexture.wrapT = THREE.RepeatWrapping;
-    terrainTexture.repeat.set((GRID_WIDTH / 2) * infiniteMultiplier, (GRID_HEIGHT / 2) * infiniteMultiplier);
-
-    const groundMaterial = new THREE.MeshStandardMaterial({
-      map: terrainTexture,
-      roughness: 0.8,
-      metalness: 0.1
+    const parkMat = new THREE.ShaderMaterial({
+      uniforms: {
+        map:    { value: terrainTexture },
+        repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
+        fade:   { value: 0.03 }
+      },
+      vertexShader: /* glsl */`
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform sampler2D map;
+        uniform vec2      repeat;
+        uniform float     fade;
+        varying vec2      vUv;
+        void main() {
+          vec4 color = texture2D(map, vUv * repeat);
+          float fx = smoothstep(0.0, fade, vUv.x) * smoothstep(1.0, 1.0 - fade, vUv.x);
+          float fz = smoothstep(0.0, fade, vUv.y) * smoothstep(1.0, 1.0 - fade, vUv.y);
+          gl_FragColor = vec4(color.rgb, fx * fz);
+        }
+      `,
+      transparent: true,
+      depthWrite: false
     });
+    const parkFloor = new THREE.Mesh(parkGeo, parkMat);
+    parkFloor.rotation.x = -Math.PI / 2;
+    parkFloor.position.y = 0.02;
+    parkFloor.receiveShadow = true;
+    this.scene.add(parkFloor);
 
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    // Forest floor — covers everything outside the park
+    const size = 600;
+    const geo  = new THREE.PlaneGeometry(size, size);
+    const outsideTex = this.textureLoader.load('/models/terrain-outside.png');
+    outsideTex.wrapS = THREE.RepeatWrapping;
+    outsideTex.wrapT = THREE.RepeatWrapping;
+    outsideTex.repeat.set(30, 30);
+    const mat  = new THREE.MeshStandardMaterial({ map: outsideTex, roughness: 1.0, metalness: 0.0 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = 0.01;
+    mesh.receiveShadow = false;
+    this.scene.add(mesh);
+
+  }
+
+  private createGround(): void {
+    // Infinite dark base — catches fog at the horizon
+    const geo = new THREE.PlaneGeometry(4000, 4000);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x1a1208, roughness: 1.0 });
+    const ground = new THREE.Mesh(geo, mat);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.01;
-    ground.receiveShadow = true;
+    ground.position.y = -0.02;
+    ground.receiveShadow = false;
     this.scene.add(ground);
   }
 
@@ -117,11 +354,11 @@ export class GameScene {
     const gridHelper = new THREE.GridHelper(
       GRID_WIDTH * GRID_SIZE,
       GRID_WIDTH,
-      0x3d1f60,  // center lines — visible purple
-      0x1e0f38   // cell lines — subtle
+      0x9060cc,  // center lines — visible purple
+      0x5a3090   // cell lines — medium purple
     );
-    gridHelper.position.y = 0.01;
-    (gridHelper.material as THREE.Material).opacity = 0.22;
+    gridHelper.position.y = 0.03;
+    (gridHelper.material as THREE.Material).opacity = 0.55;
     (gridHelper.material as THREE.Material).transparent = true;
     this.scene.add(gridHelper);
   }
@@ -129,5 +366,22 @@ export class GameScene {
   public onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+  }
+
+  public dispose(): void {
+    for (const clone of this.surroundingClones) {
+      this.scene.remove(clone);
+      clone.traverse(c => {
+        if (c instanceof THREE.Mesh) {
+          c.geometry.dispose();
+          if (Array.isArray(c.material)) {
+            c.material.forEach(m => m.dispose());
+          } else {
+            c.material.dispose();
+          }
+        }
+      });
+    }
+    this.surroundingClones.length = 0;
   }
 }

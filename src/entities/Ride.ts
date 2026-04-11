@@ -1,10 +1,8 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GridPosition, RideData, BuildingType, RideType, RIDE_SIZES } from '../types';
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
-
-const gltfLoader = new GLTFLoader();
+import { sharedGLTFLoader } from '../core/AssetLoader';
 
 export class Ride {
   public mesh: THREE.Group;
@@ -51,7 +49,8 @@ export class Ride {
     const capacities: Record<RideType, number> = {
       [RideType.CAROUSEL]: 8,
       [RideType.FERRIS_WHEEL]: 12,
-      [RideType.ROLLER_COASTER]: 16
+      [RideType.ROLLER_COASTER]: 16,
+      [RideType.HAUNTED_HOUSE]: 6
     };
     return capacities[type];
   }
@@ -60,7 +59,8 @@ export class Ride {
     const prices: Record<RideType, number> = {
       [RideType.CAROUSEL]: 5,
       [RideType.FERRIS_WHEEL]: 8,
-      [RideType.ROLLER_COASTER]: 12
+      [RideType.ROLLER_COASTER]: 12,
+      [RideType.HAUNTED_HOUSE]: 10
     };
     return prices[type];
   }
@@ -69,7 +69,8 @@ export class Ride {
     const durations: Record<RideType, number> = {
       [RideType.CAROUSEL]: 15,
       [RideType.FERRIS_WHEEL]: 20,
-      [RideType.ROLLER_COASTER]: 25
+      [RideType.ROLLER_COASTER]: 25,
+      [RideType.HAUNTED_HOUSE]: 30
     };
     return durations[type];
   }
@@ -78,7 +79,8 @@ export class Ride {
     const boosts: Record<RideType, number> = {
       [RideType.CAROUSEL]: 15,
       [RideType.FERRIS_WHEEL]: 25,
-      [RideType.ROLLER_COASTER]: 40
+      [RideType.ROLLER_COASTER]: 40,
+      [RideType.HAUNTED_HOUSE]: 30
     };
     return boosts[type];
   }
@@ -87,7 +89,8 @@ export class Ride {
     const intensities: Record<RideType, number> = {
       [RideType.CAROUSEL]: 35,
       [RideType.FERRIS_WHEEL]: 50,
-      [RideType.ROLLER_COASTER]: 82
+      [RideType.ROLLER_COASTER]: 82,
+      [RideType.HAUNTED_HOUSE]: 65
     };
     return intensities[type];
   }
@@ -96,7 +99,8 @@ export class Ride {
     const reliabilities: Record<RideType, number> = {
       [RideType.CAROUSEL]: 85,
       [RideType.FERRIS_WHEEL]: 80,
-      [RideType.ROLLER_COASTER]: 72
+      [RideType.ROLLER_COASTER]: 72,
+      [RideType.HAUNTED_HOUSE]: 78
     };
     return reliabilities[type];
   }
@@ -112,11 +116,14 @@ export class Ride {
       case RideType.ROLLER_COASTER:
         this.createRollerCoaster();
         break;
+      case RideType.HAUNTED_HOUSE:
+        this.createHauntedHouse();
+        break;
     }
   }
 
   private createCarousel(): void {
-    gltfLoader.load('/models/carusel.glb', (gltf) => {
+    sharedGLTFLoader.load('/models/carusel.glb', (gltf) => {
       const model = gltf.scene;
 
       // Fit model within the 2×2 footprint (4×4 world units), use 90% of it
@@ -150,7 +157,7 @@ export class Ride {
   }
 
   private createFerrisWheel(): void {
-    gltfLoader.load('/models/noria.glb', (gltf) => {
+    sharedGLTFLoader.load('/models/noria.glb', (gltf) => {
       const model = gltf.scene;
 
       const box = new THREE.Box3().setFromObject(model);
@@ -179,7 +186,7 @@ export class Ride {
   }
 
   private createRollerCoaster(): void {
-    gltfLoader.load('/models/rusa.glb', (gltf) => {
+    sharedGLTFLoader.load('/models/rusa.glb', (gltf) => {
       const model = gltf.scene;
 
       const box = new THREE.Box3().setFromObject(model);
@@ -204,6 +211,34 @@ export class Ride {
 
       this.mesh.add(model);
       this.rotationSpeed = 0; // Static unless the model has built-in animations
+    });
+  }
+
+  private createHauntedHouse(): void {
+    sharedGLTFLoader.load('/models/house.glb', (gltf) => {
+      const model = gltf.scene;
+
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.z);
+      const targetSize = GRID_SIZE * 3 * 0.85;
+      const scale = maxDim > 0 ? targetSize / maxDim : 1;
+      model.scale.setScalar(scale);
+
+      const scaledBox = new THREE.Box3().setFromObject(model);
+      const center = scaledBox.getCenter(new THREE.Vector3());
+      model.position.x -= center.x;
+      model.position.z -= center.z;
+      model.position.y -= scaledBox.min.y;
+
+      model.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      this.mesh.add(model);
     });
   }
 

@@ -43,6 +43,15 @@ export const RESEARCH_NODES: ResearchNode[] = [
     duration: 65,
     unlocks: [RideType.ROLLER_COASTER],
     dependencies: ['research_eye_of_doom']
+  },
+  {
+    id: 'research_haunted_house',
+    name: 'House of Screams',
+    description: 'Unlock the walk-through horror experience for a premium scare.',
+    cost: 800,
+    duration: 50,
+    unlocks: [RideType.HAUNTED_HOUSE],
+    dependencies: ['research_eye_of_doom']
   }
 ];
 

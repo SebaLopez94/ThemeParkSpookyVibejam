@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GameLoop } from './core/GameLoop';
 import { GameRenderer } from './core/Renderer';
 import { GameScene } from './core/Scene';
@@ -12,6 +11,7 @@ import { PathfindingSystem } from './systems/PathfindingSystem';
 import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
+import { sharedGLTFLoader } from './core/AssetLoader';
 import {
   BUILDING_DISPLAY,
   BuildingDefinition,
@@ -48,19 +48,25 @@ export class Game {
   private previewFloorMesh: THREE.Mesh | null = null;
   private previewEdges: THREE.LineSegments | null = null;
   private previewModelMeshes: THREE.Mesh[] = [];
-  private previewGreenMat: THREE.MeshStandardMaterial | null = null;
-  private previewRedMat: THREE.MeshStandardMaterial | null = null;
-  private previewEdgeGreenMat: THREE.LineBasicMaterial | null = null;
-  private previewEdgeRedMat: THREE.LineBasicMaterial | null = null;
+  // Persistent materials — created once, never disposed between placements
+  private readonly previewGreenMat = new THREE.MeshStandardMaterial({
+    color: 0x00ff88, transparent: true, opacity: 0.28,
+    emissive: 0x00ff88, emissiveIntensity: 0.15, depthWrite: false
+  });
+  private readonly previewRedMat = new THREE.MeshStandardMaterial({
+    color: 0xff3355, transparent: true, opacity: 0.28,
+    emissive: 0xff3355, emissiveIntensity: 0.15, depthWrite: false
+  });
+  private readonly previewEdgeGreenMat = new THREE.LineBasicMaterial({ color: 0x00ff88 });
+  private readonly previewEdgeRedMat  = new THREE.LineBasicMaterial({ color: 0xff3355 });
   private previewWidth = 1;
   private previewHeight = 1;
-
-  private static readonly previewLoader = new GLTFLoader();
 
   private static readonly MODEL_PATHS: Partial<Record<string, string>> = {
     [RideType.CAROUSEL]:         '/models/carusel.glb',
     [RideType.FERRIS_WHEEL]:     '/models/noria.glb',
     [RideType.ROLLER_COASTER]:   '/models/rusa.glb',
+    [RideType.HAUNTED_HOUSE]:    '/models/house.glb',
     [ShopType.FOOD_STALL]:       '/models/food.glb',
     [ShopType.DRINK_STAND]:      '/models/drinks.glb',
     [ShopType.GIFT_SHOP]:        '/models/gift.glb',
@@ -115,11 +121,12 @@ export class Game {
   }
 
   private initializeEntrance(): void {
-    for (let z = 45; z <= 49; z++) {
-      this.buildingSystem.placePath({ x: 24, z });
-      this.buildingSystem.placePath({ x: 25, z });
+    // Only pre-place 2 rows of path at the grid bottom edge — rest of the grid is freely buildable
+    for (let z = 23; z <= 24; z++) {
+      this.buildingSystem.placePath({ x: 12, z });
+      this.buildingSystem.placePath({ x: 13, z });
     }
-    this.visitorSystem.setEntrancePosition({ x: 24, z: 49 });
+    this.visitorSystem.setEntrancePosition({ x: 12, z: 24 });
   }
 
   private setupMouseControls(): void {
@@ -388,18 +395,6 @@ export class Game {
     this.previewGroup = new THREE.Group();
     this.previewGroup.visible = false;
 
-    // Shared materials
-    this.previewGreenMat = new THREE.MeshStandardMaterial({
-      color: 0x00ff88, transparent: true, opacity: 0.28,
-      emissive: 0x00ff88, emissiveIntensity: 0.15, depthWrite: false
-    });
-    this.previewRedMat = new THREE.MeshStandardMaterial({
-      color: 0xff3355, transparent: true, opacity: 0.28,
-      emissive: 0xff3355, emissiveIntensity: 0.15, depthWrite: false
-    });
-    this.previewEdgeGreenMat = new THREE.LineBasicMaterial({ color: 0x00ff88 });
-    this.previewEdgeRedMat  = new THREE.LineBasicMaterial({ color: 0xff3355 });
-
     // Thin footprint slab (floor indicator)
     const footprintGeo = new THREE.BoxGeometry(width * GRID_SIZE - 0.15, 0.08, height * GRID_SIZE - 0.15);
     this.previewFloorMesh = new THREE.Mesh(footprintGeo, this.previewGreenMat);
@@ -423,7 +418,7 @@ export class Game {
 
     const token = this.previewGroup; // capture to detect stale loads
 
-    Game.previewLoader.load(path, (gltf) => {
+    sharedGLTFLoader.load(path, (gltf) => {
       // Discard if a new preview was created while loading
       if (this.previewGroup !== token || !this.previewGroup) return;
 
@@ -508,25 +503,22 @@ export class Game {
     this.previewGroup.traverse(child => {
       if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
         child.geometry.dispose();
+        // Only dispose ghost model materials (not the persistent preview mats)
+        const isPreviewMat = (m: THREE.Material) =>
+          m === this.previewGreenMat || m === this.previewRedMat ||
+          m === this.previewEdgeGreenMat || m === this.previewEdgeRedMat;
         if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
+          child.material.forEach(m => { if (!isPreviewMat(m)) m.dispose(); });
         } else {
-          (child.material as THREE.Material).dispose();
+          if (!isPreviewMat(child.material as THREE.Material))
+            (child.material as THREE.Material).dispose();
         }
       }
     });
-    this.previewGreenMat?.dispose();
-    this.previewRedMat?.dispose();
-    this.previewEdgeGreenMat?.dispose();
-    this.previewEdgeRedMat?.dispose();
     this.previewGroup = null;
     this.previewFloorMesh = null;
     this.previewEdges = null;
     this.previewModelMeshes = [];
-    this.previewGreenMat = null;
-    this.previewRedMat = null;
-    this.previewEdgeGreenMat = null;
-    this.previewEdgeRedMat = null;
   }
 
   public selectBuilding(definition: BuildingDefinition): void {
@@ -619,8 +611,13 @@ export class Game {
     window.removeEventListener('keydown', this.keyHandler);
     this.mouseController.dispose();
     this.disposePreview();
+    this.previewGreenMat.dispose();
+    this.previewRedMat.dispose();
+    this.previewEdgeGreenMat.dispose();
+    this.previewEdgeRedMat.dispose();
     this.buildingSystem.clear();
     this.visitorSystem.clear();
+    this.scene.dispose();
     this.renderer.dispose();
   }
 }

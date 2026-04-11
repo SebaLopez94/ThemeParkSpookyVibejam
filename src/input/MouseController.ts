@@ -11,6 +11,9 @@ export class MouseController {
 
   private isRightDragging = false;
   private lastMousePosition: THREE.Vector2 = new THREE.Vector2();
+  private _currentPos: THREE.Vector2 = new THREE.Vector2();
+  private _delta: THREE.Vector2 = new THREE.Vector2();
+  private _intersection: THREE.Vector3 = new THREE.Vector3();
 
   private isLeftDragging = false;
   private lastDragGridPosition: GridPosition | null = null;
@@ -52,10 +55,10 @@ export class MouseController {
     this.updateMouseCoords(event);
 
     if (this.isRightDragging && event.buttons === 2) {
-      const currentPos = new THREE.Vector2(event.clientX, event.clientY);
-      const delta = new THREE.Vector2().subVectors(currentPos, this.lastMousePosition);
-      this.onCameraMove?.(delta);
-      this.lastMousePosition.copy(currentPos);
+      this._currentPos.set(event.clientX, event.clientY);
+      this._delta.subVectors(this._currentPos, this.lastMousePosition);
+      this.onCameraMove?.(this._delta);
+      this.lastMousePosition.copy(this._currentPos);
       return;
     }
 
@@ -134,10 +137,9 @@ export class MouseController {
 
   private getWorldPosition(): WorldPosition | null {
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersection = new THREE.Vector3();
-    const hit = this.raycaster.ray.intersectPlane(this.groundPlane, intersection);
+    const hit = this.raycaster.ray.intersectPlane(this.groundPlane, this._intersection);
     if (!hit) return null;
-    return { x: intersection.x, y: intersection.y, z: intersection.z };
+    return { x: this._intersection.x, y: this._intersection.y, z: this._intersection.z };
   }
 
   public dispose(): void {

@@ -63,7 +63,7 @@ export function ParkPanel({
               <span className="px-label" style={{ fontSize: 10 }}>VISITORS</span>
             </div>
             <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: 'var(--px-cyan)', textShadow: '1px 1px 0 #000' }}>
-              {economy.activeVisitors} / {economy.totalVisitors}
+              {economy.activeVisitors}
             </span>
           </div>
 

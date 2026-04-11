@@ -14,8 +14,8 @@ const PATH_DEFINITION: BuildingCatalogItem = {
   type: BuildingType.PATH,
   name: 'Cobbled Path',
   description: 'Directs visitor flow through the park',
-  cost: 1,
-  icon: '🪦',
+  cost: 0,
+  icon: '🛤️',
   quality: 0,
   valueScore: 0
 };
@@ -46,6 +46,15 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     quality: 82,
     valueScore: 12,
     unlockRequirement: 'research_terror_coaster'
+  },
+  [RideType.HAUNTED_HOUSE]: {
+    type: BuildingType.RIDE,
+    subType: RideType.HAUNTED_HOUSE,
+    ...BUILDING_DISPLAY[RideType.HAUNTED_HOUSE],
+    cost: 1000,
+    quality: 74,
+    valueScore: 10,
+    unlockRequirement: 'research_haunted_house'
   },
   [ShopType.FOOD_STALL]: {
     type: BuildingType.SHOP,
@@ -96,6 +105,22 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     quality: 52,
     valueScore: 0,
     unlockRequirement: 'research_pumpkin_lights'
+  },
+  [DecorationType.STONE]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.STONE,
+    ...BUILDING_DISPLAY[DecorationType.STONE],
+    cost: 80,
+    quality: 48,
+    valueScore: 0
+  },
+  [DecorationType.PUMPKIN]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.PUMPKIN,
+    ...BUILDING_DISPLAY[DecorationType.PUMPKIN],
+    cost: 60,
+    quality: 46,
+    valueScore: 0
   }
 };
 
@@ -104,7 +129,9 @@ export const INITIAL_UNLOCKED_BUILDINGS: PlaceableBuildingKind[] = [
   ShopType.FOOD_STALL,
   ShopType.DRINK_STAND,
   ServiceType.RESTROOM,
-  DecorationType.SPOOKY_TREE
+  DecorationType.SPOOKY_TREE,
+  DecorationType.STONE,
+  DecorationType.PUMPKIN
 ];
 
 export function getPathDefinition(): BuildingDefinition {

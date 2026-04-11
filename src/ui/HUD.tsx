@@ -13,7 +13,7 @@ export function HUD({ economy }: HUDProps) {
 
   const rows = [
     { label: 'Gold', value: `$${economy.money.toLocaleString()}`, color: 'var(--px-gold)', icon: Coins },
-    { label: 'Guests', value: `${economy.activeVisitors}/${economy.totalVisitors}`, color: 'var(--px-green-hi)', icon: Users },
+    { label: 'Guests', value: `${economy.activeVisitors}`, color: 'var(--px-green-hi)', icon: Users },
     { label: 'Joy', value: `${economy.averageHappiness}/100`, color: 'var(--px-green-hi)', icon: HeartPulse },
     { label: 'Park Rating', value: `${economy.parkRating}/100`, color: 'var(--px-cyan)', icon: Landmark },
     { label: 'Income', value: `$${economy.dailyIncome.toLocaleString()}`, color: 'var(--px-gold)', icon: TrendingUp },

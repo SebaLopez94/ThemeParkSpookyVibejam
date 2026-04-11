@@ -1,8 +1,8 @@
 import { GridPosition, WorldPosition } from '../types';
 
 export const GRID_SIZE = 2;
-export const GRID_WIDTH = 50;
-export const GRID_HEIGHT = 50;
+export const GRID_WIDTH = 25;
+export const GRID_HEIGHT = 25;
 
 // Offset so grid center maps to world origin
 const GRID_OFFSET_X = -(GRID_WIDTH * GRID_SIZE) / 2;
