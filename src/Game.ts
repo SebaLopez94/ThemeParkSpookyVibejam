@@ -378,7 +378,7 @@ export class Game {
 
   public deleteBuilding(position: GridPosition): void {
     const result = this.buildingSystem.getBuildingAtCell(position);
-    let cost = 1;
+    let cost = 0;
     if (result) {
       if ('ride' in result) cost = result.ride.data.cost;
       if ('shop' in result) cost = result.shop.data.cost;
@@ -388,10 +388,12 @@ export class Game {
 
     if (!this.buildingSystem.removeBuilding(position)) return;
 
-    const refund = cost <= 1 ? 1 : Math.floor(cost * 0.5);
-    this.economySystem.addMoney(refund);
+    const refund = cost <= 0 ? 0 : Math.floor(cost * 0.5);
+    if (refund > 0) {
+      this.economySystem.addMoney(refund);
+      this.showFloatingText(`+$${refund}`, position, '#22c55e');
+    }
     this.onBuildingSelected?.(null);
-    this.showFloatingText(`+$${refund}`, position, '#22c55e');
   }
 
   private showFloatingText(text: string, gridPos: GridPosition, color: string): void {
@@ -529,7 +531,13 @@ export class Game {
       const center = scaled.getCenter(new THREE.Vector3());
       model.position.x -= center.x;
       model.position.z -= center.z;
-      model.position.y -= scaled.min.y;
+      
+      if (path === '/models/house.glb') {
+        model.position.y -= scaled.min.y + 1.2;
+        model.scale.setScalar(scale * 0.75); // Match the scale reduction ratio from earlier
+      } else {
+        model.position.y -= scaled.min.y;
+      }
 
       // Ghost tinted material — semi-transparent, coloured by validity
       this.previewModelMeshes = [];
@@ -671,9 +679,9 @@ export class Game {
       // Recurring maintenance costs per second
       const counts = this.buildingSystem.getBuildingCounts();
       const maintenance =
-        counts[BuildingType.RIDE]    * 2 +
-        counts[BuildingType.SHOP]    * 1 +
-        counts[BuildingType.SERVICE] * 1;
+        counts[BuildingType.RIDE]    * 0.5 +
+        counts[BuildingType.SHOP]    * 0.2 +
+        counts[BuildingType.SERVICE] * 0.2;
       if (maintenance > 0) this.economySystem.chargeMaintenance(maintenance);
       const completed = this.challengeSystem.update(this.RATING_UPDATE_INTERVAL, {
         totalVisitors: this.economySystem.getState().totalVisitors,

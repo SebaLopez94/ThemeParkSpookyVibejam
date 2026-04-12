@@ -1,0 +1,17 @@
+{
+  "name": "Theme Park Vibes",
+  "short_name": "Park Vibes",
+  "description": "Build a spooky haunted theme park — retro 3D tycoon game.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0e0a1e",
+  "theme_color": "#0e0a1e",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

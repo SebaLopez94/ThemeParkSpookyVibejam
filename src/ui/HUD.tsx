@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Coins, HeartPulse, Landmark, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import { EconomyState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 function Stars({ count }: { count: number }) {
   return (
-    <span style={{ fontSize: 14, letterSpacing: 1, color: 'var(--px-gold)', textShadow: '0 0 6px rgba(251,191,36,0.5)' }}>
+    <span style={{ fontSize: 18, letterSpacing: 2, color: 'var(--px-gold)', textShadow: '0 0 6px rgba(251,191,36,0.5)' }}>
       {'★'.repeat(count)}{'☆'.repeat(5 - count)}
     </span>
   );
@@ -23,6 +23,7 @@ export function HUD({ economy }: HUDProps) {
 
   const [joyStars, setJoyStars] = useState(() => Math.round(economy.averageHappiness / 20));
   const [ratingStars, setRatingStars] = useState(() => Math.round(economy.parkRating / 20));
+  const [moneyFlash, setMoneyFlash] = useState<'green' | 'red' | null>(null);
   useEffect(() => {
     const s = Math.round(economy.averageHappiness / 20);
     setJoyStars(prev => prev === s ? prev : s);
@@ -31,6 +32,14 @@ export function HUD({ economy }: HUDProps) {
     const s = Math.round(economy.parkRating / 20);
     setRatingStars(prev => prev === s ? prev : s);
   }, [economy.parkRating]);
+
+  const prevMoneyRef2 = useRef(economy.money);
+  useEffect(() => {
+    const diff = economy.money - prevMoneyRef2.current;
+    if (diff > 0) { setMoneyFlash('green'); setTimeout(() => setMoneyFlash(null), 500); }
+    else if (diff < 0) { setMoneyFlash('red'); setTimeout(() => setMoneyFlash(null), 500); }
+    prevMoneyRef2.current = economy.money;
+  }, [economy.money]);
 
   if (!mounted) return null;
 
@@ -72,7 +81,10 @@ export function HUD({ economy }: HUDProps) {
                 <Coins size={sz} color="var(--px-gold)" />
                 <span className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>GOLD</span>
               </div>
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 12 : 15, color: 'var(--px-gold)', textShadow: '0 0 8px rgba(251,191,36,0.4), 2px 2px 0 #000' }}>
+              <span
+                className={moneyFlash === 'green' ? 'px-flash-green' : moneyFlash === 'red' ? 'px-flash-red' : ''}
+                style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 12 : 15, color: 'var(--px-gold)', textShadow: '0 0 8px rgba(251,191,36,0.4), 2px 2px 0 #000' }}
+              >
                 ${economy.money.toLocaleString()}
               </span>
             </div>

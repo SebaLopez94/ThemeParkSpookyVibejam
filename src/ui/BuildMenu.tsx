@@ -33,6 +33,7 @@ function getSizeLabel(def: BuildingDefinition): string {
 export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuildings, bottom }: BuildMenuProps) {
   const [activeTab, setActiveTab] = useState<Tab>('paths');
   const [hovered, setHovered] = useState<BuildingDefinition | null>(null);
+  const [expanded, setExpanded] = useState<BuildingDefinition | null>(null);
   const isMobile = useIsMobile();
 
   const catalog = getAllCatalogItems();
@@ -84,7 +85,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
               <button key={id}
                 className={`px-btn ${activeTab === id ? 'px-btn--active' : ''}`}
                 style={{ flex: 1, padding: '8px 4px', fontSize: 9, flexDirection: 'column', gap: 3, justifyContent: 'center' }}
-                onClick={() => { setActiveTab(id); setHovered(null); }}
+                onClick={() => { setActiveTab(id); setHovered(null); setExpanded(null); }}
               >
                 <Icon size={14} />
                 <span>{label}</span>
@@ -92,15 +93,50 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
             ))}
           </div>
 
+          {/* Expanded item detail sheet */}
+          {expanded && (
+            <div style={{ margin: '8px 8px 0', padding: '12px 14px', background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(139,92,246,0.3)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="px-emoji" style={{ fontSize: 28 }}>{expanded.icon}</span>
+                <div>
+                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-green-hi)', marginBottom: 4 }}>{expanded.name}</div>
+                  <div className="px-body" style={{ fontSize: 11, lineHeight: 1.6 }}>{expanded.description}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: canAfford(expanded.cost) ? 'var(--px-gold)' : 'var(--px-red)' }}>${expanded.cost}</span>
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-muted)' }}>{getSizeLabel(expanded)}</span>
+                <div style={{ flex: 1 }} />
+                <button className="px-btn" style={{ fontSize: 9, padding: '8px 12px' }} onClick={() => setExpanded(null)}>
+                  <X size={12} />
+                </button>
+                <button
+                  className="px-btn"
+                  style={{ fontSize: 9, padding: '8px 12px', background: canAfford(expanded.cost) ? undefined : 'rgba(0,0,0,0.3)' }}
+                  disabled={!canAfford(expanded.cost)}
+                  onClick={() => { onSelectBuilding(expanded); setExpanded(null); }}
+                >
+                  BUILD
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Items grid — scrollable */}
           <div className="px-scroll-hidden" style={{ overflowY: 'auto', padding: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
             {items.map(def => {
               const affordable = canAfford(def.cost);
+              const isExpanded = expanded === def;
               return (
                 <button key={`${def.type}:${def.subType ?? def.name}`}
                   className={`px-card${!affordable ? ' px-card--disabled' : ''}`}
-                  style={{ padding: '10px 6px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-                  onClick={() => affordable && onSelectBuilding(def)}
+                  style={{ padding: '10px 6px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, outline: isExpanded ? '2px solid var(--px-border)' : 'none', outlineOffset: 2 }}
+                  aria-label={`${def.name}, $${def.cost}${!affordable ? ', cannot afford' : ''}`}
+                  onClick={() => {
+                    if (!affordable) return;
+                    if (isExpanded) { onSelectBuilding(def); setExpanded(null); }
+                    else setExpanded(def);
+                  }}
                 >
                   <div className="px-emoji" style={{ fontSize: 26 }}>{def.icon}</div>
                   <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, textAlign: 'center', lineHeight: 1.5, wordBreak: 'break-word', color: 'var(--px-text)' }}>

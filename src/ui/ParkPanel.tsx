@@ -33,19 +33,23 @@ export function ParkPanel({
         <div style={{ padding: '10px 14px 14px', display: 'grid', gap: 12 }}>
 
           {/* ── Park Status Toggle ─────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {economy.isOpen ? <Unlock size={14} color="var(--px-green-hi)" /> : <Lock size={14} color="var(--px-red)" />}
               <span className="px-label" style={{ fontSize: 10 }}>PARK STATUS</span>
             </div>
-            <button
-              className={`px-btn ${economy.isOpen ? 'px-btn--active' : ''}`}
-              onClick={() => onToggleParkOpen(!economy.isOpen)}
-              style={{ padding: '6px 12px', fontSize: 10, minWidth: 80 }}
-            >
-              {economy.isOpen ? 'OPEN' : 'CLOSED'}
-            </button>
-          </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: economy.isOpen ? 'var(--px-green-hi)' : 'var(--px-red)' }}>
+                {economy.isOpen ? 'OPEN' : 'CLOSED'}
+              </span>
+              <input
+                type="checkbox"
+                checked={economy.isOpen}
+                onChange={e => onToggleParkOpen(e.target.checked)}
+                style={{ width: 18, height: 18, accentColor: 'var(--px-green)', cursor: 'pointer' }}
+              />
+            </div>
+          </label>
 
           <hr className="px-divider" />
 
@@ -60,6 +64,9 @@ export function ParkPanel({
               <input
                 className="px-input"
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                aria-label="Entry ticket price (0–50)"
                 min={0}
                 max={50}
                 value={localTicketPrice}

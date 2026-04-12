@@ -37,7 +37,7 @@ export class VisitorSystem {
   private scene: THREE.Scene;
   private pathfinding: PathfindingSystem;
   private spawnTimer = 0;
-  private spawnInterval = 14;
+  private spawnInterval = 28;
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
 
@@ -56,7 +56,7 @@ export class VisitorSystem {
 
   public update(deltaTime: number, entities: SimulationEntities): void {
     this.spawnTimer += deltaTime;
-    if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < 30) {
+    if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < 20) {
       this.spawnVisitor();
       this.spawnTimer = 0;
     }

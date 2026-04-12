@@ -24,20 +24,31 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
           </div>
         )}
         <div style={{ padding: '10px 16px 18px' }}>
-          {state.activeResearchId && (
-            <div className="px-stat" style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Clock3 size={16} color="var(--px-cyan)" />
-                <div className="px-label">Active Project</div>
+          {state.activeResearchId && (() => {
+            const activeNode = nodes.find(n => n.id === state.activeResearchId);
+            const pct = activeNode ? Math.max(0, Math.min(100, 100 - (state.remainingTime / activeNode.duration) * 100)) : 0;
+            const mins = Math.floor(state.remainingTime / 60);
+            const secs = Math.ceil(state.remainingTime % 60);
+            const timeLabel = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+            return (
+              <div className="px-stat" style={{ marginBottom: 14, background: 'rgba(103,232,249,0.07)', border: '1px solid rgba(103,232,249,0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Clock3 size={14} color="var(--px-cyan)" />
+                    <div className="px-label" style={{ fontSize: 9 }}>RESEARCHING</div>
+                  </div>
+                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-cyan)' }}>{timeLabel}</span>
+                </div>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: 'var(--px-green-hi)', marginBottom: 8 }}>
+                  {activeNode?.name}
+                </div>
+                {/* Timer progress bar */}
+                <div style={{ height: 10, background: '#0a0612', border: '2px solid rgba(255,255,255,0.1)', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: 'linear-gradient(90deg, var(--px-border), var(--px-cyan))', boxShadow: '0 0 6px rgba(103,232,249,0.5)', transition: 'width 1s linear' }} />
+                </div>
               </div>
-              <div className="px-stat__value" style={{ fontSize: 12, color: 'var(--px-green-hi)', lineHeight: 1.9 }}>
-                {nodes.find(node => node.id === state.activeResearchId)?.name}
-              </div>
-              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-muted)', marginTop: 6 }}>
-                {Math.ceil(state.remainingTime)}s remaining
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div style={{ display: 'grid', gap: 10 }}>
             {nodes.map(node => {

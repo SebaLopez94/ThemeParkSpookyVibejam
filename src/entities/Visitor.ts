@@ -26,7 +26,7 @@ export class Visitor {
         thirst: 100,
         hygiene: 100,
         money: 30 + Math.floor(Math.random() * 71),
-        happiness: 70
+        happiness: 30
       },
       currentActivity: null,
       activityTimer: 0,

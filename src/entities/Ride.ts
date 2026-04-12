@@ -67,10 +67,10 @@ export class Ride {
 
   private getRideDuration(type: RideType): number {
     const durations: Record<RideType, number> = {
-      [RideType.CAROUSEL]: 15,
-      [RideType.FERRIS_WHEEL]: 20,
-      [RideType.ROLLER_COASTER]: 25,
-      [RideType.HAUNTED_HOUSE]: 30
+      [RideType.CAROUSEL]: 30,
+      [RideType.FERRIS_WHEEL]: 40,
+      [RideType.ROLLER_COASTER]: 50,
+      [RideType.HAUNTED_HOUSE]: 45
     };
     return durations[type];
   }
@@ -221,7 +221,7 @@ export class Ride {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.z);
-      const targetSize = GRID_SIZE * 3 * 0.85;
+      const targetSize = GRID_SIZE * 3 * 0.65;
       const scale = maxDim > 0 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -229,7 +229,8 @@ export class Ride {
       const center = scaledBox.getCenter(new THREE.Vector3());
       model.position.x -= center.x;
       model.position.z -= center.z;
-      model.position.y -= scaledBox.min.y;
+      // Sink it into the ground a bit so it isn't too tall
+      model.position.y -= scaledBox.min.y + 1.2;
 
       model.traverse(child => {
         if (child instanceof THREE.Mesh) {

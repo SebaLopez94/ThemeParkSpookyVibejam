@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
-import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, Volume2, VolumeX, XCircle } from 'lucide-react';
+import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, Trash2, Volume2, VolumeX, XCircle } from 'lucide-react';
 import { Game } from './Game';
 import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
@@ -11,6 +11,7 @@ import { ParkPanel } from './ui/ParkPanel';
 import { ResearchPanel } from './ui/ResearchPanel';
 import { ToastItem, ToastStack } from './ui/ToastStack';
 import {
+  BuildingType,
   ChallengeState,
   EconomyState,
   BuildingDefinition,
@@ -241,10 +242,15 @@ function App() {
         <div className="px-side-tab-column">
           <button
             className="px-btn px-side-tab px-side-tab--challenges"
+            style={{ position: 'relative' }}
+            aria-label="Challenges"
             onClick={() => setShowChallenges(v => !v)}
           >
             <ScrollText />
             CHALLENGES
+            {challenges.some(c => c.completed && !c.claimed) && (
+              <span className="px-notif-dot" aria-hidden="true" />
+            )}
           </button>
           {showChallenges && <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />}
         </div>
@@ -274,7 +280,7 @@ function App() {
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45 }}>
           {/* Active panel — full width, scrollable, above nav bar */}
           {(showParkPanel || showChallenges || showResearch) && (
-            <div style={{ padding: '0 8px 8px', maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
+            <div style={{ padding: '0 8px 8px', maxHeight: 'calc(100dvh - 160px - var(--safe-bottom))', overflowY: 'auto' }}>
               {showParkPanel && (
                 <ParkPanel
                   economy={economy}
@@ -302,9 +308,11 @@ function App() {
             </div>
           )}
           {/* Nav bar */}
-          <div style={{ display: 'flex', gap: 6, padding: '0 8px 8px', background: 'rgba(10,5,20,0.85)' }}>
+          <div className="px-nav-bar">
             <button
               className={`px-btn px-mobile-tab px-side-tab--park${showParkPanel ? ' px-btn--active' : ''}`}
+              aria-label="Manage Park"
+              aria-pressed={showParkPanel}
               onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); }}
             >
               <Landmark size={16} />
@@ -312,13 +320,21 @@ function App() {
             </button>
             <button
               className={`px-btn px-mobile-tab px-side-tab--challenges${showChallenges ? ' px-btn--active' : ''}`}
+              style={{ position: 'relative' }}
+              aria-label="View Challenges"
+              aria-pressed={showChallenges}
               onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
             >
               <ScrollText size={16} />
               GOALS
+              {challenges.some(c => c.completed && !c.claimed) && (
+                <span className="px-notif-dot" aria-hidden="true" />
+              )}
             </button>
             <button
               className={`px-btn px-mobile-tab px-side-tab--research${showResearch ? ' px-btn--active' : ''}`}
+              aria-label="Research Buildings"
+              aria-pressed={showResearch}
               onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
             >
               <FlaskConical size={16} />
@@ -328,10 +344,10 @@ function App() {
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: isMobile ? 90 : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
+      <div style={{ position: 'fixed', bottom: isMobile ? 'calc(72px + var(--safe-bottom))' : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
         <button
           className="px-btn px-btn--lg"
-          title="Place path (free)"
+          aria-label="Place path (free)"
           onClick={() => {
             handleSelectBuilding(getPathDefinition());
             setShowBuildMenu(false);
@@ -342,6 +358,8 @@ function App() {
         </button>
         <button
           className="px-btn px-btn--lg"
+          aria-label="Open build menu"
+          aria-expanded={showBuildMenu}
           onClick={() => {
             setShowBuildMenu(value => !value);
             setSelectedBuilding(null);
@@ -356,6 +374,8 @@ function App() {
         <button
           className="px-btn"
           style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, fontSize: 22, justifyContent: 'center', flexShrink: 0 }}
+          aria-label="How to play"
+          aria-expanded={showHelp}
           onClick={() => {
             setShowHelp(value => !value);
             setShowBuildMenu(false);
@@ -367,7 +387,8 @@ function App() {
           className="px-btn"
           style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, justifyContent: 'center', flexShrink: 0 }}
           onClick={handleToggleMute}
-          title={isMuted ? "Unmute audio" : "Mute audio"}
+          aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
+          aria-pressed={isMuted}
         >
           {isMuted ? <VolumeX /> : <Volume2 />}
         </button>
@@ -402,24 +423,38 @@ function App() {
                 <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: 'var(--px-green-hi)' }}>
                   {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
                 </span>
-                <button className="px-btn px-btn--danger" style={{ padding: '8px 14px', fontSize: 11 }} onClick={handleCancelBuildMode}>
-                  <XCircle size={14} /> CANCEL
-                </button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {activeBuildDefinition.type === BuildingType.PATH && (
+                    <button className="px-btn px-btn--danger" style={{ padding: '8px 14px', fontSize: 11 }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
+                      <Trash2 size={14} /> DELETE
+                    </button>
+                  )}
+                  <button className="px-btn px-btn--danger" style={{ padding: '8px 14px', fontSize: 11 }} onClick={handleCancelBuildMode}>
+                    <XCircle size={14} /> CANCEL
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         ) : (
           /* Desktop: full info panel */
           <div style={{ position: 'fixed', bottom: 16, left: 16, zIndex: 45 }}>
-            <div className="px-panel px-panel--controls" style={{ padding: 0, width: 420 }}>
+            <div className="px-panel px-panel--controls" style={{ padding: 0, width: activeBuildDefinition.type === BuildingType.PATH ? 480 : 420 }}>
               <div className="px-titlebar">
                 <span className="px-titlebar__label">
                   <MousePointer2 size={16} />
                   BUILD MODE — {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
                 </span>
-                <button className="px-btn px-btn--danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={handleCancelBuildMode}>
-                  <XCircle size={13} /> CANCEL
-                </button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {activeBuildDefinition.type === BuildingType.PATH && (
+                    <button className="px-btn px-btn--danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
+                      <Trash2 size={13} /> DELETE
+                    </button>
+                  )}
+                  <button className="px-btn px-btn--danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={handleCancelBuildMode}>
+                    <XCircle size={13} /> CANCEL
+                  </button>
+                </div>
               </div>
               <div style={{ padding: '12px 16px 16px' }}>
                 <div className="px-chip-row">
@@ -506,7 +541,7 @@ function App() {
               {/* Economy */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $2/s, shops $1/s.
+                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $0.5/s, shops $0.2/s.
               </div>
 
               <hr className="px-divider" />
