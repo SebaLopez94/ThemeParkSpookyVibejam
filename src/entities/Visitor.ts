@@ -77,12 +77,12 @@ export class Visitor {
       targetPosition: null,
       path: [],
       needs: {
-        fun: 50,
-        hunger: 100,
-        thirst: 100,
-        hygiene: 100,
+        fun: 0,        // no fun yet — visitor hasn't done anything in the park
+        hunger: 60,    // travelled here, somewhat hungry
+        thirst: 60,    // somewhat thirsty
+        hygiene: 85,   // arrived clean
         money: 30 + Math.floor(Math.random() * 71),
-        happiness: 30
+        happiness: 0 * 0.4 + 60 * 0.2 + 60 * 0.2 + 85 * 0.2 // = 41 → NEUTRAL
       },
       currentActivity: null,
       activityTimer: 0,
@@ -275,7 +275,7 @@ export class Visitor {
   }
 
   private updateNeeds(deltaTime: number): void {
-    this.data.needs.fun = Math.max(0, this.data.needs.fun - deltaTime * 1.0);
+    this.data.needs.fun = Math.max(0, this.data.needs.fun - deltaTime * 0.7);
     this.data.needs.hunger = Math.max(0, this.data.needs.hunger - deltaTime * 0.6);
     this.data.needs.thirst = Math.max(0, this.data.needs.thirst - deltaTime * 0.8);
     this.data.needs.hygiene = Math.max(0, this.data.needs.hygiene - deltaTime * 0.45);

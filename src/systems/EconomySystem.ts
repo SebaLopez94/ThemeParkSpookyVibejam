@@ -7,11 +7,11 @@ export class EconomySystem {
   constructor() {
     this.state = {
       money: 3500,
-      ticketPrice: 8,
+      ticketPrice: 2,
       totalVisitors: 0,
       activeVisitors: 0,
       parkRating: 10,
-      averageHappiness: 10,
+      averageHappiness: 50,
       dailyIncome: 0,
       dailyExpenses: 0,
       netProfit: 0,
@@ -93,7 +93,8 @@ export class EconomySystem {
                        : diversityTypes === 2 ? 69
                        : 92;
 
-    this.state.averageHappiness = Math.round(averageHappiness);
+    const smoothed = this.state.averageHappiness * 0.7 + averageHappiness * 0.3;
+    this.state.averageHappiness = Math.round(smoothed);
     this.state.parkRating = Math.max(10, Math.min(visitorCap, diversityCap, Math.round(happinessComponent + facilityComponent + decorationComponent)));
   }
 

@@ -31,6 +31,15 @@ function Stars({ count, mobile }: { count: number; mobile: boolean }) {
   );
 }
 
+function happinessToFaceIndex(h: number): number {
+  if (h < 20) return 0; // FURIOUS
+  if (h < 38) return 1; // SAD
+  if (h < 52) return 2; // NEUTRAL
+  if (h < 66) return 3; // HAPPY
+  if (h < 80) return 4; // GREAT
+  return 5;             // AMAZING
+}
+
 const JOY_FACES: Array<{ emoji: string; label: string; color: string }> = [
   { emoji: '😡', label: 'FURIOUS',  color: '#ef4444' },
   { emoji: '😢', label: 'SAD',      color: '#93c5fd' },
@@ -63,7 +72,7 @@ export function HUD({ economy }: HUDProps) {
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isMobile);
-  const [joyStars, setJoyStars] = useState(() => Math.round(economy.averageHappiness / 20));
+  const [joyStars, setJoyStars] = useState(() => happinessToFaceIndex(economy.averageHappiness));
   const [ratingStars, setRatingStars] = useState(() => Math.round(economy.parkRating / 20));
   const [moneyFlash, setMoneyFlash] = useState<'green' | 'red' | null>(null);
   const prevMoneyRef = useRef(economy.money);
@@ -74,7 +83,7 @@ export function HUD({ economy }: HUDProps) {
 
   useEffect(() => {
     setJoyStars(prev => {
-      const next = Math.round(economy.averageHappiness / 20);
+      const next = happinessToFaceIndex(economy.averageHappiness);
       return prev === next ? prev : next;
     });
   }, [economy.averageHappiness]);

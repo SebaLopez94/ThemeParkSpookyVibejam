@@ -28,7 +28,7 @@ function App() {
 
   const [economy, setEconomy] = useState<EconomyState>({
     money: 3500,
-    ticketPrice: 8,
+    ticketPrice: 2,
     totalVisitors: 0,
     activeVisitors: 0,
     parkRating: 10,
@@ -54,7 +54,7 @@ function App() {
   }));
   const [researchNodes, setResearchNodes] = useState<ResearchNode[]>([]);
   const [challenges, setChallenges] = useState<ChallengeState[]>([]);
-  const [localTicketPrice, setLocalTicketPrice] = useState(8);
+  const [localTicketPrice, setLocalTicketPrice] = useState(2);
   const [showResearch, setShowResearch] = useState(false);
   const [showChallenges, setShowChallenges] = useState(false);
   const [showParkPanel, setShowParkPanel] = useState(false);
@@ -612,7 +612,7 @@ function App() {
               {/* Economy */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $4/20s, shops $2/20s. Set prices per building — too expensive and visitors reject them.
+                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & attractions. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $6/20s, shops $3/20s, services $2/20s. Entry ticket is cheap ($2 default) — real money comes from rides and shops.
               </div>
 
               <hr className="px-divider" />

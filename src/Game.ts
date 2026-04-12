@@ -880,9 +880,9 @@ export class Game {
       
       const counts = this.buildingSystem.getBuildingCounts();
       const maintenance =
-        counts[BuildingType.RIDE]    * 4 +
-        counts[BuildingType.SHOP]    * 2 +
-        counts[BuildingType.SERVICE] * 1;
+        counts[BuildingType.RIDE]    * 6 +
+        counts[BuildingType.SHOP]    * 3 +
+        counts[BuildingType.SERVICE] * 2;
         
       if (maintenance > 0) this.economySystem.chargeMaintenance(maintenance);
     }
