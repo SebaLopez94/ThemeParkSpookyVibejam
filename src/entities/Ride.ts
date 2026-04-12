@@ -67,10 +67,10 @@ export class Ride {
 
   private getRideDuration(type: RideType): number {
     const durations: Record<RideType, number> = {
-      [RideType.CAROUSEL]: 30,
-      [RideType.FERRIS_WHEEL]: 40,
-      [RideType.ROLLER_COASTER]: 50,
-      [RideType.HAUNTED_HOUSE]: 45
+      [RideType.CAROUSEL]: 8,
+      [RideType.FERRIS_WHEEL]: 12,
+      [RideType.ROLLER_COASTER]: 10,
+      [RideType.HAUNTED_HOUSE]: 11
     };
     return durations[type];
   }

@@ -6,7 +6,7 @@ import { Shop } from '../entities/Shop';
 import { Visitor } from '../entities/Visitor';
 import { PathfindingSystem } from './PathfindingSystem';
 import { GridHelper } from '../utils/GridHelper';
-import { GridPosition, ShopType, VisitorNeedType } from '../types';
+import { GridPosition, ShopType, VisitorNeedType, VisitorThought } from '../types';
 
 type VisitorTargetType = 'ride' | 'shop' | 'service' | 'wander';
 
@@ -37,9 +37,10 @@ export class VisitorSystem {
   private scene: THREE.Scene;
   private pathfinding: PathfindingSystem;
   private spawnTimer = 0;
-  private spawnInterval = 20 + Math.random() * 12;
+  private spawnInterval = 15 + Math.random() * 8;
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
+  private readonly maxVisitors = 22;
 
   public onVisitorSpawn: (() => void) | null = null;
   public onVisitorLeave: (() => void) | null = null;
@@ -56,10 +57,10 @@ export class VisitorSystem {
 
   public update(deltaTime: number, entities: SimulationEntities): void {
     this.spawnTimer += deltaTime;
-    if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < 18) {
+    if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < this.maxVisitors) {
       this.spawnVisitor();
       this.spawnTimer = 0;
-      this.spawnInterval = 20 + Math.random() * 12;
+      this.spawnInterval = 15 + Math.random() * 8;
     }
 
     const densityMap = this.buildDensityMap();
@@ -67,6 +68,7 @@ export class VisitorSystem {
 
     this.visitors.forEach((visitor, id) => {
       visitor.update(deltaTime);
+      this.tryShowAmbientMood(visitor);
 
       if (visitor.data.needs.money <= 0 || visitor.data.needs.happiness < 15) {
         toRemove.push(id);
@@ -114,11 +116,16 @@ export class VisitorSystem {
       const ride = entities.rides.find(item => item.data.id === target.id);
       if (!ride) return;
 
+      visitor.faceWorldPosition(ride.mesh.position);
+
       const fairness = this.getPriceFairness(ride.data.price, ride.data.valueScore, ride.data.quality);
       if (!this.acceptPrice(visitor, fairness, 'price')) return;
       if (visitor.spendMoney(ride.data.price)) {
         this.onVisitorSpend?.(ride.data.price);
-        visitor.boostFun(ride.data.funFactor);
+        const decorBonus = Math.min(entities.getLocalDecorationBonus(ride.data.accessCell), 20);
+        const funBoost = Math.min(100, ride.data.funFactor * (ride.data.price / 5) + decorBonus);
+        visitor.boostFun(funBoost);
+        visitor.markRideUsed(ride.data.id);
         visitor.startActivity('ride', ride.data.duration);
         if (fairness < 0.45) visitor.adjustHappiness(-6);
       }
@@ -132,6 +139,7 @@ export class VisitorSystem {
       const fairness = this.getPriceFairness(shop.data.price, shop.data.valueScore, shop.data.quality);
       if (!this.acceptPrice(visitor, fairness, 'price')) return;
       if (visitor.spendMoney(shop.data.price)) {
+        visitor.faceWorldPosition(shop.mesh.position);
         this.onVisitorSpend?.(shop.data.price);
         Object.entries(shop.data.satisfactionEffects).forEach(([need, amount]) => {
           visitor.boostNeed(need as VisitorNeedType, amount ?? 0);
@@ -141,6 +149,12 @@ export class VisitorSystem {
         } else if (fairness < 0.45) {
           visitor.adjustHappiness(-4);
         }
+        visitor.showMoodWithOptions({
+          kind: 'shopping',
+          emoji: this.getShopActivityEmoji(shop.data.shopType),
+          message: 'Buying something.',
+          duration: 10,
+        }, { force: true, cooldownSeconds: 2 });
         visitor.startActivity('shop', 10);
       }
       return;
@@ -153,11 +167,18 @@ export class VisitorSystem {
       const fairness = this.getPriceFairness(service.data.price, service.data.valueScore, service.data.quality);
       if (!this.acceptPrice(visitor, fairness, 'price')) return;
       if (visitor.spendMoney(service.data.price)) {
+        visitor.faceWorldPosition(service.mesh.position);
         this.onVisitorSpend?.(service.data.price);
         Object.entries(service.data.satisfactionEffects).forEach(([need, amount]) => {
           visitor.boostNeed(need as VisitorNeedType, amount ?? 0);
         });
         if (fairness < 0.5) visitor.adjustHappiness(-2);
+        visitor.showMoodWithOptions({
+          kind: 'shopping',
+          emoji: '🚻',
+          message: 'Using the restroom.',
+          duration: 8,
+        }, { force: true, cooldownSeconds: 2 });
         visitor.startActivity('service', 8);
       }
       return;
@@ -166,7 +187,12 @@ export class VisitorSystem {
     const currentGridPos = GridHelper.worldToGrid(visitor.data.position);
     const localDensity = densityMap.get(GridHelper.getGridKey(currentGridPos)) ?? 0;
     if (localDensity > 3) {
-      visitor.setThought({ type: 'crowd', message: 'This path is too crowded.' });
+      this.showPriorityMood(visitor, {
+        kind: 'crowded',
+        emoji: '😤',
+        message: 'This path is too crowded.',
+        duration: 1.9,
+      });
       visitor.adjustHappiness(-2);
     }
   }
@@ -216,7 +242,12 @@ export class VisitorSystem {
       const wanderType = entities.isOpen ? 'wander' : 'leaving';
       this.visitorTargets.set(visitor.data.id, { type: 'wander', id: `${wanderType}:${targetPos.x},${targetPos.z}` });
       if (entities.isOpen && (densityMap.get(GridHelper.getGridKey(currentGridPos)) ?? 0) > 3) {
-        visitor.setThought({ type: 'crowd', message: 'Need some breathing room.' });
+        this.showPriorityMood(visitor, {
+          kind: 'crowded',
+          emoji: '😤',
+          message: 'Need some breathing room.',
+          duration: 1.8,
+        });
       }
     }
   }
@@ -232,7 +263,7 @@ export class VisitorSystem {
     if (funNeed < 0.12) return null;
 
     return this.pickBestTarget(
-      rides.map(ride => ({
+      rides.filter(ride => visitor.canUseRide(ride.data.id)).map(ride => ({
         id: ride.data.id,
         type: 'ride' as const,
         accessCell: ride.data.accessCell,
@@ -331,7 +362,7 @@ export class VisitorSystem {
       if (candidate.baseNeedScore <= 0 || visitor.data.needs.money < candidate.price) return;
 
       const path = this.pathfinding.findPath(current, candidate.accessCell);
-      if (path.length === 0) return;
+      if (path.length <= 1) return; // Skip if already at destination
 
       const fairness = this.getPriceFairness(candidate.price, candidate.valueScore, candidate.quality);
       const density = densityMap.get(GridHelper.getGridKey(candidate.accessCell)) ?? 0;
@@ -356,13 +387,88 @@ export class VisitorSystem {
   private acceptPrice(visitor: Visitor, fairness: number, thoughtType: 'price'): boolean {
     const priceTolerance = Math.max(0.1, Math.min(0.95, fairness + visitor.data.needs.happiness / 200));
     if (Math.random() <= priceTolerance) {
-      visitor.setThought(null);
+      visitor.clearMood('price');
       return true;
     }
 
-    visitor.setThought({ type: thoughtType, message: 'Too expensive for what it offers.' });
+    this.showPriorityMood(visitor, {
+      kind: thoughtType,
+      emoji: '💸',
+      message: 'Too expensive for what it offers.',
+      duration: 2.1,
+    });
     visitor.adjustHappiness(-3);
     return false;
+  }
+
+  private showPriorityMood(visitor: Visitor, mood: VisitorThought): void {
+    if (!visitor.canShowMood(mood.kind)) return;
+    visitor.showMood(mood);
+  }
+
+  private tryShowAmbientMood(visitor: Visitor): void {
+    const needs = visitor.data.needs;
+
+    const hungerSeverity = THREE.MathUtils.clamp((55 - needs.hunger) / 35, 0, 1);
+    const thirstSeverity = THREE.MathUtils.clamp((60 - needs.thirst) / 35, 0, 1);
+    const boredSeverity = THREE.MathUtils.clamp((40 - needs.fun) / 25, 0, 1);
+    const sadSeverity = THREE.MathUtils.clamp((38 - needs.happiness) / 22, 0, 1);
+    const sickSeverity = THREE.MathUtils.clamp((18 - needs.hygiene) / 14, 0, 1);
+    const happySeverity = THREE.MathUtils.clamp((needs.happiness - 78) / 18, 0, 1);
+
+    const moods: Array<{ thought: VisitorThought; threshold: boolean; chancePerTick: number }> = [
+      {
+        thought: { kind: 'sick', emoji: '🤢', message: 'This place feels gross.', duration: 2.1 },
+        threshold: sickSeverity > 0,
+        chancePerTick: 0.003 + sickSeverity * 0.012,
+      },
+      {
+        thought: { kind: 'hunger', emoji: '🍔', message: 'I need food.', duration: 1.9 },
+        threshold: hungerSeverity > 0,
+        chancePerTick: 0.008 + hungerSeverity * 0.02,
+      },
+      {
+        thought: { kind: 'thirst', emoji: '🥤', message: 'I need a drink.', duration: 1.9 },
+        threshold: thirstSeverity > 0,
+        chancePerTick: 0.008 + thirstSeverity * 0.02,
+      },
+      {
+        thought: { kind: 'bored', emoji: '🥱', message: 'This park needs more fun.', duration: 1.8 },
+        threshold: boredSeverity > 0,
+        chancePerTick: 0.005 + boredSeverity * 0.012,
+      },
+      {
+        thought: { kind: 'sad', emoji: '☹️', message: 'I am not having a great time.', duration: 1.8 },
+        threshold: sadSeverity > 0,
+        chancePerTick: 0.004 + sadSeverity * 0.01,
+      },
+      {
+        thought: { kind: 'happy', emoji: '😊', message: 'This place is great!', duration: 1.7 },
+        threshold: happySeverity > 0,
+        chancePerTick: 0.0015 + happySeverity * 0.003,
+      },
+    ];
+
+    for (const mood of moods) {
+      if (!mood.threshold) continue;
+      if (!visitor.canShowMood(mood.thought.kind)) continue;
+      if (Math.random() > mood.chancePerTick) continue;
+      visitor.showMood(mood.thought);
+      return;
+    }
+  }
+
+  private getShopActivityEmoji(type: ShopType): string {
+    switch (type) {
+      case ShopType.FOOD_STALL:
+        return '🍲';
+      case ShopType.DRINK_STAND:
+        return '🥤';
+      case ShopType.GIFT_SHOP:
+        return '🛍️';
+      default:
+        return '🛒';
+    }
   }
 
   private buildDensityMap(): Map<string, number> {

@@ -46,7 +46,11 @@ export class Game {
   private backgroundMusic: THREE.Audio;
   private windAudio: THREE.Audio;
   private nightAudio: THREE.Audio;
+  private ambience1Audio: THREE.Audio;
+  private ambience2Audio: THREE.Audio;
   private nextWindTime = 0;
+  private nextAmbience1Time = 0;
+  private nextAmbience2Time = 0;
   private isMuted = false;
   private audioResumeEvents: Array<keyof WindowEventMap> = ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'];
   private audioResumeHandler = (): void => {
@@ -138,6 +142,8 @@ export class Game {
     this.backgroundMusic = new THREE.Audio(this.audioListener);
     this.windAudio = new THREE.Audio(this.audioListener);
     this.nightAudio = new THREE.Audio(this.audioListener);
+    this.ambience1Audio = new THREE.Audio(this.audioListener);
+    this.ambience2Audio = new THREE.Audio(this.audioListener);
     this.loadAudio();
 
     this.renderer.initPostProcessing(this.scene.scene, this.scene.camera);
@@ -187,6 +193,20 @@ export class Game {
       this.nightAudio.setBuffer(buffer);
       tryPlay(this.nightAudio, 0.04, true);
     });
+
+    audioLoader.load('/audio/ambience1.mp3', (buffer) => {
+      this.ambience1Audio.setBuffer(buffer);
+      this.ambience1Audio.setLoop(false);
+      this.ambience1Audio.setVolume(this.isMuted ? 0 : 0.09);
+      this.nextAmbience1Time = Math.random() * 10 + 12;
+    });
+
+    audioLoader.load('/audio/ambience2.mp3', (buffer) => {
+      this.ambience2Audio.setBuffer(buffer);
+      this.ambience2Audio.setLoop(false);
+      this.ambience2Audio.setVolume(this.isMuted ? 0 : 0.08);
+      this.nextAmbience2Time = Math.random() * 14 + 20;
+    });
   }
 
   public setMuted(muted: boolean): void {
@@ -199,6 +219,12 @@ export class Game {
     }
     if (this.nightAudio) {
       this.nightAudio.setVolume(muted ? 0 : 0.04);
+    }
+    if (this.ambience1Audio) {
+      this.ambience1Audio.setVolume(muted ? 0 : 0.09);
+    }
+    if (this.ambience2Audio) {
+      this.ambience2Audio.setVolume(muted ? 0 : 0.08);
     }
     if (!muted) {
       void this.ensureAudioRunning();
@@ -828,6 +854,26 @@ export class Game {
       }
     }
 
+    if (this.ambience1Audio.buffer && !this.isMuted) {
+      this.nextAmbience1Time -= deltaTime;
+      if (this.nextAmbience1Time <= 0) {
+        if (!this.ambience1Audio.isPlaying && this.audioListener.context.state === 'running') {
+          this.ambience1Audio.play();
+        }
+        this.nextAmbience1Time = Math.random() * 18 + 22; // Next ambience 1 in 22-40s
+      }
+    }
+
+    if (this.ambience2Audio.buffer && !this.isMuted) {
+      this.nextAmbience2Time -= deltaTime;
+      if (this.nextAmbience2Time <= 0) {
+        if (!this.ambience2Audio.isPlaying && this.audioListener.context.state === 'running') {
+          this.ambience2Audio.play();
+        }
+        this.nextAmbience2Time = Math.random() * 22 + 28; // Next ambience 2 in 28-50s
+      }
+    }
+
     this.maintenanceUpdateTimer += deltaTime;
     if (this.maintenanceUpdateTimer >= this.MAINTENANCE_UPDATE_INTERVAL) {
       this.maintenanceUpdateTimer = 0;
@@ -925,6 +971,10 @@ export class Game {
     this.scene.dispose();
     this.renderer.dispose();
     if (this.backgroundMusic.isPlaying) this.backgroundMusic.stop();
+    if (this.windAudio.isPlaying) this.windAudio.stop();
+    if (this.nightAudio.isPlaying) this.nightAudio.stop();
+    if (this.ambience1Audio.isPlaying) this.ambience1Audio.stop();
+    if (this.ambience2Audio.isPlaying) this.ambience2Audio.stop();
     this.scene.camera.remove(this.audioListener);
   }
 }

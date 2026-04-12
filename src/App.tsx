@@ -517,6 +517,7 @@ function App() {
                     ['TAP', 'Place or select'],
                     ['TAP + DRAG', 'Draw paths'],
                     ['TAP BUILDING', 'Manage / delete'],
+                    ['SWIPE on build bar', 'Rotate building'],
                   ].map(([key, desc]) => (
                     <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 6px', background: 'rgba(0,0,0,0.25)' }}>
                       <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)', flexShrink: 0 }}>{key}</span>
@@ -561,8 +562,49 @@ function App() {
 
               {/* Visitors */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>VISITORS</div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined, marginBottom: 8 }}>
+                Visitors enter through the gate and wander paths looking for rides, food, and drinks. They have four needs that decay over time:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 8 }}>
+                {[
+                  ['🎢 FUN',      'Satisfied by rides'],
+                  ['🍔 HUNGER',   'Satisfied by food stalls'],
+                  ['🥤 THIRST',   'Satisfied by drink stands'],
+                  ['🚽 HYGIENE',  'Satisfied by restrooms'],
+                ].map(([need, desc]) => (
+                  <div key={need} style={{ padding: '5px 7px', background: 'rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-green-hi)' }}>{need}</span>
+                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-text)' }}>{desc}</span>
+                  </div>
+                ))}
+              </div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Visitors enter through the gate and pay the entry fee. They wander paths looking for rides and food. Unhappy visitors drag down your Joy and Rating stars.
+                Visitors won't re-enter the same ride for <b style={{ color: 'var(--px-gold)' }}>2 minutes</b>, and won't buy food or drinks right after having them. Unhappy visitors leave and drag down your Joy and Rating stars.
+              </div>
+
+              <hr className="px-divider" />
+
+              {/* Rides */}
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>RIDES & DECORATIONS</div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined, marginBottom: 8 }}>
+                <b style={{ color: 'var(--px-gold)' }}>Pricier rides give more fun.</b> A cheap carousel barely satisfies — a roller coaster thrills. Fun is calculated from the ride's ticket price and its quality.
+              </div>
+              <div style={{ display: 'grid', gap: 4, marginBottom: 8 }}>
+                {[
+                  ['🎠 CAROUSEL',       '$4', '★★☆☆☆  low fun'],
+                  ['🎡 FERRIS WHEEL',   '$6', '★★★☆☆  moderate'],
+                  ['👻 HAUNTED HOUSE',  '$8', '★★★★☆  great fun'],
+                  ['🎢 ROLLER COASTER', '$10','★★★★★  max fun'],
+                ].map(([ride, price, stars]) => (
+                  <div key={ride} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '5px 7px', background: 'rgba(0,0,0,0.25)' }}>
+                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-text)', flexShrink: 0 }}>{ride}</span>
+                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-gold)', flexShrink: 0 }}>{price}</span>
+                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(251,191,36,0.7)', textAlign: 'right' }}>{stars}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
+                Place <b style={{ color: 'var(--px-green-hi)' }}>decorations</b> near attractions for a bonus fun boost — the more decoration around a ride, the happier visitors leave it.
               </div>
 
               <hr className="px-divider" />
@@ -570,7 +612,7 @@ function App() {
               {/* Economy */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $4/20s, shops $2/20s.
+                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $4/20s, shops $2/20s. Set prices per building — too expensive and visitors reject them.
               </div>
 
               <hr className="px-divider" />

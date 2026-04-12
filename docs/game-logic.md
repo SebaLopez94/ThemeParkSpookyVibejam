@@ -157,6 +157,39 @@ Visitors score reachable targets using:
 
 If no strong target exists, they wander to another path tile. If the park is closed, they head to the entrance instead.
 
+### Visitor mood emojis
+
+- Visitors can occasionally show a small emoji above their head as an in-world mood signal.
+- Emojis are contextual and temporary, not permanent status markers.
+- Only one emoji is shown per visitor at a time.
+- The system is intentionally throttled with cooldowns and random chance so the park does not become visually noisy.
+
+Current mood mapping:
+
+- low `hunger` -> food emoji
+- low `thirst` -> drink emoji
+- low `fun` -> bored emoji
+- high `happiness` -> happy emoji
+- low `happiness` -> sad emoji
+- very low `hygiene` -> sick / disgust emoji
+- crowd frustration -> annoyed emoji
+- price rejection -> money / frustration emoji
+
+Priority order:
+
+1. price rejection and crowd frustration
+2. hygiene / sick reaction
+3. hunger and thirst
+4. boredom
+5. sadness
+6. happiness
+
+Notes:
+
+- Happy emojis are intentionally rarer than negative need feedback.
+- Visitors do not keep an emoji visible all the time even if the same need remains low.
+- Ride invisibility suppresses the emoji while the visitor is hidden inside the attraction.
+
 ## 5. Building Effects on Visitors
 
 ### Rides

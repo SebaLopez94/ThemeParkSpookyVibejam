@@ -12,7 +12,7 @@ export class CameraController {
   private currentDistance = 38; // Starts a bit closer
   private panSpeed = 0.34;
   private readonly zoomStep = 3.2;
-  private readonly verticalRatio = 0.78;
+  private readonly verticalRatio = 0.95;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;

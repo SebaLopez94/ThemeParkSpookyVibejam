@@ -141,9 +141,13 @@ export interface VisitorNeeds {
   happiness: number;
 }
 
+export type VisitorMoodKind = 'hunger' | 'thirst' | 'bored' | 'happy' | 'sad' | 'sick' | 'crowded' | 'price' | 'shopping';
+
 export interface VisitorThought {
-  type: 'price' | 'crowd' | 'need';
+  kind: VisitorMoodKind;
+  emoji: string;
   message: string;
+  duration: number;
 }
 
 export interface VisitorData {

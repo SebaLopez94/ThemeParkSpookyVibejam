@@ -31,6 +31,30 @@ function Stars({ count, mobile }: { count: number; mobile: boolean }) {
   );
 }
 
+const JOY_FACES: Array<{ emoji: string; label: string; color: string }> = [
+  { emoji: '😡', label: 'FURIOUS',  color: '#ef4444' },
+  { emoji: '😢', label: 'SAD',      color: '#93c5fd' },
+  { emoji: '😐', label: 'NEUTRAL',  color: '#94a3b8' },
+  { emoji: '🙂', label: 'HAPPY',    color: '#86efac' },
+  { emoji: '😄', label: 'GREAT',    color: '#4ade80' },
+  { emoji: '🤩', label: 'AMAZING',  color: '#fbbf24' },
+];
+
+function JoyFace({ stars, mobile }: { stars: number; mobile: boolean }) {
+  const idx = Math.max(0, Math.min(5, stars));
+  const { emoji, label, color } = JOY_FACES[idx];
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: mobile ? 4 : 6 }}>
+      <span style={{ fontSize: mobile ? 22 : 26, lineHeight: 1, filter: 'drop-shadow(1px 1px 0 #000)' }}>
+        {emoji}
+      </span>
+      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: mobile ? 8 : 9, color, textShadow: '1px 1px 0 #000' }}>
+        {label}
+      </span>
+    </span>
+  );
+}
+
 interface HUDProps {
   economy: EconomyState;
 }
@@ -161,6 +185,7 @@ export function HUD({ economy }: HUDProps) {
                 label="Guest Joy"
                 stars={joyStars}
                 mobile={isMobile}
+                type="face"
               />
               <InlineRating
                 icon={<Landmark className="px-icon-sm" color="var(--px-cyan)" />}
@@ -201,11 +226,13 @@ function InlineRating({
   label,
   stars,
   mobile,
+  type = 'stars',
 }: {
   icon: React.ReactNode;
   label: string;
   stars: number;
   mobile: boolean;
+  type?: 'stars' | 'face';
 }) {
   return (
     <div className="px-hud-rating">
@@ -213,7 +240,7 @@ function InlineRating({
         {icon}
         <span className="px-label">{label}</span>
       </div>
-      <Stars count={stars} mobile={mobile} />
+      {type === 'face' ? <JoyFace stars={stars} mobile={mobile} /> : <Stars count={stars} mobile={mobile} />}
     </div>
   );
 }
