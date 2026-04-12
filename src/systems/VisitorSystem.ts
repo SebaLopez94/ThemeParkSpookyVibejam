@@ -389,7 +389,7 @@ export class VisitorSystem {
   }
 
   public getAverageHappiness(): number {
-    if (this.visitors.size === 0) return 50;
+    if (this.visitors.size === 0) return 10;
     let total = 0;
     this.visitors.forEach(visitor => {
       total += visitor.data.needs.happiness;

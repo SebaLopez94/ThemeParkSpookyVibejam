@@ -39,23 +39,36 @@ export class Visitor {
   }
 
   private loadModel(): void {
-    const model = Math.random() < 0.5 ? '/models/kid1.glb' : '/models/kid2.glb';
-    sharedGLTFLoader.load(model, (gltf) => {
+    const modelPath = Math.random() < 0.5 ? '/models/kid1.glb' : '/models/kid2.glb';
+    sharedGLTFLoader.load(modelPath, (gltf) => {
       const model = gltf.scene;
       model.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(model);
       const height = box.getSize(new THREE.Vector3()).y;
       const scale = height > 0.01 ? 0.9 / height : 0.5;
 
+      const yNudge = modelPath.includes('kid2') ? 0.12 : 0.05;
       model.scale.setScalar(scale);
-      model.position.y = -box.min.y * scale + 0.05;
+      model.position.y = -box.min.y * scale + yNudge;
 
       model.traverse(child => {
-        if (child instanceof THREE.SkinnedMesh) {
+        if (child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh) {
           child.castShadow = true;
-          child.frustumCulled = false; // SkinnedMesh bounding sphere can be wrong mid-animation
-        } else if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
+          child.frustumCulled = false;
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach(mat => {
+            if (!mat) return;
+            // Fix transparent / alpha materials (e.g. face planes layered over head)
+            if (mat.alphaTest > 0 || mat.transparent) {
+              mat.transparent = true;
+              mat.depthWrite = false;
+              mat.alphaTest = 0;
+            }
+            // Prevent z-fighting on overlapping geometry
+            mat.polygonOffset = true;
+            mat.polygonOffsetFactor = -1;
+            mat.polygonOffsetUnits = -1;
+          });
         }
       });
 

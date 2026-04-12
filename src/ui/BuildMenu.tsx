@@ -73,7 +73,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
                 <Trash2 size={13} />
               </button>
               <button className="px-btn" style={{ fontSize: 10, padding: '6px 10px' }} onClick={onCancel}>
-                <X size={13} /> CLOSE
+                <X size={13} />
               </button>
             </div>
           </div>

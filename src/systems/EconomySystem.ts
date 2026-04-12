@@ -70,7 +70,7 @@ export class EconomySystem {
     const decorationComponent = Math.min(decorationAppeal, 10);
 
     this.state.averageHappiness = Math.round(averageHappiness);
-    this.state.parkRating = Math.round(happinessComponent + facilityComponent + decorationComponent);
+    this.state.parkRating = Math.max(10, Math.round(happinessComponent + facilityComponent + decorationComponent));
     this.notifyListeners();
   }
 
