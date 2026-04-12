@@ -21,8 +21,8 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
       <div className="px-panel px-panel--research" style={{ padding: 0 }}>
         {onClose && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
-            <button className="px-btn" style={{ padding: '4px 8px', minHeight: 0 }} onClick={onClose}>
-              <X size={14} />
+            <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose}>
+              <X />
             </button>
           </div>
         )}
@@ -37,7 +37,7 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
               <div className="px-stat" style={{ marginBottom: 14, padding: isMobile ? 8 : undefined, background: 'rgba(103,232,249,0.07)', border: '1px solid rgba(103,232,249,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Clock3 size={isMobile ? 12 : 14} color="var(--px-cyan)" />
+                    <Clock3 className="px-icon-sm" color="var(--px-cyan)" />
                     <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>RESEARCHING</div>
                   </div>
                   <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 9, color: 'var(--px-cyan)' }}>{timeLabel}</span>
@@ -102,7 +102,7 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
                         IN PROGRESS
                       </span>
                     ) : !unlocked ? (
-                      <LockKeyhole size={isMobile ? 12 : 14} color="var(--px-muted)" />
+                      <LockKeyhole className="px-icon-sm" color="var(--px-muted)" />
                     ) : null}
                   </div>
                   <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 10, color: 'var(--px-muted)', lineHeight: isMobile ? 1.5 : 1.9, marginTop: 8, padding: isMobile ? '0 8px' : undefined }}>
@@ -120,18 +120,18 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
                   </div>
                   <div className="px-chip-row" style={{ marginTop: isMobile ? 6 : 10, padding: isMobile ? '0 8px' : undefined }}>
                     <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : undefined }}>
-                      <FlaskConical size={isMobile ? 12 : 16} />
+                      <FlaskConical className="px-icon-sm" />
                       ${node.cost}
                     </div>
                     <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : undefined }}>
-                      <Clock3 size={isMobile ? 12 : 16} />
+                      <Clock3 className="px-icon-sm" />
                       {node.duration}s
                     </div>
                   </div>
                   <div style={{ marginTop: isMobile ? 8 : 12, display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '0 8px 8px' : undefined }}>
                     <button
-                      className={`px-btn ${completed ? 'px-btn--active' : ''}`}
-                      style={{ fontSize: 10, padding: '10px 14px', opacity: disabled ? 0.5 : 1 }}
+                      className={`px-btn px-btn--sm ${completed ? 'px-btn--active' : ''}`}
+                      style={{ opacity: disabled ? 0.5 : 1 }}
                       disabled={disabled}
                       onClick={() => onStartResearch(node.id)}
                     >

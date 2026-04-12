@@ -59,7 +59,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
   if (isMobile) {
     return (
       <div style={{ position: 'fixed', bottom: bottom ?? 90, left: 0, right: 0, zIndex: 40 }}>
-        <div className="px-panel px-panel--build" style={{ padding: 0, margin: '0 8px', maxHeight: 'calc(100vh - 220px)', display: 'flex', flexDirection: 'column' }}>
+        <div className="px-panel px-panel--build px-anim-enter-up" style={{ padding: 0, margin: '0 8px', maxHeight: 'calc(100vh - 220px)', display: 'flex', flexDirection: 'column' }}>
 
           {/* Titlebar */}
           <div className="px-titlebar px-titlebar--build" style={{ flexShrink: 0, padding: '4px 8px' }}>
@@ -155,7 +155,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
 
   return (
     <div style={{ position: 'fixed', bottom: bottom ?? 16, left: '50%', transform: 'translateX(-50%)', zIndex: 40 }}>
-      <div className="px-panel px-panel--build" style={{ width: 740, maxWidth: '96vw', padding: 0 }}>
+      <div className="px-panel px-panel--build px-anim-enter-up" style={{ width: 740, maxWidth: '96vw', padding: 0 }}>
 
         {/* ── Title bar ──────────────────────────────────────────────── */}
         <div className="px-titlebar px-titlebar--build">

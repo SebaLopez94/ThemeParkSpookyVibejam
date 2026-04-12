@@ -136,6 +136,8 @@ function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showHelp, selectedBuilding, showBuildMenu, isPlacing]);
 
+  const isMobile = useIsMobile();
+
   const handleSelectBuilding = (definition: BuildingDefinition) => {
     gameRef.current?.selectBuilding(definition);
     setShowBuildMenu(false);
@@ -143,7 +145,9 @@ function App() {
     setIsPlacing(true);
     setBuildRotation(0);
     setActiveBuildDefinition(definition);
-    pushToast('info', `Placing ${definition.name}. Left click to build, Esc or right click to cancel.`);
+    if (!isMobile) {
+      pushToast('info', `Placing ${definition.name}. Left click to build, Esc or right click to cancel.`);
+    }
   };
 
   const handleCancelBuildMode = () => {
@@ -175,7 +179,7 @@ function App() {
       cost: info.buildCost,
       icon: info.icon
     });
-    pushToast('info', `Moving ${info.name}. Choose a new valid tile.`);
+    if (!isMobile) pushToast('info', `Moving ${info.name}. Choose a new valid tile.`);
   };
 
   const handlePriceChange = (position: GridPosition, newPrice: number) => {
@@ -203,7 +207,6 @@ function App() {
     [researchNodes, researchState.activeResearchId]
   );
 
-  const isMobile = useIsMobile();
   const controlsRight = 16;
 
   return (
@@ -224,18 +227,20 @@ function App() {
             MANAGE PARK
           </button>
           {showParkPanel && (
-            <ParkPanel
-              economy={economy}
-              localTicketPrice={localTicketPrice}
-              onTicketPriceChange={value => setLocalTicketPrice(value)}
-              onTicketPriceCommit={handleTicketCommit}
-              onToggleParkOpen={isOpen => {
-                gameRef.current?.setParkOpen(isOpen);
-                pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
-              }}
-              activeResearchLabel={activeResearchLabel}
-              onClose={() => setShowParkPanel(false)}
-            />
+            <div className="px-anim-enter-scale">
+              <ParkPanel
+                economy={economy}
+                localTicketPrice={localTicketPrice}
+                onTicketPriceChange={value => setLocalTicketPrice(value)}
+                onTicketPriceCommit={handleTicketCommit}
+                onToggleParkOpen={isOpen => {
+                  gameRef.current?.setParkOpen(isOpen);
+                  pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
+                }}
+                activeResearchLabel={activeResearchLabel}
+                onClose={() => setShowParkPanel(false)}
+              />
+            </div>
           )}
         </div>
 
@@ -244,7 +249,7 @@ function App() {
             className="px-btn px-side-tab px-side-tab--challenges"
             style={{ position: 'relative' }}
             aria-label="Challenges"
-            onClick={() => setShowChallenges(v => !v)}
+            onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
           >
             <ScrollText />
             CHALLENGES
@@ -252,25 +257,31 @@ function App() {
               <span className="px-notif-dot" aria-hidden="true" />
             )}
           </button>
-          {showChallenges && <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />}
+          {showChallenges && (
+            <div className="px-anim-enter-scale">
+              <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />
+            </div>
+          )}
         </div>
 
         <div className="px-side-tab-column">
           <button
             className="px-btn px-side-tab px-side-tab--research"
-            onClick={() => setShowResearch(v => !v)}
+            onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
           >
             <FlaskConical />
             RESEARCH
           </button>
           {showResearch && (
-            <ResearchPanel
-              nodes={researchNodes}
-              state={researchState}
-              onStartResearch={id => gameRef.current?.startResearch(id)}
-              canAffordResearch={cost => canAfford(cost)}
-              onClose={() => setShowResearch(false)}
-            />
+            <div className="px-anim-enter-scale">
+              <ResearchPanel
+                nodes={researchNodes}
+                state={researchState}
+                onStartResearch={id => gameRef.current?.startResearch(id)}
+                canAffordResearch={cost => canAfford(cost)}
+                onClose={() => setShowResearch(false)}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -280,7 +291,7 @@ function App() {
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45 }}>
           {/* Active panel — full width, scrollable, above nav bar */}
           {(showParkPanel || showChallenges || showResearch) && (
-            <div style={{ padding: '0 8px 8px', maxHeight: 'calc(100dvh - 160px - var(--safe-bottom))', overflowY: 'auto' }}>
+            <div className="px-anim-enter-up" style={{ padding: '0 8px 8px', maxHeight: 'calc(100dvh - 160px - var(--safe-bottom))', overflowY: 'auto' }}>
               {showParkPanel && (
                 <ParkPanel
                   economy={economy}
@@ -344,7 +355,7 @@ function App() {
         </div>
       )}
 
-      {!(isMobile && (showParkPanel || showChallenges || showResearch)) && (
+      {!(isMobile && (showParkPanel || showChallenges || showResearch || isPlacing)) && (
         <div style={{ position: 'fixed', bottom: isMobile ? 'calc(72px + var(--safe-bottom))' : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
           <button
           className="px-btn px-btn--lg"
@@ -420,7 +431,7 @@ function App() {
         isMobile ? (
           /* Mobile: minimal bar — building name + cancel */
           <div style={{ position: 'fixed', bottom: 90, left: 8, right: 8, zIndex: 46 }}>
-            <div className="px-panel px-panel--controls" style={{ padding: 0 }}>
+            <div className="px-panel px-panel--controls px-anim-enter-up" style={{ padding: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px' }}>
                 <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)' }}>
                   {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
@@ -441,7 +452,7 @@ function App() {
         ) : (
           /* Desktop: full info panel */
           <div style={{ position: 'fixed', bottom: 16, left: 16, zIndex: 45 }}>
-            <div className="px-panel px-panel--controls" style={{ padding: 0, width: activeBuildDefinition.type === BuildingType.PATH ? 480 : 420 }}>
+            <div className="px-panel px-panel--controls px-anim-enter-up" style={{ padding: 0, width: activeBuildDefinition.type === BuildingType.PATH ? 480 : 420 }}>
               <div className="px-titlebar">
                 <span className="px-titlebar__label">
                   <MousePointer2 size={16} />
@@ -571,27 +582,16 @@ function App() {
       )}
 
       {celebration && (
-        <div style={{
-          position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 100, pointerEvents: 'none'
-        }}>
-          <div style={{ animation: 'px-celebrate 0.35s cubic-bezier(0.22,1,0.36,1) both', textAlign: 'center' }}>
-            <div style={{
-              background: 'linear-gradient(180deg, #2d1a00 0%, #1a0d00 100%)',
-              border: '4px solid #f59e0b',
-              boxShadow: '0 0 40px rgba(251,191,36,0.5), 6px 6px 0 #000',
-              padding: '28px 48px',
-              maxWidth: '90vw'
-            }}>
-              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(14px, 4vw, 22px)', color: '#fbbf24', textShadow: '2px 2px 0 #000', lineHeight: 1.6 }}>
-                {celebration.title}
-              </div>
-              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(9px, 2vw, 11px)', color: '#d9f99d', marginTop: 12, lineHeight: 1.8 }}>
-                {celebration.sub}
-              </div>
-              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(16px, 4vw, 26px)', color: '#4ade80', textShadow: '2px 2px 0 #000', marginTop: 16 }}>
-                +${celebration.reward.toLocaleString()}
-              </div>
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, pointerEvents: 'none' }}>
+          <div className="px-celebration">
+            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(14px, 4vw, 22px)', color: 'var(--px-gold)', textShadow: '2px 2px 0 #000', lineHeight: 1.6 }}>
+              {celebration.title}
+            </div>
+            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(9px, 2vw, 11px)', color: 'var(--px-green-hi)', marginTop: 12, lineHeight: 1.8 }}>
+              {celebration.sub}
+            </div>
+            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(16px, 4vw, 26px)', color: 'var(--px-green-hi)', textShadow: '2px 2px 0 #000', marginTop: 16 }}>
+              +${celebration.reward.toLocaleString()}
             </div>
           </div>
         </div>

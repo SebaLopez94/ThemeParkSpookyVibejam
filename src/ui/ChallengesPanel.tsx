@@ -23,8 +23,8 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
       <div className="px-panel px-panel--challenges" style={{ padding: 0 }}>
         {onClose && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
-            <button className="px-btn" style={{ padding: '4px 8px', minHeight: 0 }} onClick={onClose}>
-              <X size={14} />
+            <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose}>
+              <X />
             </button>
           </div>
         )}
@@ -54,12 +54,12 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Goal size={isMobile ? 14 : 18} color={completed ? 'var(--px-green-hi)' : 'var(--px-orange)'} />
+                    <Goal className="px-icon-md" color={completed ? 'var(--px-green-hi)' : 'var(--px-orange)'} />
                     <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 10 : 13, color: 'var(--px-text)', lineHeight: isMobile ? 1.5 : 1.9 }}>
                       {challenge.title}
                     </div>
                   </div>
-                  {completed && <Star size={isMobile ? 14 : 18} color="var(--px-green-hi)" />}
+                  {completed && <Star className="px-icon-md" color="var(--px-green-hi)" />}
                 </div>
                 <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 11, color: 'var(--px-muted)', lineHeight: isMobile ? 1.6 : 2, marginTop: isMobile ? 6 : 10 }}>
                   {challenge.description}

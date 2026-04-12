@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 
 function Stars({ count }: { count: number }) {
   return (
-    <span style={{ fontSize: 18, letterSpacing: 2, color: 'var(--px-gold)', textShadow: '0 0 6px rgba(251,191,36,0.5)' }}>
+    <span style={{ fontSize: 22, letterSpacing: 3, color: 'var(--px-gold)', textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>
       {'★'.repeat(count)}{'☆'.repeat(5 - count)}
     </span>
   );
@@ -44,8 +44,6 @@ export function HUD({ economy }: HUDProps) {
   if (!mounted) return null;
 
   const netColor = economy.netProfit >= 0 ? 'var(--px-green-hi)' : 'var(--px-red)';
-  const sz = isMobile ? 12 : 13;
-
   return (
     <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 40, maxWidth: 'calc(100vw - 32px)' }}>
       <div className="px-panel px-panel--hud" style={{ padding: 0, minWidth: isMobile ? 180 : 300 }}>
@@ -53,7 +51,7 @@ export function HUD({ economy }: HUDProps) {
         {/* Titlebar */}
         <div className="px-titlebar px-titlebar--hud">
           <span className="px-titlebar__label" style={{ gap: 6 }}>
-            <Landmark size={isMobile ? 13 : 15} />
+            <Landmark className="px-icon-sm" />
             <span style={{ fontSize: isMobile ? 9 : 11 }}>PARK LIVE</span>
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -63,11 +61,11 @@ export function HUD({ economy }: HUDProps) {
               </span>
             )}
             <button
-              className="px-btn"
-              style={{ padding: '2px 6px', minHeight: 0 }}
+              className="px-btn px-btn--sm"
+              aria-label={collapsed ? 'Expand HUD' : 'Collapse HUD'}
               onClick={() => setCollapsed(v => !v)}
             >
-              {collapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+              {collapsed ? <ChevronDown /> : <ChevronUp />}
             </button>
           </div>
         </div>
@@ -78,7 +76,7 @@ export function HUD({ economy }: HUDProps) {
             {/* Money — full width highlight */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.18)', padding: isMobile ? '6px 8px' : '8px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Coins size={sz} color="var(--px-gold)" />
+                <Coins className="px-icon-sm" color="var(--px-gold)" />
                 <span className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>GOLD</span>
               </div>
               <span
@@ -91,9 +89,9 @@ export function HUD({ economy }: HUDProps) {
 
             {/* 2-col grid: Guests + Net */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-              <StatBox icon={<Users size={sz} color="var(--px-cyan)" />} label="GUESTS" value={`${economy.activeVisitors}`} color="var(--px-cyan)" mobile={isMobile} />
+              <StatBox icon={<Users className="px-icon-sm" color="var(--px-cyan)" />} label="GUESTS" value={`${economy.activeVisitors}`} color="var(--px-cyan)" mobile={isMobile} />
               <StatBox
-                icon={<TrendingUp size={sz} color={netColor} />}
+                icon={<TrendingUp className="px-icon-sm" color={netColor} />}
                 label="NET"
                 value={`${economy.netProfit >= 0 ? '+' : ''}$${economy.netProfit.toLocaleString()}`}
                 color={netColor}
@@ -103,15 +101,15 @@ export function HUD({ economy }: HUDProps) {
 
             {/* Joy + Rating */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-              <StarBox icon={<HeartPulse size={sz} color="var(--px-green-hi)" />} label="JOY" count={joyStars} mobile={isMobile} />
-              <StarBox icon={<Landmark size={sz} color="var(--px-cyan)" />} label="RATING" count={ratingStars} mobile={isMobile} />
+              <StarBox icon={<HeartPulse className="px-icon-sm" color="var(--px-green-hi)" />} label="JOY" count={joyStars} mobile={isMobile} />
+              <StarBox icon={<Landmark className="px-icon-sm" color="var(--px-cyan)" />} label="RATING" count={ratingStars} mobile={isMobile} />
             </div>
 
             {/* Income / Expenses — only desktop */}
             {!isMobile && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                <StatBox icon={<TrendingUp size={sz} color="var(--px-green-hi)" />} label="INCOME" value={`$${economy.dailyIncome.toLocaleString()}`} color="var(--px-green-hi)" mobile={false} />
-                <StatBox icon={<TrendingDown size={sz} color="var(--px-red)" />} label="EXPENSES" value={`$${economy.dailyExpenses.toLocaleString()}`} color="var(--px-red)" mobile={false} />
+                <StatBox icon={<TrendingUp className="px-icon-sm" color="var(--px-green-hi)" />} label="INCOME" value={`$${economy.dailyIncome.toLocaleString()}`} color="var(--px-green-hi)" mobile={false} />
+                <StatBox icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />} label="EXPENSES" value={`$${economy.dailyExpenses.toLocaleString()}`} color="var(--px-red)" mobile={false} />
               </div>
             )}
 

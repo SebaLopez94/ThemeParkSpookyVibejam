@@ -28,8 +28,8 @@ export function ParkPanel({
       <div className="px-panel px-panel--park" style={{ padding: 0 }}>
         {onClose && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
-            <button className="px-btn" style={{ padding: '4px 8px', minHeight: 0 }} onClick={onClose}>
-              <X size={14} />
+            <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose}>
+              <X />
             </button>
           </div>
         )}
@@ -38,7 +38,7 @@ export function ParkPanel({
           {/* ── Park Status Toggle ─────────────────────────────── */}
           <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {economy.isOpen ? <Unlock size={isMobile ? 12 : 14} color="var(--px-green-hi)" /> : <Lock size={isMobile ? 12 : 14} color="var(--px-red)" />}
+              {economy.isOpen ? <Unlock className="px-icon-sm" color="var(--px-green-hi)" /> : <Lock className="px-icon-sm" color="var(--px-red)" />}
               <span className="px-label" style={{ fontSize: isMobile ? 8 : 10 }}>PARK STATUS</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -59,7 +59,7 @@ export function ParkPanel({
           {/* ── Entry ticket ───────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: isMobile ? 80 : 100, flexShrink: 0 }}>
-              <Ticket size={isMobile ? 11 : 13} color="var(--px-gold)" />
+              <Ticket className="px-icon-sm" color="var(--px-gold)" />
               <span className="px-label" style={{ fontSize: isMobile ? 8 : 10 }}>ENTRY FEE</span>
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
@@ -85,7 +85,7 @@ export function ParkPanel({
 
           {/* ── Active research ────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FlaskConical size={isMobile ? 11 : 13} color="var(--px-border)" style={{ flexShrink: 0 }} />
+            <FlaskConical className="px-icon-sm" color="var(--px-border)" style={{ flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
               <div className="px-label" style={{ fontSize: isMobile ? 7 : 9, marginBottom: 4 }}>ACTIVE RESEARCH</div>
               <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 10, color: 'var(--px-text)', lineHeight: 1.8, wordBreak: 'break-word' }}>

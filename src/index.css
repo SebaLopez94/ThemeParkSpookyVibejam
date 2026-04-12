@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  /* ── Color palette ────────────────────────────────────────────── */
   --px-bg: #160d26;
   --px-bg2: #211238;
   --px-bg3: #2c1846;
@@ -19,11 +20,47 @@
   --px-text: #f3e8ff;
   --px-muted: #c4b5fd;
   --px-shadow: rgba(0, 0, 0, 0.55);
-  /* Safe area insets for notched devices */
+
+  /* ── Spacing scale ────────────────────────────────────────────── */
+  --px-s1: 4px;
+  --px-s2: 8px;
+  --px-s3: 12px;
+  --px-s4: 16px;
+  --px-s5: 20px;
+  --px-s6: 24px;
+
+  /* ── Font scale ───────────────────────────────────────────────── */
+  --px-f-xs: 8px;
+  --px-f-sm: 10px;
+  --px-f-md: 12px;
+  --px-f-lg: 14px;
+  --px-f-xl: 16px;
+
+  /* ── Icon scale ───────────────────────────────────────────────── */
+  --px-icon-sm: 14px;
+  --px-icon-md: 16px;
+  --px-icon-lg: 20px;
+
+  /* ── Safe area insets ─────────────────────────────────────────── */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --px-f-xs: 7px;
+    --px-f-sm: 9px;
+    --px-f-md: 10px;
+    --px-f-lg: 12px;
+    --px-f-xl: 14px;
+    --px-icon-sm: 12px;
+    --px-icon-md: 14px;
+    --px-icon-lg: 16px;
+    --px-s3: 10px;
+    --px-s4: 12px;
+  }
 }
 
 * { image-rendering: pixelated; }
@@ -105,18 +142,18 @@ button {
 
 .px-panel--research {
   background:
-    radial-gradient(circle at top left, rgba(34,211,238,0.14), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(167,139,250,0.14), transparent 38%),
-    linear-gradient(180deg, #18112c 0%, #0c0b19 100%);
-  box-shadow: 0 0 0 1px rgba(103,232,249,0.15), 0 12px 24px var(--px-shadow), 4px 4px 0 #000;
+    radial-gradient(circle at top left, rgba(59,130,246,0.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(167,139,250,0.10), transparent 38%),
+    linear-gradient(180deg, #0f172a 0%, #080d1a 100%);
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.18), 0 12px 24px var(--px-shadow), 4px 4px 0 #000;
 }
 
 .px-panel--challenges {
   background:
-    radial-gradient(circle at top left, rgba(251,146,60,0.16), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(251,191,36,0.12), transparent 38%),
-    linear-gradient(180deg, #25130f 0%, #130c0b 100%);
-  box-shadow: 0 0 0 1px rgba(251,146,60,0.16), 0 12px 24px var(--px-shadow), 4px 4px 0 #000;
+    radial-gradient(circle at top left, rgba(190,18,60,0.16), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(251,191,36,0.08), transparent 38%),
+    linear-gradient(180deg, #1c0a12 0%, #0e0608 100%);
+  box-shadow: 0 0 0 1px rgba(190,18,60,0.2), 0 12px 24px var(--px-shadow), 4px 4px 0 #000;
 }
 
 .px-panel--park {
@@ -172,13 +209,13 @@ button {
 }
 
 .px-titlebar--research {
-  background: linear-gradient(180deg, #7c3aed 0%, #155e75 100%);
-  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  background: linear-gradient(180deg, #1d4ed8 0%, #1e3a5f 100%);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(147,197,253,0.2);
 }
 
 .px-titlebar--challenges {
-  background: linear-gradient(180deg, #f97316 0%, #7c2d12 100%);
-  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  background: linear-gradient(180deg, #be123c 0%, #7f1d1d 100%);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(253,164,175,0.2);
 }
 
 .px-titlebar--build {
@@ -274,6 +311,49 @@ button {
 }
 
 .px-btn--danger:hover { background: linear-gradient(180deg, #6d1629 0%, #4b0f14 100%); }
+
+/* ── Small button — for close/action buttons inside panels ──────── */
+.px-btn--sm {
+  padding: 6px 12px;
+  font-size: var(--px-f-sm);
+  min-height: 36px;
+  gap: 6px;
+}
+.px-btn--sm svg { width: var(--px-icon-sm); height: var(--px-icon-sm); }
+
+/* ── Icon size utilities ─────────────────────────────────────────── */
+.px-icon-sm { width: var(--px-icon-sm) !important; height: var(--px-icon-sm) !important; }
+.px-icon-md { width: var(--px-icon-md) !important; height: var(--px-icon-md) !important; }
+.px-icon-lg { width: var(--px-icon-lg) !important; height: var(--px-icon-lg) !important; }
+
+/* ── Panel body padding — consistent across all panels ──────────── */
+.px-panel-body {
+  padding: var(--px-s4) var(--px-s4) var(--px-s4);
+}
+.px-panel-body--sm {
+  padding: var(--px-s3) var(--px-s3) var(--px-s3);
+}
+
+/* ── Row utility ─────────────────────────────────────────────────── */
+.px-row {
+  display: flex;
+  align-items: center;
+  gap: var(--px-s2);
+}
+.px-row--between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--px-s2);
+}
+
+/* ── Inputs: prevent Safari auto-zoom (needs 16px on mobile) ─────── */
+.px-input {
+  font-size: max(var(--px-f-lg), 16px);
+}
+@media (min-width: 641px) {
+  .px-input { font-size: var(--px-f-lg); }
+}
 
 .px-card {
   background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%), var(--px-bg2);
@@ -420,8 +500,23 @@ button {
   left: 50%;
   transform: translateX(-50%);
   display: grid;
-  gap: 10px;
+  gap: 8px;
   z-index: 80;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .px-toast-stack {
+    top: auto;
+    bottom: calc(80px + var(--safe-bottom));
+    left: var(--px-s2);
+    right: var(--px-s2);
+    transform: none;
+  }
+  .px-toast {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .px-toast {
@@ -512,14 +607,43 @@ button {
   height: 0;
 }
 
+/* ── Panel enter/exit animations ─────────────────────────────────────── */
+@keyframes px-enter-up {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes px-enter-scale {
+  from { opacity: 0; transform: scale(0.95) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+@keyframes px-exit-down {
+  from { opacity: 1; transform: translateY(0)    scale(1); }
+  to   { opacity: 0; transform: translateY(14px) scale(0.98); }
+}
+
+.px-anim-enter-up    { animation: px-enter-up    0.2s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+.px-anim-enter-scale { animation: px-enter-scale 0.18s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+
 /* ── Challenge celebration ───────────────────────────────────────────── */
 @keyframes px-celebrate {
   from { opacity: 0; transform: scale(0.6) translateY(20px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+.px-celebration {
+  background: linear-gradient(180deg, #1e0d3a 0%, #0e0720 100%);
+  border: 3px solid var(--px-gold);
+  box-shadow: 0 0 40px rgba(251,191,36,0.4), 6px 6px 0 #000;
+  padding: clamp(16px, 4vw, 40px) clamp(20px, 5vw, 56px);
+  text-align: center;
+  max-width: min(480px, 90vw);
+  animation: px-celebrate 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* ── Mobile responsive ───────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .px-panel::after { opacity: 0.12; }
+
   /* Side tabs hidden — replaced by mobile bottom nav in JS */
   .px-side-tabs { display: none; }
 
@@ -638,13 +762,22 @@ button {
   font-family: 'Press Start 2P', monospace;
 }
 
-.px-loading__title {
-  font-size: clamp(14px, 4vw, 28px);
-  color: var(--px-text);
-  text-shadow: 0 0 20px rgba(139,92,246,0.8), 3px 3px 0 #000;
-  text-align: center;
-  line-height: 1.8;
-  letter-spacing: 2px;
+.px-loading__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.px-loading__logo img {
+  image-rendering: auto;
+  filter: drop-shadow(0 0 24px rgba(139,92,246,0.6));
+  animation: px-logo-pulse 3s ease-in-out infinite;
+}
+
+@keyframes px-logo-pulse {
+  0%, 100% { filter: drop-shadow(0 0 16px rgba(139,92,246,0.5)); }
+  50%       { filter: drop-shadow(0 0 32px rgba(139,92,246,0.9)); }
 }
 
 .px-loading__sub {
