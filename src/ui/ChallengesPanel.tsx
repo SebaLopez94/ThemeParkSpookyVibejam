@@ -1,13 +1,14 @@
 import { CSSProperties } from 'react';
-import { Goal, Star } from 'lucide-react';
+import { Goal, Star, X } from 'lucide-react';
 import { ChallengeState } from '../types';
 
 interface ChallengesPanelProps {
   challenges: ChallengeState[];
   style?: CSSProperties;
+  onClose?: () => void;
 }
 
-export function ChallengesPanel({ challenges, style }: ChallengesPanelProps) {
+export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelProps) {
   // Active challenges float to the top; claimed ones sink to the bottom
   const sorted = [...challenges].sort((a, b) => {
     if (a.claimed === b.claimed) return 0;
@@ -17,7 +18,14 @@ export function ChallengesPanel({ challenges, style }: ChallengesPanelProps) {
   return (
     <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '48vh', overflow: 'auto', ...style }}>
       <div className="px-panel px-panel--challenges" style={{ padding: 0 }}>
-        <div style={{ padding: '16px 16px 18px', display: 'grid', gap: 10 }}>
+        {onClose && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
+            <button className="px-btn" style={{ padding: '4px 8px', minHeight: 0 }} onClick={onClose}>
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <div style={{ padding: '10px 16px 18px', display: 'grid', gap: 10 }}>
           {sorted.map(challenge => {
             const goal = challenge.duration ?? challenge.target;
             const progress = Math.min(goal, challenge.progress);

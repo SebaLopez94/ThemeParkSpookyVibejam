@@ -208,7 +208,8 @@ export class MouseController {
           }
         }
       } else {
-        // Normal mode — pan camera
+        // Normal mode — pan camera (touch needs higher multiplier than mouse)
+        this._delta.multiplyScalar(2.8);
         this.onCameraMove?.(this._delta);
       }
     } else if (event.touches.length === 2) {

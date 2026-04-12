@@ -39,7 +39,8 @@ export class Visitor {
   }
 
   private loadModel(): void {
-    sharedGLTFLoader.load('/models/kid1.glb', (gltf) => {
+    const model = Math.random() < 0.5 ? '/models/kid1.glb' : '/models/kid2.glb';
+    sharedGLTFLoader.load(model, (gltf) => {
       const model = gltf.scene;
       model.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(model);

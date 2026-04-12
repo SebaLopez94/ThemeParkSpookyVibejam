@@ -233,6 +233,7 @@ function App() {
                 pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
               }}
               activeResearchLabel={activeResearchLabel}
+              onClose={() => setShowParkPanel(false)}
             />
           )}
         </div>
@@ -245,7 +246,7 @@ function App() {
             <ScrollText />
             CHALLENGES
           </button>
-          {showChallenges && <ChallengesPanel challenges={challenges} />}
+          {showChallenges && <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />}
         </div>
 
         <div className="px-side-tab-column">
@@ -262,6 +263,7 @@ function App() {
               state={researchState}
               onStartResearch={id => gameRef.current?.startResearch(id)}
               canAffordResearch={cost => canAfford(cost)}
+              onClose={() => setShowResearch(false)}
             />
           )}
         </div>
@@ -284,15 +286,17 @@ function App() {
                     pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
                   }}
                   activeResearchLabel={activeResearchLabel}
+                  onClose={() => setShowParkPanel(false)}
                 />
               )}
-              {showChallenges && <ChallengesPanel challenges={challenges} />}
+              {showChallenges && <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />}
               {showResearch && (
                 <ResearchPanel
                   nodes={researchNodes}
                   state={researchState}
                   onStartResearch={id => gameRef.current?.startResearch(id)}
                   canAffordResearch={cost => canAfford(cost)}
+                  onClose={() => setShowResearch(false)}
                 />
               )}
             </div>
@@ -324,7 +328,7 @@ function App() {
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: isMobile ? 80 : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
+      <div style={{ position: 'fixed', bottom: isMobile ? 90 : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
         <button
           className="px-btn px-btn--lg"
           title="Place path (free)"
@@ -375,6 +379,7 @@ function App() {
           onCancel={handleCancelBuildMode}
           canAfford={canAfford}
           unlockedBuildings={researchState.unlocked}
+          bottom={isMobile ? 150 : 16}
         />
       )}
 
@@ -389,37 +394,42 @@ function App() {
       )}
 
       {isPlacing && activeBuildDefinition && (
-        <div style={{ position: 'fixed', bottom: isMobile ? 70 : 16, left: isMobile ? 8 : 16, right: isMobile ? 8 : 'auto', zIndex: 45 }}>
-          <div className="px-panel px-panel--controls" style={{ padding: 0, width: isMobile ? '100%' : 420 }}>
-            <div className="px-titlebar">
-              <span className="px-titlebar__label">
-                <MousePointer2 size={16} />
-                BUILD MODE
-              </span>
-              <span style={{ fontSize: 10 }}>{activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}</span>
-            </div>
-            <div style={{ padding: '12px 16px 16px' }}>
-              <div className="px-chip-row">
-                <div className="px-chip">{activeBuildDefinition.icon} {activeBuildDefinition.name}</div>
-                <div className="px-chip">Cost ${activeBuildDefinition.cost}</div>
+        isMobile ? (
+          /* Mobile: minimal bar — building name + cancel */
+          <div style={{ position: 'fixed', bottom: 90, left: 8, right: 8, zIndex: 46 }}>
+            <div className="px-panel px-panel--controls" style={{ padding: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: 'var(--px-green-hi)' }}>
+                  {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
+                </span>
+                <button className="px-btn px-btn--danger" style={{ padding: '8px 14px', fontSize: 11 }} onClick={handleCancelBuildMode}>
+                  <XCircle size={14} /> CANCEL
+                </button>
               </div>
-              <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
-                <div className="px-stat" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <MousePointer2 size={14} color="var(--px-green-hi)" />
-                  <div className="px-body">Left click to place on a valid tile.</div>
-                </div>
-                <div className="px-stat" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <RotateCw size={14} color="var(--px-cyan)" />
-                  <div className="px-body">Press R to rotate — current: {buildRotation}°</div>
-                </div>
-                <div className="px-stat" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <XCircle size={14} color="var(--px-red)" />
-                  <div className="px-body">Right click or Esc to cancel.</div>
+            </div>
+          </div>
+        ) : (
+          /* Desktop: full info panel */
+          <div style={{ position: 'fixed', bottom: 16, left: 16, zIndex: 45 }}>
+            <div className="px-panel px-panel--controls" style={{ padding: 0, width: 420 }}>
+              <div className="px-titlebar">
+                <span className="px-titlebar__label">
+                  <MousePointer2 size={16} />
+                  BUILD MODE — {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
+                </span>
+                <button className="px-btn px-btn--danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={handleCancelBuildMode}>
+                  <XCircle size={13} /> CANCEL
+                </button>
+              </div>
+              <div style={{ padding: '12px 16px 16px' }}>
+                <div className="px-chip-row">
+                  <div className="px-chip">Cost ${activeBuildDefinition.cost}</div>
+                  <div className="px-chip"><RotateCw size={12} /> R to rotate — {buildRotation}°</div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )
       )}
 
       {/* rotation hint is shown inside the build mode panel on the left */}
@@ -429,76 +439,93 @@ function App() {
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
           onClick={() => setShowHelp(false)}
         >
-          <div className="px-panel" style={{ maxWidth: 600, width: '94%', padding: 0, maxHeight: '90vh', overflowY: 'auto', overflowX: 'hidden' }} onClick={e => e.stopPropagation()}>
-            <div className="px-titlebar">HOW TO PLAY</div>
-            <div style={{ padding: '18px 22px' }}>
+          <div className="px-panel px-scroll-hidden" style={{ maxWidth: 600, width: isMobile ? '100%' : '94%', padding: 0, maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', overflowX: 'hidden', borderRadius: isMobile ? 0 : undefined }} onClick={e => e.stopPropagation()}>
+            <div className="px-titlebar" style={{ fontSize: isMobile ? 10 : undefined }}>HOW TO PLAY</div>
+            <div style={{ padding: isMobile ? '12px 14px' : '18px 22px' }}>
 
               {/* Controls */}
-              <div className="px-label" style={{ marginBottom: 8 }}>CONTROLS</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'Press Start 2P', monospace", fontSize: 11, tableLayout: 'fixed' }}>
-                <colgroup>
-                  <col style={{ width: '52%' }} />
-                  <col style={{ width: '48%' }} />
-                </colgroup>
-                <tbody>
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>CONTROLS</div>
+              {isMobile ? (
+                <div style={{ display: 'grid', gap: 4 }}>
                   {[
-                    ['RMB DRAG / 1 FINGER', 'Pan camera'],
-                    ['SCROLL / PINCH',       'Zoom in / out'],
-                    ['LMB / TAP',            'Place or select'],
-                    ['LMB DRAG',             'Draw paths'],
-                    ['R',                    'Rotate building'],
-                    ['RMB / ESC',            'Cancel build mode'],
-                    ['CLICK BUILDING',       'Manage / move / delete'],
+                    ['1 FINGER DRAG', 'Pan camera'],
+                    ['PINCH', 'Zoom in / out'],
+                    ['TAP', 'Place or select'],
+                    ['TAP + DRAG', 'Draw paths'],
+                    ['TAP BUILDING', 'Manage / delete'],
                   ].map(([key, desc]) => (
-                    <tr key={key}>
-                      <td style={{ padding: '6px 8px', color: 'var(--px-green-hi)', textShadow: '1px 1px 0 #000', wordBreak: 'break-word' }}>{key}</td>
-                      <td style={{ padding: '6px 8px', color: 'var(--px-text)', wordBreak: 'break-word' }}>{desc}</td>
-                    </tr>
+                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 6px', background: 'rgba(0,0,0,0.25)' }}>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)', flexShrink: 0 }}>{key}</span>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-text)', textAlign: 'right' }}>{desc}</span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'Press Start 2P', monospace", fontSize: 11, tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '52%' }} />
+                    <col style={{ width: '48%' }} />
+                  </colgroup>
+                  <tbody>
+                    {[
+                      ['RMB DRAG / 1 FINGER', 'Pan camera'],
+                      ['SCROLL / PINCH',       'Zoom in / out'],
+                      ['LMB / TAP',            'Place or select'],
+                      ['LMB DRAG',             'Draw paths'],
+                      ['R',                    'Rotate building'],
+                      ['RMB / ESC',            'Cancel build mode'],
+                      ['CLICK BUILDING',       'Manage / move / delete'],
+                    ].map(([key, desc]) => (
+                      <tr key={key}>
+                        <td style={{ padding: '6px 8px', color: 'var(--px-green-hi)', textShadow: '1px 1px 0 #000', wordBreak: 'break-word' }}>{key}</td>
+                        <td style={{ padding: '6px 8px', color: 'var(--px-text)', wordBreak: 'break-word' }}>{desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
 
               <hr className="px-divider" />
 
               {/* Goal */}
-              <div className="px-label" style={{ marginBottom: 8 }}>GOAL</div>
-              <div className="px-body">
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>GOAL</div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
                 Build a thriving haunted theme park. Connect rides and shops to the entrance with paths, keep visitors happy, and grow your park rating to 5 stars.
               </div>
 
               <hr className="px-divider" />
 
               {/* Visitors */}
-              <div className="px-label" style={{ marginBottom: 8 }}>VISITORS</div>
-              <div className="px-body">
-                Visitors enter through the gate and pay the entry ticket price. They wander paths looking for rides, food, and restrooms. If their needs aren't met they leave unhappy — dragging down your Joy and Rating stars.
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>VISITORS</div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
+                Visitors enter through the gate and pay the entry fee. They wander paths looking for rides and food. Unhappy visitors drag down your Joy and Rating stars.
               </div>
 
               <hr className="px-divider" />
 
               {/* Economy */}
-              <div className="px-label" style={{ marginBottom: 8 }}>ECONOMY</div>
-              <div className="px-body">
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> comes from entry tickets and building prices. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are recurring maintenance costs — rides cost $2/s, shops and services $1/s. Keep net profit positive to grow sustainably.
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
+                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $2/s, shops $1/s.
               </div>
 
               <hr className="px-divider" />
 
               {/* Research */}
-              <div className="px-label" style={{ marginBottom: 8 }}>RESEARCH</div>
-              <div className="px-body">
-                Spend money to research new buildings. Some unlock advanced rides that attract more visitors and boost your rating. Research takes time — plan ahead.
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>RESEARCH</div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
+                Spend money to unlock new buildings. Research takes time — plan ahead.
               </div>
 
               <hr className="px-divider" />
 
               {/* Challenges */}
-              <div className="px-label" style={{ marginBottom: 8 }}>CHALLENGES</div>
-              <div className="px-body">
-                Complete challenges to earn bonus money and rating boosts. They range from starter goals to legendary feats — check them often for guidance on what to build next.
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>CHALLENGES</div>
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
+                Complete challenges to earn bonus money. Check them often for guidance on what to build next.
               </div>
 
-              <button className="px-btn" style={{ marginTop: 18, width: '100%', justifyContent: 'center' }} onClick={() => setShowHelp(false)}>
+              <button className="px-btn" style={{ marginTop: 16, width: '100%', justifyContent: 'center', fontSize: isMobile ? 10 : undefined }} onClick={() => setShowHelp(false)}>
                 OK, LET'S BUILD
               </button>
             </div>

@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { Clock3, FlaskConical, LockKeyhole } from 'lucide-react';
+import { Clock3, FlaskConical, LockKeyhole, X } from 'lucide-react';
 import { BUILDING_DISPLAY } from '../types';
 import { ResearchNode, ResearchState } from '../types';
 
@@ -9,13 +9,21 @@ interface ResearchPanelProps {
   onStartResearch: (id: string) => void;
   canAffordResearch: (cost: number) => boolean;
   style?: CSSProperties;
+  onClose?: () => void;
 }
 
-export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch, style }: ResearchPanelProps) {
+export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch, style, onClose }: ResearchPanelProps) {
   return (
     <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '48vh', overflow: 'auto', ...style }}>
       <div className="px-panel px-panel--research" style={{ padding: 0 }}>
-        <div style={{ padding: '16px 16px 18px' }}>
+        {onClose && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
+            <button className="px-btn" style={{ padding: '4px 8px', minHeight: 0 }} onClick={onClose}>
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <div style={{ padding: '10px 16px 18px' }}>
           {state.activeResearchId && (
             <div className="px-stat" style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

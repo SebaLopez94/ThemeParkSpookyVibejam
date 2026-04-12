@@ -1,4 +1,4 @@
-import { Banknote, FlaskConical, Lock, Ticket, Unlock } from 'lucide-react';
+import { Banknote, FlaskConical, Lock, Ticket, Unlock, X } from 'lucide-react';
 import { EconomyState } from '../types';
 
 interface ParkPanelProps {
@@ -8,6 +8,7 @@ interface ParkPanelProps {
   onTicketPriceCommit: () => void;
   onToggleParkOpen: (isOpen: boolean) => void;
   activeResearchLabel: string;
+  onClose?: () => void;
 }
 
 export function ParkPanel({
@@ -16,12 +17,20 @@ export function ParkPanel({
   onTicketPriceChange,
   onTicketPriceCommit,
   onToggleParkOpen,
-  activeResearchLabel
+  activeResearchLabel,
+  onClose
 }: ParkPanelProps) {
   return (
     <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '52vh', overflow: 'auto' }}>
       <div className="px-panel px-panel--park" style={{ padding: 0 }}>
-        <div style={{ padding: '16px 14px 14px', display: 'grid', gap: 12 }}>
+        {onClose && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
+            <button className="px-btn" style={{ padding: '4px 8px', minHeight: 0 }} onClick={onClose}>
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <div style={{ padding: '10px 14px 14px', display: 'grid', gap: 12 }}>
 
           {/* ── Park Status Toggle ─────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
