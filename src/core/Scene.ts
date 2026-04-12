@@ -56,6 +56,7 @@ export class GameScene {
     this.createEntranceGate();
     this.createPerimeterFence();
     this.createSurroundings();
+    this.createMoon();
   }
 
   private createEntranceGate(): void {
@@ -250,7 +251,7 @@ export class GameScene {
       minR: number, maxR: number,
       mat: THREE.MeshStandardMaterial
     ) => {
-      const geo  = new THREE.ConeGeometry(1, 1, 6); // unit cone, scaled per instance
+      const geo  = new THREE.CylinderGeometry(0.05, 1, 1, 6); // unit cylinder (truncated cone)
       const inst = new THREE.InstancedMesh(geo, mat, count);
       inst.castShadow = false;
       inst.receiveShadow = false;
@@ -277,9 +278,9 @@ export class GameScene {
     // Close foothills — shorter, dense
     buildLayer(60,  55,  80,  8, 18, 10, 20, matNear);
     // Mid mountains — taller
-    buildLayer(40,  75, 105, 20, 40, 14, 28, matFar);
+    buildLayer(40,  75, 105, 18, 28, 14, 28, matFar);
     // Far peaks — tallest, visible above everything
-    buildLayer(24, 100, 130, 35, 60, 16, 30, matFar);
+    buildLayer(24, 100, 130, 25, 38, 16, 30, matFar);
   }
 
   private createForestFloor(): void {
@@ -361,6 +362,41 @@ export class GameScene {
     (gridHelper.material as THREE.Material).opacity = 0.55;
     (gridHelper.material as THREE.Material).transparent = true;
     this.scene.add(gridHelper);
+  }
+
+  private createMoon(): void {
+    const moonGroup = new THREE.Group();
+    const moonPos = new THREE.Vector3(-110, 20, -25);
+
+    // Main moon body
+    const moonGeo = new THREE.SphereGeometry(7, 32, 32);
+    const moonMat = new THREE.MeshBasicMaterial({ 
+      color: 0xffffee,
+    });
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    moonGroup.add(moon);
+
+    // Three layers of halo for a very diffuse look
+    const haloSizes = [11, 28, 60];
+    const haloOpacities = [0.08, 0.03, 0.01];
+    haloSizes.forEach((size, i) => {
+      const geo = new THREE.SphereGeometry(size, 32, 32);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xddeeff,
+        transparent: true,
+        opacity: haloOpacities[i],
+        depthWrite: false
+      });
+      moonGroup.add(new THREE.Mesh(geo, mat));
+    });
+
+    // Extremely diffuse and subtle light source
+    const moonLight = new THREE.PointLight(0xddeeff, 0.1, 800);
+    moonLight.position.set(0, 0, 0); 
+    moonGroup.add(moonLight);
+
+    moonGroup.position.copy(moonPos);
+    this.scene.add(moonGroup);
   }
 
   public onWindowResize(): void {
