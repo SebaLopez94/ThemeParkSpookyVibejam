@@ -49,22 +49,24 @@ export function ResearchPanel({
   const totalCount = nodes.length;
 
   return (
-    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', overflow: 'auto', ...style }}>
-      <div className="px-panel px-panel--research" style={{ padding: 0 }}>
+    <div className="px-panel px-panel--research px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', padding: 0, ...style }}>
+      <div className="px-overlay-panel__top">
+        <div className="px-overlay-panel__meta">
+          <span className="px-label" style={{ color: 'var(--px-cyan)' }}>Research</span>
+          <span className="px-overlay-panel__count">{completedCount}/{totalCount}</span>
+        </div>
         {onClose && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '4px 6px 0' : '6px 8px 0' }}>
-            <button className="px-btn px-btn--sm" aria-label="Close research panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
-              <X />
-            </button>
-          </div>
+          <button className="px-btn px-btn--sm" aria-label="Close research panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
+            <X />
+          </button>
         )}
+      </div>
 
-        <div style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
+      <div className="px-overlay-panel__body px-scroll-hidden" style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
           <div
-            className="px-stat"
+            className="px-stat px-soft-block"
             style={{
               background: 'linear-gradient(180deg, rgba(12,24,43,0.96) 0%, rgba(8,14,27,0.96) 100%)',
-              border: '2px solid rgba(103,232,249,0.18)',
               padding: isMobile ? '10px 10px 12px' : '12px 14px 14px'
             }}
           >
@@ -86,19 +88,16 @@ export function ResearchPanel({
                 </div>
               </div>
 
-              <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : '7px 10px', color: 'var(--px-cyan)' }}>
+              <div className="px-soft-chip" style={{ color: 'var(--px-cyan)' }}>
                 <Sparkles className="px-icon-sm" />
-                {completedCount}/{totalCount}
+                {readyNodes.length} READY
               </div>
             </div>
 
             {activeNode ? (
               <>
-                <div className="px-body" style={{ marginTop: 10, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.55 : undefined }}>
-                  {activeNode.description}
-                </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12 }}>
-                  <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : '7px 10px' }}>
+                  <div className="px-soft-chip">
                     <Clock3 className="px-icon-sm" />
                     {formatTime(state.remainingTime)}
                   </div>
@@ -112,16 +111,7 @@ export function ResearchPanel({
                     {Math.round(activeProgress)}%
                   </div>
                 </div>
-                <div
-                  style={{
-                    marginTop: 10,
-                    height: 12,
-                    background: '#07111f',
-                    border: '2px solid rgba(255,255,255,0.1)',
-                    overflow: 'hidden',
-                    position: 'relative'
-                  }}
-                >
+                <div className="px-soft-progress" style={{ marginTop: 10 }}>
                   <div
                     style={{
                       position: 'absolute',
@@ -136,13 +126,13 @@ export function ResearchPanel({
               </>
             ) : (
               <div className="px-body" style={{ marginTop: 10 }}>
-                Choose the next unlock when you are ready. Only one project can run at a time.
+                No active research. Start one project to unlock the next building.
               </div>
             )}
           </div>
 
           {readyNodes.length > 0 && (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div className="px-soft-section">
               <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
                 AVAILABLE PROJECTS
               </div>
@@ -158,29 +148,24 @@ export function ResearchPanel({
                 return (
                   <div
                     key={node.id}
-                    className="px-card"
+                    className={`px-soft-card ${active ? 'px-soft-card--active' : ''}`}
                     style={{
-                      cursor: 'default',
                       padding: isMobile ? '10px' : '12px',
-                      background: active
-                        ? 'linear-gradient(180deg, rgba(37,99,235,0.16) 0%, rgba(9,21,39,0.98) 100%)'
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(10,15,29,0.98) 100%)',
-                      borderTopColor: active ? 'var(--px-cyan)' : undefined,
-                      borderLeftColor: active ? 'var(--px-cyan)' : undefined
+                      cursor: 'default',
                     }}
                   >
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto', gap: isMobile ? 10 : 12, alignItems: 'center' }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, minWidth: 0 }}>
                           <div
+                            className="px-soft-block"
                             style={{
                               width: isMobile ? 36 : 48,
                               height: isMobile ? 36 : 48,
                               display: 'grid',
                               placeItems: 'center',
                               flexShrink: 0,
-                              background: 'linear-gradient(180deg, rgba(103,232,249,0.1) 0%, rgba(255,255,255,0.02) 100%)',
-                              border: '2px solid rgba(103,232,249,0.14)'
+                              background: 'rgba(103,232,249,0.06)',
                             }}
                           >
                             <span className="px-emoji" style={{ fontSize: isMobile ? 18 : 24 }}>
@@ -199,24 +184,24 @@ export function ResearchPanel({
                             >
                               {unlockDisplay.name}
                             </div>
-                            <div className="px-body" style={{ marginTop: 3, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
-                              {node.description}
-                            </div>
                           </div>
                         </div>
 
                         <div className="px-chip-row" style={{ marginTop: isMobile ? 8 : 10, gap: isMobile ? 6 : 8 }}>
-                          <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : '7px 10px' }}>
+                          <div className="px-soft-chip">
                             <FlaskConical className="px-icon-sm" />
                             ${node.cost}
                           </div>
-                          <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : '7px 10px' }}>
+                          <div className="px-soft-chip">
                             <Clock3 className="px-icon-sm" />
                             {node.duration}s
                           </div>
+                          <div className="px-soft-chip">
+                            UNLOCKS {unlockDisplay.icon}
+                          </div>
                           {!affordable && (
-                            <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : '7px 10px', color: 'var(--px-red)' }}>
-                              NEED MORE CASH
+                            <div className="px-soft-chip" style={{ color: 'var(--px-red)' }}>
+                              NOT ENOUGH CASH
                             </div>
                           )}
                         </div>
@@ -234,7 +219,7 @@ export function ResearchPanel({
                           disabled={disabled}
                           onClick={() => onStartResearch(node.id)}
                         >
-                          {active ? 'ACTIVE' : blockedByActiveResearch ? 'WAIT' : 'START'}
+                          {active ? 'ACTIVE' : blockedByActiveResearch ? 'BUSY' : 'START'}
                         </button>
                       </div>
                     </div>
@@ -245,7 +230,7 @@ export function ResearchPanel({
           )}
 
           {lockedNodes.length > 0 && (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div className="px-soft-section">
               <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
                 LOCKED PROJECTS
               </div>
@@ -259,24 +244,22 @@ export function ResearchPanel({
                 return (
                   <div
                     key={node.id}
-                    className="px-card"
+                    className="px-soft-card"
                     style={{
                       cursor: 'default',
                       padding: isMobile ? '10px' : '12px',
                       opacity: 0.78,
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(12,12,18,0.96) 100%)'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 8 : 10 }}>
                       <div
+                        className="px-soft-block"
                         style={{
                           width: isMobile ? 32 : 42,
                           height: isMobile ? 32 : 42,
                           display: 'grid',
                           placeItems: 'center',
                           flexShrink: 0,
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '2px solid rgba(255,255,255,0.08)'
                         }}
                       >
                         <LockKeyhole className="px-icon-sm" color="var(--px-muted)" />
@@ -294,7 +277,7 @@ export function ResearchPanel({
                           {unlockDisplay.name}
                         </div>
                         <div className="px-body" style={{ marginTop: 3, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
-                          Requires {missing.join(' + ')}
+                          Requires: {missing.join(' + ')}
                         </div>
                       </div>
                     </div>
@@ -303,7 +286,6 @@ export function ResearchPanel({
               })}
             </div>
           )}
-        </div>
       </div>
     </div>
   );

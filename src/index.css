@@ -1322,6 +1322,104 @@ button {
   height: 0;
 }
 
+.px-overlay-panel {
+  overflow: hidden;
+}
+
+.px-overlay-panel__top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border-bottom: 3px solid rgba(0,0,0,0.42);
+  background: rgba(10, 8, 18, 0.96);
+  backdrop-filter: blur(4px);
+}
+
+.px-overlay-panel__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.px-overlay-panel__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--px-text);
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.1);
+}
+
+.px-overlay-panel__body {
+  overflow: auto;
+  max-height: inherit;
+}
+
+.px-soft-section {
+  display: grid;
+  gap: 8px;
+}
+
+.px-soft-block {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.px-soft-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: none;
+}
+
+.px-soft-card--active {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(103,232,249,0.12);
+}
+
+.px-soft-card--success {
+  background: rgba(190,242,100,0.08);
+  border-color: rgba(190,242,100,0.12);
+}
+
+.px-soft-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--px-text);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.px-soft-chip svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.px-soft-progress {
+  margin-top: 8px;
+  height: 10px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  position: relative;
+}
+
 /* ── Panel enter/exit animations ─────────────────────────────────────── */
 @keyframes px-enter-up {
   from { opacity: 0; transform: translateY(14px) scale(0.98); }

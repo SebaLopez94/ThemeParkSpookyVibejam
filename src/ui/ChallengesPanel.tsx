@@ -51,22 +51,24 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
   const totalRewardMoney = challenges.reduce((sum, challenge) => sum + challenge.reward.money, 0);
 
   return (
-    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', overflow: 'auto', ...style }}>
-      <div className="px-panel px-panel--challenges" style={{ padding: 0 }}>
+    <div className="px-panel px-panel--challenges px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', padding: 0, ...style }}>
+      <div className="px-overlay-panel__top">
+        <div className="px-overlay-panel__meta">
+          <span className="px-label" style={{ color: 'var(--px-orange)' }}>Goals</span>
+          <span className="px-overlay-panel__count">{finishedCount}/{totalCount}</span>
+        </div>
         {onClose && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '4px 6px 0' : '6px 8px 0' }}>
-            <button className="px-btn px-btn--sm" aria-label="Close challenges panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
-              <X />
-            </button>
-          </div>
+          <button className="px-btn px-btn--sm" aria-label="Close challenges panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
+            <X />
+          </button>
         )}
+      </div>
 
-        <div style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
+      <div className="px-overlay-panel__body px-scroll-hidden" style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
           <div
-            className="px-stat"
+            className="px-stat px-soft-block"
             style={{
               background: 'linear-gradient(180deg, rgba(49,13,21,0.96) 0%, rgba(20,7,10,0.96) 100%)',
-              border: '2px solid rgba(251,191,36,0.16)',
               padding: isMobile ? '10px' : '12px 14px'
             }}
           >
@@ -99,7 +101,7 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
           </div>
 
           {active.length > 0 && (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div className="px-soft-section">
               <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
                 ACTIVE OBJECTIVES
               </div>
@@ -112,25 +114,20 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                 return (
                   <div
                     key={challenge.id}
-                    className="px-card"
+                    className={`px-soft-card ${justCompleted ? 'px-soft-card--success' : ''}`}
                     style={{
                       cursor: 'default',
                       padding: isMobile ? '10px' : '12px',
-                      background: justCompleted
-                        ? 'linear-gradient(180deg, rgba(190,242,100,0.12) 0%, rgba(26,49,19,0.96) 100%)'
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(28,8,12,0.98) 100%)',
-                      borderTopColor: justCompleted ? 'var(--px-green)' : undefined,
-                      borderLeftColor: justCompleted ? 'var(--px-green)' : undefined
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-                          <div className="px-chip" style={{ padding: isMobile ? '5px 8px' : '6px 9px', color: justCompleted ? 'var(--px-green-hi)' : 'var(--px-orange)' }}>
+                          <div className="px-soft-chip" style={{ color: justCompleted ? 'var(--px-green-hi)' : 'var(--px-orange)' }}>
                             {getChallengeLabel(challenge)}
                           </div>
                           {justCompleted && (
-                            <div className="px-chip" style={{ padding: isMobile ? '5px 8px' : '6px 9px', color: 'var(--px-green-hi)' }}>
+                            <div className="px-soft-chip" style={{ color: 'var(--px-green-hi)' }}>
                               <Sparkles className="px-icon-sm" />
                               READY
                             </div>
@@ -152,12 +149,12 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                       </div>
 
                       <div style={{ display: 'grid', gap: 6, flexShrink: 0, justifyItems: 'end' }}>
-                        <div className="px-chip" style={{ padding: isMobile ? '5px 8px' : '6px 9px', color: 'var(--px-gold)' }}>
+                        <div className="px-soft-chip" style={{ color: 'var(--px-gold)' }}>
                           <Coins className="px-icon-sm" />
                           +${challenge.reward.money}
                         </div>
                         {challenge.reward.rating > 0 && (
-                          <div className="px-chip" style={{ padding: isMobile ? '5px 8px' : '6px 9px', color: 'var(--px-light)' }}>
+                          <div className="px-soft-chip" style={{ color: 'var(--px-light)' }}>
                             <Crown className="px-icon-sm" />
                             +{challenge.reward.rating}
                           </div>
@@ -170,23 +167,14 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                         {getProgressText(challenge)}
                       </div>
                       {challenge.duration && (
-                        <div className="px-chip" style={{ padding: isMobile ? '5px 8px' : '6px 9px' }}>
+                        <div className="px-soft-chip">
                           <TimerReset className="px-icon-sm" />
                           STREAK
                         </div>
                       )}
                     </div>
 
-                    <div
-                      style={{
-                        marginTop: 8,
-                        height: isMobile ? 9 : 12,
-                        background: '#12060b',
-                        border: '2px solid rgba(255,255,255,0.08)',
-                        overflow: 'hidden',
-                        position: 'relative'
-                      }}
-                    >
+                    <div className="px-soft-progress">
                       <div
                         style={{
                           position: 'absolute',
@@ -208,20 +196,17 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
           )}
 
           {completed.length > 0 && (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div className="px-soft-section">
               <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
                 COMPLETED
               </div>
               {completed.map(challenge => (
                 <div
                   key={challenge.id}
-                  className="px-card"
+                  className="px-soft-card px-soft-card--success"
                   style={{
                     cursor: 'default',
                     padding: isMobile ? '10px' : '12px',
-                    background: 'linear-gradient(180deg, rgba(190,242,100,0.1) 0%, rgba(20,33,15,0.96) 100%)',
-                    borderTopColor: 'var(--px-green)',
-                    borderLeftColor: 'var(--px-green)',
                     opacity: 0.9
                   }}
                 >
@@ -247,7 +232,6 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
               ))}
             </div>
           )}
-        </div>
       </div>
     </div>
   );

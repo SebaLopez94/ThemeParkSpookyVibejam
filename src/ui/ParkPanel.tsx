@@ -25,17 +25,20 @@ export function ParkPanel({
   const netPositive = economy.netProfit >= 0;
 
   return (
-    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '52vh', overflow: 'auto' }}>
-      <div className="px-panel px-panel--park" style={{ padding: 0 }}>
+    <div className="px-panel px-panel--park px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '52vh', padding: 0 }}>
+      <div className="px-overlay-panel__top">
+        <div className="px-overlay-panel__meta">
+          <span className="px-label" style={{ color: 'var(--px-muted)' }}>Manage Park</span>
+          <span className="px-overlay-panel__count">{economy.isOpen ? 'ON' : 'OFF'}</span>
+        </div>
         {onClose && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '4px 6px 0' : '6px 8px 0' }}>
-            <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
-              <X />
-            </button>
-          </div>
+          <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
+            <X />
+          </button>
         )}
+      </div>
 
-        <div style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
+      <div className="px-overlay-panel__body px-scroll-hidden" style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
           <div
             className="px-stat"
             style={{
@@ -184,7 +187,6 @@ export function ParkPanel({
               mobile={isMobile}
             />
           </div>
-        </div>
       </div>
     </div>
   );
