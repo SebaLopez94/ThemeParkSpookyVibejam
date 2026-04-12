@@ -12,10 +12,9 @@ interface BuildMenuProps {
   bottom?: number;
 }
 
-type Tab = 'paths' | 'rides' | 'shops' | 'services' | 'decor';
+type Tab = 'rides' | 'shops' | 'services' | 'decor';
 
 const TABS: Array<{ id: Tab; label: string; Icon: typeof Map }> = [
-  { id: 'paths',    label: 'PATHS',    Icon: Map },
   { id: 'rides',    label: 'RIDES',    Icon: PartyPopper },
   { id: 'shops',    label: 'SHOPS',    Icon: Store },
   { id: 'services', label: 'SERVICES', Icon: Package },
@@ -31,7 +30,7 @@ function getSizeLabel(def: BuildingDefinition): string {
 }
 
 export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuildings, bottom }: BuildMenuProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('paths');
+  const [activeTab, setActiveTab] = useState<Tab>('rides');
   const [hovered, setHovered] = useState<BuildingDefinition | null>(null);
   const [expanded, setExpanded] = useState<BuildingDefinition | null>(null);
   const isMobile = useIsMobile();
@@ -40,7 +39,6 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
   const unlockedSet = new Set(unlockedBuildings);
 
   const groups: Record<Tab, BuildingDefinition[]> = {
-    paths:    [getPathDefinition()],
     rides:    [],
     shops:    [],
     services: [],

@@ -9,7 +9,7 @@ function isMobile(): boolean {
 export class GameRenderer {
   public renderer: THREE.WebGLRenderer;
   private postProcessing: PostProcessing | null = null;
-  private clock = new THREE.Clock();
+  private startTime = performance.now();
 
   constructor(container: HTMLElement) {
     const mobile = isMobile();
@@ -39,7 +39,8 @@ export class GameRenderer {
 
   public render(scene: THREE.Scene, camera: THREE.Camera): void {
     if (this.postProcessing) {
-      this.postProcessing.render(this.clock.getElapsedTime());
+      const elapsed = (performance.now() - this.startTime) / 1000;
+      this.postProcessing.render(elapsed);
     } else {
       this.renderer.render(scene, camera);
     }

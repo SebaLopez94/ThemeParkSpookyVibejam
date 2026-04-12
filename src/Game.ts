@@ -83,7 +83,9 @@ export class Game {
   private selectedBuilding: BuildingDefinition | null = null;
   private buildRotation = 0;
   private ratingUpdateTimer = 0;
+  private maintenanceUpdateTimer = 0;
   private readonly RATING_UPDATE_INTERVAL = 1;
+  private readonly MAINTENANCE_UPDATE_INTERVAL = 20;
 
   public onEconomyUpdate: ((state: EconomyState) => void) | null = null;
   public onBuildingSelected: ((info: SelectedBuildingInfo | null) => void) | null = null;
@@ -136,8 +138,8 @@ export class Game {
   }
 
   private initializeEntrance(): void {
-    // Only pre-place 2 rows of path at the grid bottom edge — rest of the grid is freely buildable
-    for (let z = 23; z <= 24; z++) {
+    // Extend the path further into the park instead of just the edge
+    for (let z = 18; z <= 24; z++) {
       this.buildingSystem.placePath({ x: 12, z });
       this.buildingSystem.placePath({ x: 13, z });
     }
@@ -189,32 +191,38 @@ export class Game {
   private setupAudioResume(): void {
     const resumeAudio = () => {
       const ctx = this.audioListener.context;
+      
       const startAudio = () => {
-        if (this.backgroundMusic.buffer && !this.backgroundMusic.isPlaying) {
-          this.backgroundMusic.play();
+        if (!this.isMuted) {
+          if (this.backgroundMusic.buffer && !this.backgroundMusic.isPlaying) {
+            this.backgroundMusic.play();
+          }
+          if (this.nightAudio.buffer && !this.nightAudio.isPlaying) {
+            this.nightAudio.play();
+          }
         }
-        if (this.nightAudio.buffer && !this.nightAudio.isPlaying) {
-          this.nightAudio.play();
-        }
+        
         // Keep listeners alive until both are actually playing (buffers may not be loaded yet)
         const bgReady = !this.backgroundMusic.buffer || this.backgroundMusic.isPlaying;
         const nightReady = !this.nightAudio.buffer || this.nightAudio.isPlaying;
+        
         if (bgReady && nightReady) {
-          window.removeEventListener('click', resumeAudio);
-          window.removeEventListener('keydown', resumeAudio);
-          window.removeEventListener('touchstart', resumeAudio);
+          ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'].forEach(ev => {
+            window.removeEventListener(ev, resumeAudio);
+          });
         }
       };
+
       if (ctx.state === 'suspended') {
-        ctx.resume().then(startAudio);
+        ctx.resume().then(startAudio).catch(() => {});
       } else {
         startAudio();
       }
     };
 
-    window.addEventListener('click', resumeAudio);
-    window.addEventListener('keydown', resumeAudio);
-    window.addEventListener('touchstart', resumeAudio);
+    ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'].forEach(ev => {
+      window.addEventListener(ev, resumeAudio);
+    });
   }
 
   private setupMouseControls(): void {
@@ -531,10 +539,9 @@ export class Game {
       const center = scaled.getCenter(new THREE.Vector3());
       model.position.x -= center.x;
       model.position.z -= center.z;
-      
       if (path === '/models/house.glb') {
         model.position.y -= scaled.min.y + 1.2;
-        model.scale.setScalar(scale * 0.75); // Match the scale reduction ratio from earlier
+        model.scale.setScalar(scale * 0.75);
       } else {
         model.position.y -= scaled.min.y;
       }
@@ -667,6 +674,19 @@ export class Game {
       }
     }
 
+    this.maintenanceUpdateTimer += deltaTime;
+    if (this.maintenanceUpdateTimer >= this.MAINTENANCE_UPDATE_INTERVAL) {
+      this.maintenanceUpdateTimer = 0;
+      
+      const counts = this.buildingSystem.getBuildingCounts();
+      const maintenance =
+        counts[BuildingType.RIDE]    * 0.5 +
+        counts[BuildingType.SHOP]    * 0.2 +
+        counts[BuildingType.SERVICE] * 0.2;
+        
+      if (maintenance > 0) this.economySystem.chargeMaintenance(maintenance);
+    }
+
     this.ratingUpdateTimer += deltaTime;
     if (this.ratingUpdateTimer >= this.RATING_UPDATE_INTERVAL) {
       this.ratingUpdateTimer = 0;
@@ -676,13 +696,7 @@ export class Game {
         this.buildingSystem.getDecorationAppeal()
       );
 
-      // Recurring maintenance costs per second
       const counts = this.buildingSystem.getBuildingCounts();
-      const maintenance =
-        counts[BuildingType.RIDE]    * 0.5 +
-        counts[BuildingType.SHOP]    * 0.2 +
-        counts[BuildingType.SERVICE] * 0.2;
-      if (maintenance > 0) this.economySystem.chargeMaintenance(maintenance);
       const completed = this.challengeSystem.update(this.RATING_UPDATE_INTERVAL, {
         totalVisitors: this.economySystem.getState().totalVisitors,
         averageHappiness: this.visitorSystem.getAverageHappiness(),
@@ -693,6 +707,8 @@ export class Game {
         rideCount: counts[BuildingType.RIDE],
         shopCount: counts[BuildingType.SHOP]
       });
+
+      this.economySystem.notify();
 
       completed.forEach(challenge => {
         const claimed = this.challengeSystem.claimReward(challenge.id);

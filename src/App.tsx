@@ -541,7 +541,7 @@ function App() {
               {/* Economy */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $0.5/s, shops $0.2/s.
+                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $0.5/20s, shops $0.2/20s.
               </div>
 
               <hr className="px-divider" />

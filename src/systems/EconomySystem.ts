@@ -27,7 +27,6 @@ export class EconomySystem {
     this.state.money += amount;
     this.state.dailyIncome += amount;
     this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
-    this.notifyListeners();
   }
 
   /** One-time purchase — deducts money but does NOT count as recurring expense. */
@@ -56,12 +55,10 @@ export class EconomySystem {
     this.state.totalVisitors += 1;
     this.state.activeVisitors += 1;
     this.addMoney(this.state.ticketPrice);
-    this.notifyListeners();
   }
 
   public removeVisitor(): void {
     this.state.activeVisitors = Math.max(0, this.state.activeVisitors - 1);
-    this.notifyListeners();
   }
 
   public updateParkRating(averageHappiness: number, facilityScore: number, decorationAppeal: number): void {
@@ -71,6 +68,9 @@ export class EconomySystem {
 
     this.state.averageHappiness = Math.round(averageHappiness);
     this.state.parkRating = Math.max(10, Math.round(happinessComponent + facilityComponent + decorationComponent));
+  }
+
+  public notify(): void {
     this.notifyListeners();
   }
 

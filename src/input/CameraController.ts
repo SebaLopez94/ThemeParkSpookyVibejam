@@ -9,14 +9,25 @@ export class CameraController {
   private target: THREE.Vector3;
   private minDistance = 24;
   private maxDistance = 72;
-  private currentDistance = 54;
+  private currentDistance = 38; // Starts a bit closer
   private panSpeed = 0.34;
   private readonly zoomStep = 3.2;
   private readonly verticalRatio = 0.78;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
-    this.target = new THREE.Vector3(0, 0, 0);
+    
+    // On mobile screens, the narrow view port means the isometric angle pushes the gate off-center.
+    // We adjust the target more to the left (-X) and closer to the gate (+Z) to center it better.
+    const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      this.target = new THREE.Vector3(-8, 0, 22);
+      this.currentDistance = 44; // Slightly further back for mobile to fit the entrance
+    } else {
+      this.target = new THREE.Vector3(0, 0, 18);
+    }
+    
     this.updateCameraPosition();
   }
 
