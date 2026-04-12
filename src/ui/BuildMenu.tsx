@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'lucide-react';
-import { getAllCatalogItems, getPathDefinition } from '../data/buildings';
+import { getAllCatalogItems } from '../data/buildings';
 import { BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 

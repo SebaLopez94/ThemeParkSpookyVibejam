@@ -163,7 +163,7 @@ export class Ride {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.z);
-      const targetSize = GRID_SIZE * 3 * 0.9;
+      const targetSize = GRID_SIZE * 3 * 0.62;
       const scale = maxDim > 0 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -229,8 +229,8 @@ export class Ride {
       const center = scaledBox.getCenter(new THREE.Vector3());
       model.position.x -= center.x;
       model.position.z -= center.z;
-      // Sink it into the ground a bit so it isn't too tall
-      model.position.y -= scaledBox.min.y + 1.2;
+      model.position.y -= scaledBox.min.y;
+      model.position.y += 0.04;
 
       model.traverse(child => {
         if (child instanceof THREE.Mesh) {

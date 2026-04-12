@@ -35,7 +35,8 @@ function App() {
     averageHappiness: 10,
     dailyIncome: 0,
     dailyExpenses: 0,
-    netProfit: 0
+    netProfit: 0,
+    isOpen: true
   });
   const [showBuildMenu, setShowBuildMenu] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -109,7 +110,7 @@ function App() {
         colors: ['#fbbf24', '#d9f99d', '#67e8f9', '#a78bfa']
       });
 
-      window.setTimeout(() => setCelebration(null), 4400);
+      window.setTimeout(() => setCelebration(null), 3400);
     };
 
     setResearchNodes(game.getResearchNodes());
@@ -184,7 +185,7 @@ function App() {
       subType: info.subType,
       name: info.name,
       description: '',
-      cost: info.buildCost,
+      cost: 0,
       icon: info.icon
     });
     if (!isMobile) pushToast('info', `Moving ${info.name}. Choose a new valid tile.`);

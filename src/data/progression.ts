@@ -3,30 +3,10 @@ import {
   ChallengeDefinition,
   DecorationType,
   ResearchNode,
-  RideType,
-  ShopType
+  RideType
 } from '../types';
 
 export const RESEARCH_NODES: ResearchNode[] = [
-  // ── Tier 1 — no dependencies, affordable early ────────────────────────
-  {
-    id: 'research_curse_kitchen',
-    name: 'Curse Kitchen',
-    description: 'Unlock the Food Stall. Feed your visitors before they haunt you.',
-    cost: 150,
-    duration: 25,
-    unlocks: [ShopType.FOOD_STALL],
-    dependencies: []
-  },
-  {
-    id: 'research_witch_brew',
-    name: "Witch's Brew Stand",
-    description: 'Unlock the Drink Stand. Thirsty visitors spend more — and complain less.',
-    cost: 100,
-    duration: 20,
-    unlocks: [ShopType.DRINK_STAND],
-    dependencies: []
-  },
   {
     id: 'research_pumpkin_lights',
     name: 'Pumpkin Lantern Rituals',
@@ -39,36 +19,25 @@ export const RESEARCH_NODES: ResearchNode[] = [
   {
     id: 'research_eye_of_doom',
     name: 'Eye of Doom Blueprints',
-    description: 'Unlock the Ferris Wheel — a prestige ride that draws bigger crowds.',
+    description: 'Unlock the Ferris Wheel - a prestige ride that draws bigger crowds.',
     cost: 500,
     duration: 50,
     unlocks: [RideType.FERRIS_WHEEL],
     dependencies: []
   },
-  // ── Tier 2 — require at least one Tier 1 unlock ───────────────────────
-  {
-    id: 'research_voodoo_shop',
-    name: 'Souvenir Hexcraft',
-    description: 'Unlock the Voodoo Shop. High-margin impulse buys from happy visitors.',
-    cost: 400,
-    duration: 40,
-    unlocks: [ShopType.GIFT_SHOP],
-    dependencies: ['research_curse_kitchen']
-  },
   {
     id: 'research_haunted_house',
     name: 'House of Screams',
-    description: 'Unlock the Haunted House — a premium walk-through horror experience.',
+    description: 'Unlock the Haunted House - a premium walk-through horror experience.',
     cost: 750,
     duration: 60,
     unlocks: [RideType.HAUNTED_HOUSE],
     dependencies: ['research_eye_of_doom']
   },
-  // ── Tier 3 — endgame ─────────────────────────────────────────────────
   {
     id: 'research_terror_coaster',
     name: 'Terror Coaster Engineering',
-    description: 'Unlock the Roller Coaster — the most thrilling and profitable ride in the park.',
+    description: 'Unlock the Roller Coaster - the most thrilling and profitable ride in the park.',
     cost: 1100,
     duration: 90,
     unlocks: [RideType.ROLLER_COASTER],
@@ -77,7 +46,6 @@ export const RESEARCH_NODES: ResearchNode[] = [
 ];
 
 export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
-  // ── Starter ──────────────────────────────────────────────────────────
   {
     id: 'challenge_first_ride',
     title: 'First Thrills',
@@ -102,7 +70,6 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
     target: 3,
     reward: { money: 200, rating: 2 }
   },
-  // ── Medium ────────────────────────────────────────────────────────────
   {
     id: 'challenge_visitors_25',
     title: 'Crowd Puller',
@@ -145,7 +112,6 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
     target: 3,
     reward: { money: 700, rating: 5 }
   },
-  // ── Hard ─────────────────────────────────────────────────────────────
   {
     id: 'challenge_visitors_75',
     title: 'Haunted Horde',
@@ -171,7 +137,6 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
     target: 80,
     reward: { money: 1200, rating: 0 }
   },
-  // ── Legendary ─────────────────────────────────────────────────────────
   {
     id: 'challenge_visitors_150',
     title: 'Thousand Screams',

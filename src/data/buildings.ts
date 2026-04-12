@@ -78,8 +78,7 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     ...BUILDING_DISPLAY[ShopType.GIFT_SHOP],
     cost: 300,
     quality: 60,
-    valueScore: 10,
-    unlockRequirement: 'research_voodoo_shop'
+    valueScore: 10
   },
   [ServiceType.RESTROOM]: {
     type: BuildingType.SERVICE,
@@ -126,6 +125,9 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
 
 export const INITIAL_UNLOCKED_BUILDINGS: PlaceableBuildingKind[] = [
   RideType.CAROUSEL,
+  ShopType.FOOD_STALL,
+  ShopType.DRINK_STAND,
+  ShopType.GIFT_SHOP,
   ServiceType.RESTROOM,
   DecorationType.SPOOKY_TREE,
   DecorationType.STONE,

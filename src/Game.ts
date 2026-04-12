@@ -81,6 +81,7 @@ export class Game {
 
   private hoveredGridPosition: GridPosition | null = null;
   private selectedBuilding: BuildingDefinition | null = null;
+  private movingBuilding: SelectedBuildingInfo | null = null;
   private buildRotation = 0;
   private ratingUpdateTimer = 0;
   private maintenanceUpdateTimer = 0;
@@ -302,7 +303,8 @@ export class Game {
         icon: display.icon,
         position: buildingPosition,
         currentPrice: price,
-        buildCost: cost
+        buildCost: cost,
+        rotationY: result.ride.mesh.rotation.y
       });
       return;
     }
@@ -319,7 +321,8 @@ export class Game {
         icon: display.icon,
         position: buildingPosition,
         currentPrice: price,
-        buildCost: cost
+        buildCost: cost,
+        rotationY: result.shop.mesh.rotation.y
       });
       return;
     }
@@ -336,7 +339,8 @@ export class Game {
         icon: display.icon,
         position: buildingPosition,
         currentPrice: price,
-        buildCost: cost
+        buildCost: cost,
+        rotationY: result.service.mesh.rotation.y
       });
       return;
     }
@@ -352,7 +356,8 @@ export class Game {
       icon: display.icon,
       position: buildingPosition,
       currentPrice: null,
-      buildCost: cost
+      buildCost: cost,
+      rotationY: result.decoration.mesh.rotation.y
     });
   }
 
@@ -388,6 +393,10 @@ export class Game {
     }
 
     if (success) {
+      if (this.movingBuilding) {
+        this.movingBuilding = null;
+        return;
+      }
       this.economySystem.spendMoney(this.selectedBuilding.cost);
     }
   }
@@ -455,7 +464,7 @@ export class Game {
 
   public startMoveBuilding(info: SelectedBuildingInfo): void {
     this.buildingSystem.removeBuilding(info.position);
-    this.economySystem.addMoney(info.buildCost);
+    this.movingBuilding = info;
     this.hideSelectionHighlight();
     this.onBuildingSelected?.(null);
     this.selectBuilding({
@@ -463,9 +472,12 @@ export class Game {
       subType: info.subType,
       name: info.name,
       description: '',
-      cost: info.buildCost,
+      cost: 0,
       icon: info.icon
     });
+    this.buildRotation = info.rotationY;
+    this.onRotationChange?.(Math.round(this.buildRotation * 180 / Math.PI));
+    this.updatePreview();
   }
 
   public updateBuildingPrice(position: GridPosition, newPrice: number): void {
@@ -560,8 +572,9 @@ export class Game {
       model.position.x -= center.x;
       model.position.z -= center.z;
       if (path === '/models/house.glb') {
-        model.position.y -= scaled.min.y + 1.2;
-        model.scale.setScalar(scale * 0.75);
+        model.position.y -= scaled.min.y;
+        model.position.y += 0.04;
+        model.scale.setScalar(scale * 0.72);
       } else {
         model.position.y -= scaled.min.y;
       }
@@ -697,6 +710,16 @@ export class Game {
   }
 
   public selectBuilding(definition: BuildingDefinition): void {
+    if (
+      this.movingBuilding &&
+      !(
+        definition.cost === 0 &&
+        definition.type === this.movingBuilding.buildingType &&
+        definition.subType === this.movingBuilding.subType
+      )
+    ) {
+      this.restoreMovedBuilding();
+    }
     this.selectedBuilding = definition;
     this.buildRotation = 0;
     this.onRotationChange?.(0);
@@ -708,10 +731,47 @@ export class Game {
   }
 
   public cancelBuildMode(): void {
+    if (this.movingBuilding) {
+      this.restoreMovedBuilding();
+    }
     this.selectedBuilding = null;
     this.mouseController.onBuildRotate = null;
     this.mouseController.touchRotateMode = false;
     this.disposePreview();
+  }
+
+  private restoreMovedBuilding(): void {
+    const info = this.movingBuilding;
+    if (!info) return;
+
+    let restored: { mesh: THREE.Object3D } | null = null;
+
+    switch (info.buildingType) {
+      case BuildingType.RIDE:
+        restored = this.buildingSystem.placeRide(info.position, info.subType as RideType);
+        break;
+      case BuildingType.SHOP:
+        restored = this.buildingSystem.placeShop(info.position, info.subType as ShopType);
+        break;
+      case BuildingType.SERVICE:
+        restored = this.buildingSystem.placeService(info.position, info.subType as ServiceType);
+        break;
+      case BuildingType.DECORATION:
+        restored = this.buildingSystem.placeDecoration(info.position, info.subType as DecorationType);
+        break;
+      default:
+        restored = null;
+        break;
+    }
+
+    if (restored) {
+      restored.mesh.rotation.y = info.rotationY;
+      if (info.currentPrice !== null) {
+        this.buildingSystem.updateBuildingPrice(info.position, info.currentPrice);
+      }
+    }
+
+    this.movingBuilding = null;
   }
 
   public canAfford(cost: number): boolean {

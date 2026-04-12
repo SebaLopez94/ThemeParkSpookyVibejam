@@ -79,7 +79,7 @@ export class Decoration {
     switch (type) {
       case DecorationType.SPOOKY_TREE:
         // tree.glb — scale to fit within one grid cell height
-        this.loadGlb('/models/tree.glb', GRID_SIZE * 2.5);
+        this.loadGlb('/models/tree.glb', GRID_SIZE * 1.35);
         break;
 
       case DecorationType.STONE:

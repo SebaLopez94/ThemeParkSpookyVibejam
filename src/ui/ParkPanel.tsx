@@ -1,4 +1,4 @@
-import { Banknote, FlaskConical, Lock, Ticket, Unlock, X } from 'lucide-react';
+import { FlaskConical, Lock, Ticket, Unlock, X } from 'lucide-react';
 import { EconomyState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 

@@ -81,6 +81,7 @@ export interface SelectedBuildingInfo {
   position: GridPosition;
   currentPrice: number | null;
   buildCost: number;
+  rotationY: number;
 }
 
 export interface BuildingData {

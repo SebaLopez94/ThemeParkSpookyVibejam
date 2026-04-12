@@ -72,14 +72,14 @@ export class Shop {
     }
   }
 
-  private loadGlbShop(path: string): void {
+  private loadGlbShop(path: string, sizeMultiplier = 1): void {
     sharedGLTFLoader.load(path, (gltf) => {
       const model = gltf.scene;
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.z);
-      const targetSize = GRID_SIZE * 0.9;
+      const targetSize = GRID_SIZE * 0.9 * sizeMultiplier;
       const scale = maxDim > 0 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -106,11 +106,11 @@ export class Shop {
       return;
     }
     if (type === ShopType.DRINK_STAND) {
-      this.loadGlbShop('/models/drinks.glb');
+      this.loadGlbShop('/models/drinks.glb', 1.12);
       return;
     }
     if (type === ShopType.GIFT_SHOP) {
-      this.loadGlbShop('/models/gift.glb');
+      this.loadGlbShop('/models/gift.glb', 1.14);
       return;
     }
     const baseMat = type === ShopType.FOOD_STALL ? sharedFallbackMat.food
