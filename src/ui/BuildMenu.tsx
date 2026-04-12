@@ -62,55 +62,55 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
         <div className="px-panel px-panel--build" style={{ padding: 0, margin: '0 8px', maxHeight: 'calc(100vh - 220px)', display: 'flex', flexDirection: 'column' }}>
 
           {/* Titlebar */}
-          <div className="px-titlebar px-titlebar--build" style={{ flexShrink: 0 }}>
-            <span className="px-titlebar__label" style={{ fontSize: 11 }}>
-              <Hammer size={14} /> BUILD
+          <div className="px-titlebar px-titlebar--build" style={{ flexShrink: 0, padding: '4px 8px' }}>
+            <span className="px-titlebar__label" style={{ fontSize: 9 }}>
+              <Hammer size={12} /> BUILD
             </span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button className="px-btn px-btn--danger" style={{ fontSize: 10, padding: '6px 10px' }}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button className="px-btn px-btn--danger" style={{ fontSize: 9, padding: '4px 8px' }}
                 onClick={() => onSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a building (50% refund)', cost: 0, icon: '🗑️' })}>
-                <Trash2 size={13} />
+                <Trash2 size={12} />
               </button>
-              <button className="px-btn" style={{ fontSize: 10, padding: '6px 10px' }} onClick={onCancel}>
-                <X size={13} />
+              <button className="px-btn" style={{ fontSize: 9, padding: '4px 8px' }} onClick={onCancel}>
+                <X size={12} />
               </button>
             </div>
           </div>
 
           {/* Category tabs — icon only */}
-          <div style={{ display: 'flex', gap: 4, padding: '8px 8px 0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 2, padding: '4px 4px 0', flexShrink: 0 }}>
             {TABS.map(({ id, label, Icon }) => (
               <button key={id}
                 className={`px-btn ${activeTab === id ? 'px-btn--active' : ''}`}
-                style={{ flex: 1, padding: '8px 4px', fontSize: 9, flexDirection: 'column', gap: 3, justifyContent: 'center' }}
+                style={{ flex: 1, padding: '6px 2px', fontSize: 8, flexDirection: 'column', gap: 2, justifyContent: 'center' }}
                 onClick={() => { setActiveTab(id); setHovered(null); setExpanded(null); }}
               >
-                <Icon size={14} />
-                <span>{label}</span>
+                <Icon size={12} />
+                <span style={{ transform: 'scale(0.9)' }}>{label}</span>
               </button>
             ))}
           </div>
 
           {/* Expanded item detail sheet */}
           {expanded && (
-            <div style={{ margin: '8px 8px 0', padding: '12px 14px', background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(139,92,246,0.3)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="px-emoji" style={{ fontSize: 28 }}>{expanded.icon}</span>
+            <div style={{ margin: '6px 6px 0', padding: '8px 10px', background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(139,92,246,0.3)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="px-emoji" style={{ fontSize: 24 }}>{expanded.icon}</span>
                 <div>
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-green-hi)', marginBottom: 4 }}>{expanded.name}</div>
-                  <div className="px-body" style={{ fontSize: 11, lineHeight: 1.6 }}>{expanded.description}</div>
+                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', marginBottom: 2 }}>{expanded.name}</div>
+                  <div className="px-body" style={{ fontSize: 10, lineHeight: 1.4 }}>{expanded.description}</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: canAfford(expanded.cost) ? 'var(--px-gold)' : 'var(--px-red)' }}>${expanded.cost}</span>
-                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-muted)' }}>{getSizeLabel(expanded)}</span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: canAfford(expanded.cost) ? 'var(--px-gold)' : 'var(--px-red)' }}>${expanded.cost}</span>
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-muted)' }}>{getSizeLabel(expanded)}</span>
                 <div style={{ flex: 1 }} />
-                <button className="px-btn" style={{ fontSize: 9, padding: '8px 12px' }} onClick={() => setExpanded(null)}>
-                  <X size={12} />
+                <button className="px-btn" style={{ fontSize: 8, padding: '6px 8px' }} onClick={() => setExpanded(null)}>
+                  <X size={11} />
                 </button>
                 <button
                   className="px-btn"
-                  style={{ fontSize: 9, padding: '8px 12px', background: canAfford(expanded.cost) ? undefined : 'rgba(0,0,0,0.3)' }}
+                  style={{ fontSize: 8, padding: '6px 8px', background: canAfford(expanded.cost) ? undefined : 'rgba(0,0,0,0.3)' }}
                   disabled={!canAfford(expanded.cost)}
                   onClick={() => { onSelectBuilding(expanded); setExpanded(null); }}
                 >
@@ -121,14 +121,14 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
           )}
 
           {/* Items grid — scrollable */}
-          <div className="px-scroll-hidden" style={{ overflowY: 'auto', padding: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 6 }}>
+          <div className="px-scroll-hidden" style={{ overflowY: 'auto', padding: '6px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(75px, 1fr))', gap: 4 }}>
             {items.map(def => {
               const affordable = canAfford(def.cost);
               const isExpanded = expanded === def;
               return (
                 <button key={`${def.type}:${def.subType ?? def.name}`}
                   className={`px-card${!affordable ? ' px-card--disabled' : ''}`}
-                  style={{ padding: '10px 6px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, outline: isExpanded ? '2px solid var(--px-border)' : 'none', outlineOffset: 2 }}
+                  style={{ padding: '8px 4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, outline: isExpanded ? '2px solid var(--px-border)' : 'none', outlineOffset: 1 }}
                   aria-label={`${def.name}, $${def.cost}${!affordable ? ', cannot afford' : ''}`}
                   onClick={() => {
                     if (!affordable) return;
@@ -136,11 +136,11 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
                     else setExpanded(def);
                   }}
                 >
-                  <div className="px-emoji" style={{ fontSize: 26 }}>{def.icon}</div>
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, textAlign: 'center', lineHeight: 1.5, wordBreak: 'break-word', color: 'var(--px-text)' }}>
+                  <div className="px-emoji" style={{ fontSize: 22 }}>{def.icon}</div>
+                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, textAlign: 'center', lineHeight: 1.4, wordBreak: 'break-word', color: 'var(--px-text)' }}>
                     {def.name}
                   </div>
-                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: affordable ? 'var(--px-gold)' : 'var(--px-red)' }}>
+                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: affordable ? 'var(--px-gold)' : 'var(--px-red)' }}>
                     ${def.cost}
                   </span>
                 </button>

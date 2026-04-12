@@ -2,6 +2,7 @@ import { CSSProperties } from 'react';
 import { Clock3, FlaskConical, LockKeyhole, X } from 'lucide-react';
 import { BUILDING_DISPLAY } from '../types';
 import { ResearchNode, ResearchState } from '../types';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface ResearchPanelProps {
   nodes: ResearchNode[];
@@ -13,6 +14,8 @@ interface ResearchPanelProps {
 }
 
 export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch, style, onClose }: ResearchPanelProps) {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '48vh', overflow: 'auto', ...style }}>
       <div className="px-panel px-panel--research" style={{ padding: 0 }}>
@@ -23,7 +26,7 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
             </button>
           </div>
         )}
-        <div style={{ padding: '10px 16px 18px' }}>
+        <div style={{ padding: isMobile ? '8px 12px 14px' : '10px 16px 18px' }}>
           {state.activeResearchId && (() => {
             const activeNode = nodes.find(n => n.id === state.activeResearchId);
             const pct = activeNode ? Math.max(0, Math.min(100, 100 - (state.remainingTime / activeNode.duration) * 100)) : 0;
@@ -31,15 +34,15 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
             const secs = Math.ceil(state.remainingTime % 60);
             const timeLabel = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
             return (
-              <div className="px-stat" style={{ marginBottom: 14, background: 'rgba(103,232,249,0.07)', border: '1px solid rgba(103,232,249,0.2)' }}>
+              <div className="px-stat" style={{ marginBottom: 14, padding: isMobile ? 8 : undefined, background: 'rgba(103,232,249,0.07)', border: '1px solid rgba(103,232,249,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Clock3 size={14} color="var(--px-cyan)" />
-                    <div className="px-label" style={{ fontSize: 9 }}>RESEARCHING</div>
+                    <Clock3 size={isMobile ? 12 : 14} color="var(--px-cyan)" />
+                    <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>RESEARCHING</div>
                   </div>
-                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-cyan)' }}>{timeLabel}</span>
+                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 9, color: 'var(--px-cyan)' }}>{timeLabel}</span>
                 </div>
-                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: 'var(--px-green-hi)', marginBottom: 8 }}>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 9 : 11, color: 'var(--px-green-hi)', marginBottom: isMobile ? 6 : 8 }}>
                   {activeNode?.name}
                 </div>
                 {/* Timer progress bar */}
@@ -86,46 +89,46 @@ export function ResearchPanel({ nodes, state, onStartResearch, canAffordResearch
                         : {})
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 12, color: 'var(--px-text)', lineHeight: 1.8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', padding: isMobile ? '8px 8px 0' : undefined }}>
+                    <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 9 : 12, color: 'var(--px-text)', lineHeight: 1.8 }}>
                       {node.name}
                     </div>
                     {completed ? (
-                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', lineHeight: 1.8 }}>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 9, color: 'var(--px-green-hi)', lineHeight: 1.8 }}>
                         COMPLETE
                       </span>
                     ) : active ? (
-                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-cyan)', lineHeight: 1.8 }}>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 9, color: 'var(--px-cyan)', lineHeight: 1.8 }}>
                         IN PROGRESS
                       </span>
                     ) : !unlocked ? (
-                      <LockKeyhole size={14} color="var(--px-muted)" />
+                      <LockKeyhole size={isMobile ? 12 : 14} color="var(--px-muted)" />
                     ) : null}
                   </div>
-                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-muted)', lineHeight: 1.9, marginTop: 8 }}>
+                  <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 10, color: 'var(--px-muted)', lineHeight: isMobile ? 1.5 : 1.9, marginTop: 8, padding: isMobile ? '0 8px' : undefined }}>
                     {node.description}
                   </div>
-                  <div className="px-chip-row" style={{ marginTop: 10 }}>
+                  <div className="px-chip-row" style={{ marginTop: isMobile ? 6 : 10, padding: isMobile ? '0 8px' : undefined }}>
                     {unlockItems.map(item => (
-                      <div key={item.key} className="px-chip" style={{ fontSize: 11, padding: '10px 12px', gap: 10 }}>
-                        <span className="px-chip__emoji" aria-hidden="true" style={{ fontSize: 24 }}>
+                      <div key={item.key} className="px-chip" style={{ fontSize: isMobile ? 9 : 11, padding: isMobile ? '6px 8px' : '10px 12px', gap: isMobile ? 6 : 10 }}>
+                        <span className="px-chip__emoji" aria-hidden="true" style={{ fontSize: isMobile ? 18 : 24 }}>
                           {item.icon}
                         </span>
                         <span style={{ lineHeight: 1.7 }}>{item.name}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="px-chip-row" style={{ marginTop: 10 }}>
-                    <div className="px-chip">
-                      <FlaskConical size={16} />
+                  <div className="px-chip-row" style={{ marginTop: isMobile ? 6 : 10, padding: isMobile ? '0 8px' : undefined }}>
+                    <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : undefined }}>
+                      <FlaskConical size={isMobile ? 12 : 16} />
                       ${node.cost}
                     </div>
-                    <div className="px-chip">
-                      <Clock3 size={16} />
+                    <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : undefined }}>
+                      <Clock3 size={isMobile ? 12 : 16} />
                       {node.duration}s
                     </div>
                   </div>
-                  <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ marginTop: isMobile ? 8 : 12, display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '0 8px 8px' : undefined }}>
                     <button
                       className={`px-btn ${completed ? 'px-btn--active' : ''}`}
                       style={{ fontSize: 10, padding: '10px 14px', opacity: disabled ? 0.5 : 1 }}

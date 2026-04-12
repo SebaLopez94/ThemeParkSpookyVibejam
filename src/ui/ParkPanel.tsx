@@ -1,5 +1,6 @@
 import { Banknote, FlaskConical, Lock, Ticket, Unlock, X } from 'lucide-react';
 import { EconomyState } from '../types';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface ParkPanelProps {
   economy: EconomyState;
@@ -20,6 +21,8 @@ export function ParkPanel({
   activeResearchLabel,
   onClose
 }: ParkPanelProps) {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '52vh', overflow: 'auto' }}>
       <div className="px-panel px-panel--park" style={{ padding: 0 }}>
@@ -30,16 +33,16 @@ export function ParkPanel({
             </button>
           </div>
         )}
-        <div style={{ padding: '10px 14px 14px', display: 'grid', gap: 12 }}>
+        <div style={{ padding: isMobile ? '6px 10px 10px' : '10px 14px 14px', display: 'grid', gap: isMobile ? 8 : 12 }}>
 
           {/* ── Park Status Toggle ─────────────────────────────── */}
           <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {economy.isOpen ? <Unlock size={14} color="var(--px-green-hi)" /> : <Lock size={14} color="var(--px-red)" />}
-              <span className="px-label" style={{ fontSize: 10 }}>PARK STATUS</span>
+              {economy.isOpen ? <Unlock size={isMobile ? 12 : 14} color="var(--px-green-hi)" /> : <Lock size={isMobile ? 12 : 14} color="var(--px-red)" />}
+              <span className="px-label" style={{ fontSize: isMobile ? 8 : 10 }}>PARK STATUS</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: economy.isOpen ? 'var(--px-green-hi)' : 'var(--px-red)' }}>
+              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 9, color: economy.isOpen ? 'var(--px-green-hi)' : 'var(--px-red)' }}>
                 {economy.isOpen ? 'OPEN' : 'CLOSED'}
               </span>
               <input
@@ -55,12 +58,12 @@ export function ParkPanel({
 
           {/* ── Entry ticket ───────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: 100, flexShrink: 0 }}>
-              <Ticket size={13} color="var(--px-gold)" />
-              <span className="px-label" style={{ fontSize: 10 }}>ENTRY FEE</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: isMobile ? 80 : 100, flexShrink: 0 }}>
+              <Ticket size={isMobile ? 11 : 13} color="var(--px-gold)" />
+              <span className="px-label" style={{ fontSize: isMobile ? 8 : 10 }}>ENTRY FEE</span>
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 14, color: 'var(--px-gold)' }}>$</span>
+              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 11 : 14, color: 'var(--px-gold)' }}>$</span>
               <input
                 className="px-input"
                 type="number"
@@ -82,10 +85,10 @@ export function ParkPanel({
 
           {/* ── Active research ────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FlaskConical size={13} color="var(--px-border)" style={{ flexShrink: 0 }} />
+            <FlaskConical size={isMobile ? 11 : 13} color="var(--px-border)" style={{ flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
-              <div className="px-label" style={{ fontSize: 9, marginBottom: 4 }}>ACTIVE RESEARCH</div>
-              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-text)', lineHeight: 1.8, wordBreak: 'break-word' }}>
+              <div className="px-label" style={{ fontSize: isMobile ? 7 : 9, marginBottom: 4 }}>ACTIVE RESEARCH</div>
+              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 10, color: 'var(--px-text)', lineHeight: 1.8, wordBreak: 'break-word' }}>
                 {activeResearchLabel.toUpperCase()}
               </div>
             </div>

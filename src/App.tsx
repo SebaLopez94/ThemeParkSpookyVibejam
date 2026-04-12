@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
-import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, Trash2, Volume2, VolumeX, XCircle } from 'lucide-react';
+import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { Game } from './Game';
 import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
@@ -344,8 +344,9 @@ function App() {
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: isMobile ? 'calc(72px + var(--safe-bottom))' : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
-        <button
+      {!(isMobile && (showParkPanel || showChallenges || showResearch)) && (
+        <div style={{ position: 'fixed', bottom: isMobile ? 'calc(72px + var(--safe-bottom))' : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
+          <button
           className="px-btn px-btn--lg"
           aria-label="Place path (free)"
           onClick={() => {
@@ -393,6 +394,7 @@ function App() {
           {isMuted ? <VolumeX /> : <Volume2 />}
         </button>
       </div>
+      )}
 
       {isBuildMenuVisible && (
         <BuildMenu
@@ -419,18 +421,18 @@ function App() {
           /* Mobile: minimal bar — building name + cancel */
           <div style={{ position: 'fixed', bottom: 90, left: 8, right: 8, zIndex: 46 }}>
             <div className="px-panel px-panel--controls" style={{ padding: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
-                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: 'var(--px-green-hi)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px' }}>
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)' }}>
                   {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
                 </span>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 4 }}>
                   {activeBuildDefinition.type === BuildingType.PATH && (
-                    <button className="px-btn px-btn--danger" style={{ padding: '8px 14px', fontSize: 11 }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
-                      <Trash2 size={14} /> DELETE
+                    <button className="px-btn px-btn--danger" style={{ padding: '6px 10px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
+                      <Trash2 size={13} />
                     </button>
                   )}
-                  <button className="px-btn px-btn--danger" style={{ padding: '8px 14px', fontSize: 11 }} onClick={handleCancelBuildMode}>
-                    <XCircle size={14} /> CANCEL
+                  <button className="px-btn" style={{ padding: '6px 10px' }} onClick={handleCancelBuildMode}>
+                    <X size={13} />
                   </button>
                 </div>
               </div>
@@ -447,12 +449,12 @@ function App() {
                 </span>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {activeBuildDefinition.type === BuildingType.PATH && (
-                    <button className="px-btn px-btn--danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
-                      <Trash2 size={13} /> DELETE
+                    <button className="px-btn px-btn--danger" style={{ padding: '8px 14px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
+                      <Trash2 size={16} />
                     </button>
                   )}
-                  <button className="px-btn px-btn--danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={handleCancelBuildMode}>
-                    <XCircle size={13} /> CANCEL
+                  <button className="px-btn" style={{ padding: '8px 14px' }} onClick={handleCancelBuildMode}>
+                    <X size={16} />
                   </button>
                 </div>
               </div>
@@ -541,7 +543,7 @@ function App() {
               {/* Economy */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $0.5/20s, shops $0.2/20s.
+                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $1/20s, shops $1/20s.
               </div>
 
               <hr className="px-divider" />

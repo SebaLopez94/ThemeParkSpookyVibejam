@@ -24,15 +24,17 @@ export class EconomySystem {
   }
 
   public addMoney(amount: number): void {
-    this.state.money += amount;
-    this.state.dailyIncome += amount;
+    const intAmount = Math.round(amount);
+    this.state.money += intAmount;
+    this.state.dailyIncome += intAmount;
     this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
   }
 
   /** One-time purchase — deducts money but does NOT count as recurring expense. */
   public spendMoney(amount: number): boolean {
-    if (this.state.money >= amount) {
-      this.state.money -= amount;
+    const intAmount = Math.round(amount);
+    if (this.state.money >= intAmount) {
+      this.state.money -= intAmount;
       this.notifyListeners();
       return true;
     }
@@ -41,8 +43,9 @@ export class EconomySystem {
 
   /** Recurring maintenance — deducts money AND adds to dailyExpenses. */
   public chargeMaintenance(amount: number): void {
-    this.state.money -= amount;
-    this.state.dailyExpenses += amount;
+    const intAmount = Math.round(amount);
+    this.state.money -= intAmount;
+    this.state.dailyExpenses += intAmount;
     this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
     this.notifyListeners();
   }
@@ -75,7 +78,7 @@ export class EconomySystem {
   }
 
   public setTicketPrice(price: number): void {
-    this.state.ticketPrice = Math.max(0, Math.min(price, 50));
+    this.state.ticketPrice = Math.round(Math.max(0, Math.min(price, 50)));
     this.notifyListeners();
   }
 
