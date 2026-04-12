@@ -598,8 +598,11 @@ function App() {
       )}
 
       {celebration && (
-        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, pointerEvents: 'none' }}>
-          <div className="px-celebration">
+        <div
+          style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, pointerEvents: 'auto' }}
+          onClick={() => setCelebration(null)}
+        >
+          <div className="px-celebration" role="button" aria-label="Dismiss challenge celebration">
             <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(14px, 4vw, 22px)', color: 'var(--px-gold)', textShadow: '2px 2px 0 #000', lineHeight: 1.6 }}>
               {celebration.title}
             </div>

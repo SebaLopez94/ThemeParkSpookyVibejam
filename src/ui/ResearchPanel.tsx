@@ -49,11 +49,11 @@ export function ResearchPanel({
   const totalCount = nodes.length;
 
   return (
-    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '48vh', overflow: 'auto', ...style }}>
+    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', overflow: 'auto', ...style }}>
       <div className="px-panel px-panel--research" style={{ padding: 0 }}>
         {onClose && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
-            <button className="px-btn px-btn--sm" aria-label="Close research panel" onClick={onClose}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '4px 6px 0' : '6px 8px 0' }}>
+            <button className="px-btn px-btn--sm" aria-label="Close research panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
               <X />
             </button>
           </div>
@@ -94,7 +94,7 @@ export function ResearchPanel({
 
             {activeNode ? (
               <>
-                <div className="px-body" style={{ marginTop: 10 }}>
+                <div className="px-body" style={{ marginTop: 10, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.55 : undefined }}>
                   {activeNode.description}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12 }}>
@@ -171,11 +171,11 @@ export function ResearchPanel({
                   >
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto', gap: isMobile ? 10 : 12, alignItems: 'center' }}>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, minWidth: 0 }}>
                           <div
                             style={{
-                              width: isMobile ? 42 : 48,
-                              height: isMobile ? 42 : 48,
+                              width: isMobile ? 36 : 48,
+                              height: isMobile ? 36 : 48,
                               display: 'grid',
                               placeItems: 'center',
                               flexShrink: 0,
@@ -183,7 +183,7 @@ export function ResearchPanel({
                               border: '2px solid rgba(103,232,249,0.14)'
                             }}
                           >
-                            <span className="px-emoji" style={{ fontSize: isMobile ? 20 : 24 }}>
+                            <span className="px-emoji" style={{ fontSize: isMobile ? 18 : 24 }}>
                               {unlockDisplay.icon}
                             </span>
                           </div>
@@ -192,20 +192,20 @@ export function ResearchPanel({
                             <div
                               style={{
                                 fontFamily: "'Press Start 2P', monospace",
-                                fontSize: isMobile ? 9 : 11,
+                                fontSize: isMobile ? 8 : 11,
                                 color: 'var(--px-text)',
-                                lineHeight: 1.7
+                                lineHeight: isMobile ? 1.55 : 1.7
                               }}
                             >
                               {unlockDisplay.name}
                             </div>
-                            <div className="px-body" style={{ marginTop: 4 }}>
+                            <div className="px-body" style={{ marginTop: 3, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
                               {node.description}
                             </div>
                           </div>
                         </div>
 
-                        <div className="px-chip-row" style={{ marginTop: 10 }}>
+                        <div className="px-chip-row" style={{ marginTop: isMobile ? 8 : 10, gap: isMobile ? 6 : 8 }}>
                           <div className="px-chip" style={{ padding: isMobile ? '6px 8px' : '7px 10px' }}>
                             <FlaskConical className="px-icon-sm" />
                             ${node.cost}
@@ -228,7 +228,8 @@ export function ResearchPanel({
                           style={{
                             minWidth: isMobile ? '100%' : 132,
                             opacity: disabled ? 0.55 : 1,
-                            color: active ? 'var(--px-cyan)' : undefined
+                            color: active ? 'var(--px-cyan)' : undefined,
+                            ...(isMobile ? { padding: '8px 10px', minHeight: 38 } : {})
                           }}
                           disabled={disabled}
                           onClick={() => onStartResearch(node.id)}
@@ -266,11 +267,11 @@ export function ResearchPanel({
                       background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(12,12,18,0.96) 100%)'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 8 : 10 }}>
                       <div
                         style={{
-                          width: isMobile ? 38 : 42,
-                          height: isMobile ? 38 : 42,
+                          width: isMobile ? 32 : 42,
+                          height: isMobile ? 32 : 42,
                           display: 'grid',
                           placeItems: 'center',
                           flexShrink: 0,
@@ -285,14 +286,14 @@ export function ResearchPanel({
                         <div
                           style={{
                             fontFamily: "'Press Start 2P', monospace",
-                            fontSize: isMobile ? 9 : 10,
+                            fontSize: isMobile ? 8 : 10,
                             color: 'var(--px-text)',
-                            lineHeight: 1.7
+                            lineHeight: isMobile ? 1.55 : 1.7
                           }}
                         >
                           {unlockDisplay.name}
                         </div>
-                        <div className="px-body" style={{ marginTop: 4 }}>
+                        <div className="px-body" style={{ marginTop: 3, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
                           Requires {missing.join(' + ')}
                         </div>
                       </div>

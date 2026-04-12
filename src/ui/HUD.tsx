@@ -1,12 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Coins, HeartPulse, Landmark, TrendingDown, TrendingUp, Users } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Coins,
+  HeartPulse,
+  Landmark,
+  TrendingDown,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 import { EconomyState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
-function Stars({ count }: { count: number }) {
+function Stars({ count, mobile }: { count: number; mobile: boolean }) {
+  const clampedCount = Math.max(0, Math.min(5, count));
+  const star = '\u2605';
+
   return (
-    <span style={{ fontSize: 22, letterSpacing: 3, color: 'var(--px-gold)', textShadow: '0 0 8px rgba(251,191,36,0.6)' }}>
-      {'★'.repeat(count)}{'☆'.repeat(5 - count)}
+    <span
+      style={{
+        fontSize: mobile ? 18 : 22,
+        letterSpacing: mobile ? 1.5 : 2.5,
+        color: 'var(--px-gold)',
+        textShadow: '2px 2px 0 #000',
+      }}
+    >
+      {star.repeat(clampedCount)}
+      <span style={{ color: 'rgba(251,191,36,0.22)' }}>{star.repeat(5 - clampedCount)}</span>
     </span>
   );
 }
@@ -16,54 +36,78 @@ interface HUDProps {
 }
 
 export function HUD({ economy }: HUDProps) {
-  const [mounted, setMounted] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
   const isMobile = useIsMobile();
-
+  const [mounted, setMounted] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => isMobile);
   const [joyStars, setJoyStars] = useState(() => Math.round(economy.averageHappiness / 20));
   const [ratingStars, setRatingStars] = useState(() => Math.round(economy.parkRating / 20));
   const [moneyFlash, setMoneyFlash] = useState<'green' | 'red' | null>(null);
+  const prevMoneyRef = useRef(economy.money);
+
   useEffect(() => {
-    const s = Math.round(economy.averageHappiness / 20);
-    setJoyStars(prev => prev === s ? prev : s);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setJoyStars(prev => {
+      const next = Math.round(economy.averageHappiness / 20);
+      return prev === next ? prev : next;
+    });
   }, [economy.averageHappiness]);
+
   useEffect(() => {
-    const s = Math.round(economy.parkRating / 20);
-    setRatingStars(prev => prev === s ? prev : s);
+    setRatingStars(prev => {
+      const next = Math.round(economy.parkRating / 20);
+      return prev === next ? prev : next;
+    });
   }, [economy.parkRating]);
 
-  const prevMoneyRef2 = useRef(economy.money);
   useEffect(() => {
-    const diff = economy.money - prevMoneyRef2.current;
-    if (diff > 0) { setMoneyFlash('green'); setTimeout(() => setMoneyFlash(null), 500); }
-    else if (diff < 0) { setMoneyFlash('red'); setTimeout(() => setMoneyFlash(null), 500); }
-    prevMoneyRef2.current = economy.money;
+    const diff = economy.money - prevMoneyRef.current;
+    if (diff > 0) {
+      setMoneyFlash('green');
+      setTimeout(() => setMoneyFlash(null), 500);
+    } else if (diff < 0) {
+      setMoneyFlash('red');
+      setTimeout(() => setMoneyFlash(null), 500);
+    }
+    prevMoneyRef.current = economy.money;
   }, [economy.money]);
 
   if (!mounted) return null;
 
-  const netColor = economy.netProfit >= 0 ? 'var(--px-green-hi)' : 'var(--px-red)';
-  return (
-    <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 40, maxWidth: 'calc(100vw - 32px)' }}>
-      <div className="px-panel px-panel--hud" style={{ padding: 0, minWidth: isMobile ? 180 : 300 }}>
+  const netPositive = economy.netProfit >= 0;
+  const netIcon = netPositive ? <TrendingUp className="px-icon-sm" color="var(--px-green-hi)" /> : <TrendingDown className="px-icon-sm" color="var(--px-red)" />;
+  const netValue = `${netPositive ? '+' : '-'}$${Math.abs(economy.netProfit).toLocaleString()}`;
 
-        {/* Titlebar */}
-        <div className="px-titlebar px-titlebar--hud">
-          <span className="px-titlebar__label" style={{ gap: 6 }}>
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 16,
+        left: 16,
+        zIndex: 40,
+        maxWidth: 'calc(100vw - 32px)',
+      }}
+    >
+      <div className="px-panel px-panel--hud px-hud-panel" style={{ padding: 0 }}>
+        <div className="px-titlebar px-titlebar--hud px-hud-bar">
+          <div className="px-titlebar__label px-hud-bar__label">
             <Landmark className="px-icon-sm" />
-            <span style={{ fontSize: isMobile ? 9 : 11 }}>PARK LIVE</span>
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="px-hud-bar__title">Park Live</span>
+          </div>
+
+          <div className="px-hud-bar__actions">
             {collapsed && (
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-gold)' }}>
+              <span className="px-hud-inline-money">
+                <Coins className="px-icon-sm" color="var(--px-gold)" />
                 ${economy.money.toLocaleString()}
               </span>
             )}
             <button
               className="px-btn px-btn--sm"
               aria-label={collapsed ? 'Expand HUD' : 'Collapse HUD'}
-              onClick={() => setCollapsed(v => !v)}
+              onClick={() => setCollapsed(value => !value)}
             >
               {collapsed ? <ChevronDown /> : <ChevronUp />}
             </button>
@@ -71,48 +115,60 @@ export function HUD({ economy }: HUDProps) {
         </div>
 
         {!collapsed && (
-          <div style={{ padding: isMobile ? '8px 10px 10px' : '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-
-            {/* Money — full width highlight */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.18)', padding: isMobile ? '6px 8px' : '8px 10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Coins className="px-icon-sm" color="var(--px-gold)" />
-                <span className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>GOLD</span>
+          <div className="px-panel-body px-panel-body--sm px-hud-body px-hud-body--compact">
+            <div className="px-hud-money-row">
+              <div className="px-hud-money-row__main">
+                <span className="px-label">Money</span>
+                <span
+                  className={
+                    moneyFlash === 'green'
+                      ? 'px-hud-money-row__amount px-flash-green'
+                      : moneyFlash === 'red'
+                        ? 'px-hud-money-row__amount px-flash-red'
+                        : 'px-hud-money-row__amount'
+                  }
+                >
+                  ${economy.money.toLocaleString()}
+                </span>
               </div>
-              <span
-                className={moneyFlash === 'green' ? 'px-flash-green' : moneyFlash === 'red' ? 'px-flash-red' : ''}
-                style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 12 : 15, color: 'var(--px-gold)', textShadow: '0 0 8px rgba(251,191,36,0.4), 2px 2px 0 #000' }}
-              >
-                ${economy.money.toLocaleString()}
-              </span>
+              <div className="px-hud-money-row__icon">
+                <Coins className="px-icon-md" color="var(--px-gold)" />
+              </div>
             </div>
 
-            {/* 2-col grid: Guests + Net */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-              <StatBox icon={<Users className="px-icon-sm" color="var(--px-cyan)" />} label="GUESTS" value={`${economy.activeVisitors}`} color="var(--px-cyan)" mobile={isMobile} />
-              <StatBox
-                icon={<TrendingUp className="px-icon-sm" color={netColor} />}
-                label="NET"
-                value={`${economy.netProfit >= 0 ? '+' : ''}$${economy.netProfit.toLocaleString()}`}
-                color={netColor}
-                mobile={isMobile}
+            <div className="px-hud-inline-stats">
+              <InlineStat
+                icon={<Users className="px-icon-sm" color="var(--px-cyan)" />}
+                label="Guests"
+                value={economy.activeVisitors.toLocaleString()}
+              />
+              <InlineStat icon={netIcon} label="Balance" value={netValue} />
+              <InlineStat
+                icon={<TrendingUp className="px-icon-sm" color="var(--px-green-hi)" />}
+                label="Income"
+                value={`$${economy.dailyIncome.toLocaleString()}`}
+              />
+              <InlineStat
+                icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}
+                label="Expenses"
+                value={`$${economy.dailyExpenses.toLocaleString()}`}
               />
             </div>
 
-            {/* Joy + Rating */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-              <StarBox icon={<HeartPulse className="px-icon-sm" color="var(--px-green-hi)" />} label="JOY" count={joyStars} mobile={isMobile} />
-              <StarBox icon={<Landmark className="px-icon-sm" color="var(--px-cyan)" />} label="RATING" count={ratingStars} mobile={isMobile} />
+            <div className="px-hud-ratings">
+              <InlineRating
+                icon={<HeartPulse className="px-icon-sm" color="var(--px-green-hi)" />}
+                label="Guest Joy"
+                stars={joyStars}
+                mobile={isMobile}
+              />
+              <InlineRating
+                icon={<Landmark className="px-icon-sm" color="var(--px-cyan)" />}
+                label="Park Rating"
+                stars={ratingStars}
+                mobile={isMobile}
+              />
             </div>
-
-            {/* Income / Expenses — only desktop */}
-            {!isMobile && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                <StatBox icon={<TrendingUp className="px-icon-sm" color="var(--px-green-hi)" />} label="INCOME" value={`$${economy.dailyIncome.toLocaleString()}`} color="var(--px-green-hi)" mobile={false} />
-                <StatBox icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />} label="EXPENSES" value={`$${economy.dailyExpenses.toLocaleString()}`} color="var(--px-red)" mobile={false} />
-              </div>
-            )}
-
           </div>
         )}
       </div>
@@ -120,26 +176,44 @@ export function HUD({ economy }: HUDProps) {
   );
 }
 
-function StatBox({ icon, label, value, color, mobile }: { icon: React.ReactNode; label: string; value: string; color: string; mobile: boolean }) {
+function InlineStat({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
-    <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.07)', padding: mobile ? '5px 7px' : '7px 9px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+    <div className="px-hud-inline-stat">
+      <div className="px-hud-inline-stat__label">
         {icon}
-        <span className="px-label" style={{ fontSize: mobile ? 7 : 8 }}>{label}</span>
+        <span className="px-label">{label}</span>
       </div>
-      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: mobile ? 10 : 12, color, textShadow: '1px 1px 0 #000' }}>{value}</span>
+      <span className="px-hud-inline-stat__value">{value}</span>
     </div>
   );
 }
 
-function StarBox({ icon, label, count, mobile }: { icon: React.ReactNode; label: string; count: number; mobile: boolean }) {
+function InlineRating({
+  icon,
+  label,
+  stars,
+  mobile,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  stars: number;
+  mobile: boolean;
+}) {
   return (
-    <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.07)', padding: mobile ? '5px 7px' : '7px 9px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+    <div className="px-hud-rating">
+      <div className="px-hud-rating__label">
         {icon}
-        <span className="px-label" style={{ fontSize: mobile ? 7 : 8 }}>{label}</span>
+        <span className="px-label">{label}</span>
       </div>
-      <Stars count={count} />
+      <Stars count={stars} mobile={mobile} />
     </div>
   );
 }

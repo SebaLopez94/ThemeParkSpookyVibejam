@@ -51,11 +51,11 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
   const totalRewardMoney = challenges.reduce((sum, challenge) => sum + challenge.reward.money, 0);
 
   return (
-    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '48vh', overflow: 'auto', ...style }}>
+    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', overflow: 'auto', ...style }}>
       <div className="px-panel px-panel--challenges" style={{ padding: 0 }}>
         {onClose && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
-            <button className="px-btn px-btn--sm" aria-label="Close challenges panel" onClick={onClose}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '4px 6px 0' : '6px 8px 0' }}>
+            <button className="px-btn px-btn--sm" aria-label="Close challenges panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
               <X />
             </button>
           </div>
@@ -70,7 +70,7 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
               padding: isMobile ? '10px' : '12px 14px'
             }}
           >
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               <div>
                 <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
                   COMPLETED
@@ -125,7 +125,7 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
                           <div className="px-chip" style={{ padding: isMobile ? '5px 8px' : '6px 9px', color: justCompleted ? 'var(--px-green-hi)' : 'var(--px-orange)' }}>
                             {getChallengeLabel(challenge)}
                           </div>
@@ -139,14 +139,14 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                         <div
                           style={{
                             fontFamily: "'Press Start 2P', monospace",
-                            fontSize: isMobile ? 9 : 11,
+                            fontSize: isMobile ? 8 : 11,
                             color: 'var(--px-text)',
-                            lineHeight: 1.7
+                            lineHeight: isMobile ? 1.55 : 1.7
                           }}
                         >
                           {challenge.title}
                         </div>
-                        <div className="px-body" style={{ marginTop: 6 }}>
+                        <div className="px-body" style={{ marginTop: 5, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
                           {challenge.description}
                         </div>
                       </div>
@@ -165,8 +165,8 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12 }}>
-                      <div className="px-body" style={{ color: justCompleted ? 'var(--px-green-hi)' : 'var(--px-muted)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: isMobile ? 10 : 12 }}>
+                      <div className="px-body" style={{ color: justCompleted ? 'var(--px-green-hi)' : 'var(--px-muted)', fontSize: isMobile ? 11 : undefined }}>
                         {getProgressText(challenge)}
                       </div>
                       {challenge.duration && (
@@ -180,7 +180,7 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                     <div
                       style={{
                         marginTop: 8,
-                        height: isMobile ? 10 : 12,
+                        height: isMobile ? 9 : 12,
                         background: '#12060b',
                         border: '2px solid rgba(255,255,255,0.08)',
                         overflow: 'hidden',
@@ -230,14 +230,14 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                       <div
                         style={{
                           fontFamily: "'Press Start 2P', monospace",
-                          fontSize: isMobile ? 9 : 10,
+                          fontSize: isMobile ? 8 : 10,
                           color: 'var(--px-text)',
-                          lineHeight: 1.7
+                          lineHeight: isMobile ? 1.55 : 1.7
                         }}
                       >
                         {challenge.title}
                       </div>
-                      <div className="px-body" style={{ marginTop: 4 }}>
+                      <div className="px-body" style={{ marginTop: 3, fontSize: isMobile ? 11 : undefined }}>
                         Reward claimed
                       </div>
                     </div>

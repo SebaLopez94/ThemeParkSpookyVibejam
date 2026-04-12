@@ -34,7 +34,14 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
   const refundAmount = Math.floor(building.buildCost * 0.5);
 
   const panelStyle = isMobile
-    ? { position: 'fixed' as const, bottom: 0, left: 0, right: 0, zIndex: 40 }
+    ? {
+        position: 'fixed' as const,
+        bottom: 'calc(72px + var(--safe-bottom))',
+        left: 8,
+        right: 8,
+        zIndex: 46,
+        maxHeight: 'calc(100dvh - 120px - var(--safe-bottom))',
+      }
     : { position: 'fixed' as const, bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 40 };
 
   return (
@@ -44,8 +51,8 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
         style={{
           padding: 0,
           width: isMobile ? '100%' : 410,
-          borderRadius: isMobile ? 0 : undefined,
-          borderBottom: isMobile ? 'none' : undefined,
+          maxHeight: isMobile ? 'inherit' : undefined,
+          overflow: 'hidden',
         }}
       >
         <div className="px-titlebar px-titlebar--manage">
@@ -58,7 +65,13 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
           </button>
         </div>
 
-        <div style={{ padding: isMobile ? '10px 14px 14px' : '14px 18px 18px' }}>
+        <div
+          style={{
+            padding: isMobile ? '10px 12px 12px' : '14px 18px 18px',
+            maxHeight: isMobile ? 'calc(100dvh - 176px - var(--safe-bottom))' : undefined,
+            overflowY: isMobile ? 'auto' : undefined,
+          }}
+        >
           <div className="px-chip-row">
             <div className="px-chip" style={{ fontSize: isMobile ? 9 : 11 }}>{building.icon} {building.buildingType}</div>
             <div className="px-chip" style={{ fontSize: isMobile ? 9 : 11 }}>
@@ -108,7 +121,7 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
               <div className="px-label" style={{ fontSize: isMobile ? 8 : 9, marginBottom: 10, color: 'var(--px-red)' }}>
                 Sell for ${refundAmount}? (50% refund)
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
                 <button
                   className="px-btn px-btn--danger px-btn--sm"
                   style={{ flex: 1, justifyContent: 'center' }}
@@ -126,7 +139,7 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: isMobile ? 8 : 10 }}>
+            <div style={{ display: 'flex', gap: isMobile ? 8 : 10, flexDirection: isMobile ? 'column' : 'row' }}>
               <button
                 className="px-btn px-btn--sm"
                 style={{ flex: 1, justifyContent: 'center' }}

@@ -25,11 +25,11 @@ export function ParkPanel({
   const netPositive = economy.netProfit >= 0;
 
   return (
-    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '52vh', overflow: 'auto' }}>
+    <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '52vh', overflow: 'auto' }}>
       <div className="px-panel px-panel--park" style={{ padding: 0 }}>
         {onClose && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 8px 0' }}>
-            <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: isMobile ? '4px 6px 0' : '6px 8px 0' }}>
+            <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
               <X />
             </button>
           </div>
@@ -79,14 +79,14 @@ export function ParkPanel({
               </label>
             </div>
 
-            <div className="px-body" style={{ marginTop: 10 }}>
+            <div className="px-body" style={{ marginTop: 8, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
               {economy.isOpen
                 ? 'Guests can enter, spend money, and keep your park alive.'
                 : 'Spawns stop and current visitors head back toward the entrance.'}
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap: isMobile ? 6 : 8 }}>
             <StatTile
               icon={<Coins className="px-icon-sm" color="var(--px-gold)" />}
               label="CASH"
@@ -145,7 +145,7 @@ export function ParkPanel({
               </div>
             </div>
 
-            <div className="px-body" style={{ marginBottom: 10 }}>
+            <div className="px-body" style={{ marginBottom: 8, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
               Higher prices raise ticket income, but pushing too hard can slow long-term momentum.
             </div>
 
@@ -163,7 +163,7 @@ export function ParkPanel({
                 onChange={e => onTicketPriceChange(Number(e.target.value))}
                 onBlur={onTicketPriceCommit}
                 onKeyDown={e => e.key === 'Enter' && onTicketPriceCommit()}
-                style={{ fontSize: 13, padding: '8px 10px' }}
+                style={{ fontSize: 13, padding: isMobile ? '7px 10px' : '8px 10px' }}
               />
             </div>
           </div>
