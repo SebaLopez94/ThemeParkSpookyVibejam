@@ -283,7 +283,11 @@ export class Game {
     }
 
     const result = this.buildingSystem.getBuildingAtCell(position);
-    if (!result) return;
+    if (!result) {
+      this.deselectBuilding();
+      this.onBuildingSelected?.(null);
+      return;
+    }
 
     if ('ride' in result) {
       const { id, rideType, price, cost, position: buildingPosition } = result.ride.data;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import confetti from 'canvas-confetti';
 import { useIsMobile } from './hooks/useIsMobile';
 import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { Game } from './Game';
@@ -98,14 +99,17 @@ function App() {
         challenge_rating:       { title: '⭐ FIVE-STAR NIGHTMARE!',   sub: 'The park is legendary.' },
         challenge_visitors_150: { title: '💀 THOUSAND SCREAMS!',     sub: 'Your park is a phenomenon.' },
       };
-      const cel = celebrationIds[challenge.id];
-      if (cel) {
-        setCelebration({ ...cel, reward: challenge.reward.money });
-        window.setTimeout(() => setCelebration(null), 2400);
-      } else {
-        // All other challenges get a toast notification
-        pushToast('success', `✓ ${challenge.title} — +$${challenge.reward.money}`);
-      }
+      const cel = celebrationIds[challenge.id] || { title: `🎯 ${challenge.title.toUpperCase()}`, sub: challenge.description };
+      setCelebration({ ...cel, reward: challenge.reward.money });
+      
+      confetti({
+        particleCount: isMobile ? 60 : 120,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#fbbf24', '#d9f99d', '#67e8f9', '#a78bfa']
+      });
+
+      window.setTimeout(() => setCelebration(null), 4400);
     };
 
     setResearchNodes(game.getResearchNodes());
@@ -565,7 +569,7 @@ function App() {
               {/* Economy */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $1/20s, shops $1/20s.
+                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & shops. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $4/20s, shops $2/20s.
               </div>
 
               <hr className="px-divider" />

@@ -507,8 +507,8 @@ button {
 
 @media (max-width: 640px) {
   .px-toast-stack {
-    top: auto;
-    bottom: calc(80px + var(--safe-bottom));
+    top: 160px;
+    bottom: auto;
     left: var(--px-s2);
     right: var(--px-s2);
     transform: none;
