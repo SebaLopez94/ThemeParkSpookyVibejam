@@ -48,6 +48,10 @@ export class Game {
   private nightAudio: THREE.Audio;
   private nextWindTime = 0;
   private isMuted = false;
+  private audioResumeEvents: Array<keyof WindowEventMap> = ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'];
+  private audioResumeHandler = (): void => {
+    void this.ensureAudioRunning();
+  };
 
   // Preview group holds both the footprint indicator and the GLB ghost model
   private previewGroup: THREE.Group | null = null;
@@ -196,42 +200,54 @@ export class Game {
     if (this.nightAudio) {
       this.nightAudio.setVolume(muted ? 0 : 0.04);
     }
+    if (!muted) {
+      void this.ensureAudioRunning();
+    }
   }
 
-  private setupAudioResume(): void {
-    const resumeAudio = () => {
-      const ctx = this.audioListener.context;
-      
-      const startAudio = () => {
-        if (!this.isMuted) {
-          if (this.backgroundMusic.buffer && !this.backgroundMusic.isPlaying) {
-            this.backgroundMusic.play();
-          }
-          if (this.nightAudio.buffer && !this.nightAudio.isPlaying) {
-            this.nightAudio.play();
-          }
-        }
-        
-        // Keep listeners alive until both are actually playing (buffers may not be loaded yet)
-        const bgReady = !this.backgroundMusic.buffer || this.backgroundMusic.isPlaying;
-        const nightReady = !this.nightAudio.buffer || this.nightAudio.isPlaying;
-        
-        if (bgReady && nightReady) {
-          ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'].forEach(ev => {
-            window.removeEventListener(ev, resumeAudio);
-          });
-        }
-      };
+  private async ensureAudioRunning(): Promise<void> {
+    const ctx = this.audioListener.context;
+    if (ctx.state !== 'running') {
+      try {
+        await ctx.resume();
+      } catch {
+        return;
+      }
+    }
 
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(startAudio).catch(() => {});
-      } else {
-        startAudio();
+    if (this.isMuted) return;
+
+    const tryStart = (audio: THREE.Audio): void => {
+      if (!audio.buffer || audio.isPlaying) return;
+      try {
+        audio.play();
+      } catch {
+        // Mobile browsers may still reject until the next gesture; listeners stay attached.
       }
     };
 
-    ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'].forEach(ev => {
-      window.addEventListener(ev, resumeAudio);
+    tryStart(this.backgroundMusic);
+    tryStart(this.nightAudio);
+
+    const bgReady = !this.backgroundMusic.buffer || this.backgroundMusic.isPlaying;
+    const nightReady = !this.nightAudio.buffer || this.nightAudio.isPlaying;
+
+    if (bgReady && nightReady) {
+      this.teardownAudioResume();
+    }
+  }
+
+  private setupAudioResume(): void {
+    this.audioResumeEvents.forEach(ev => {
+      window.addEventListener(ev, this.audioResumeHandler, { capture: true });
+      this.renderer.renderer.domElement.addEventListener(ev, this.audioResumeHandler, { capture: true });
+    });
+  }
+
+  private teardownAudioResume(): void {
+    this.audioResumeEvents.forEach(ev => {
+      window.removeEventListener(ev, this.audioResumeHandler, { capture: true });
+      this.renderer.renderer.domElement.removeEventListener(ev, this.audioResumeHandler, { capture: true });
     });
   }
 
@@ -894,6 +910,7 @@ export class Game {
     this.gameLoop.stop();
     window.removeEventListener('resize', this.resizeHandler);
     window.removeEventListener('keydown', this.keyHandler);
+    this.teardownAudioResume();
     this.mouseController.dispose();
     this.disposePreview();
     this.previewGreenMat.dispose();

@@ -1,4 +1,4 @@
-import { FlaskConical, Lock, Ticket, Unlock, X } from 'lucide-react';
+import { Coins, FlaskConical, Lock, Ticket, TrendingDown, TrendingUp, Unlock, Users, X } from 'lucide-react';
 import { EconomyState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -22,7 +22,8 @@ export function ParkPanel({
   onClose
 }: ParkPanelProps) {
   const isMobile = useIsMobile();
-  
+  const netPositive = economy.netProfit >= 0;
+
   return (
     <div className="px-scroll-hidden" style={{ width: '100%', maxHeight: '52vh', overflow: 'auto' }}>
       <div className="px-panel px-panel--park" style={{ padding: 0 }}>
@@ -33,68 +34,247 @@ export function ParkPanel({
             </button>
           </div>
         )}
-        <div style={{ padding: isMobile ? '6px 10px 10px' : '10px 14px 14px', display: 'grid', gap: isMobile ? 8 : 12 }}>
 
-          {/* ── Park Status Toggle ─────────────────────────────── */}
-          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {economy.isOpen ? <Unlock className="px-icon-sm" color="var(--px-green-hi)" /> : <Lock className="px-icon-sm" color="var(--px-red)" />}
-              <span className="px-label" style={{ fontSize: isMobile ? 8 : 10 }}>PARK STATUS</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 9, color: economy.isOpen ? 'var(--px-green-hi)' : 'var(--px-red)' }}>
-                {economy.isOpen ? 'OPEN' : 'CLOSED'}
-              </span>
-              <input
-                type="checkbox"
-                checked={economy.isOpen}
-                onChange={e => onToggleParkOpen(e.target.checked)}
-                style={{ width: 18, height: 18, accentColor: 'var(--px-green)', cursor: 'pointer' }}
-              />
-            </div>
-          </label>
+        <div style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
+          <div
+            className="px-stat"
+            style={{
+              background: 'linear-gradient(180deg, rgba(34,18,56,0.96) 0%, rgba(14,10,30,0.96) 100%)',
+              border: '2px solid rgba(167,139,250,0.18)',
+              padding: isMobile ? '10px' : '12px 14px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <div>
+                <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
+                  PARK STATUS
+                </div>
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: isMobile ? 10 : 12,
+                    color: economy.isOpen ? 'var(--px-green-hi)' : 'var(--px-red)',
+                    lineHeight: 1.7
+                  }}
+                >
+                  {economy.isOpen ? <Unlock className="px-icon-sm" color="var(--px-green-hi)" /> : <Lock className="px-icon-sm" color="var(--px-red)" />}
+                  {economy.isOpen ? 'OPEN TO GUESTS' : 'PARK CLOSED'}
+                </div>
+              </div>
 
-          <hr className="px-divider" />
-
-          {/* ── Entry ticket ───────────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: isMobile ? 80 : 100, flexShrink: 0 }}>
-              <Ticket className="px-icon-sm" color="var(--px-gold)" />
-              <span className="px-label" style={{ fontSize: isMobile ? 8 : 10 }}>ENTRY FEE</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <span className="px-label" style={{ fontSize: isMobile ? 7 : 8, color: economy.isOpen ? 'var(--px-green-hi)' : 'var(--px-red)' }}>
+                  {economy.isOpen ? 'OPEN' : 'CLOSED'}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={economy.isOpen}
+                  onChange={e => onToggleParkOpen(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: 'var(--px-green)', cursor: 'pointer' }}
+                />
+              </label>
             </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 11 : 14, color: 'var(--px-gold)' }}>$</span>
+
+            <div className="px-body" style={{ marginTop: 10 }}>
+              {economy.isOpen
+                ? 'Guests can enter, spend money, and keep your park alive.'
+                : 'Spawns stop and current visitors head back toward the entrance.'}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+            <StatTile
+              icon={<Coins className="px-icon-sm" color="var(--px-gold)" />}
+              label="CASH"
+              value={`$${economy.money.toLocaleString()}`}
+              color="var(--px-gold)"
+              mobile={isMobile}
+            />
+            <StatTile
+              icon={<Users className="px-icon-sm" color="var(--px-cyan)" />}
+              label="GUESTS"
+              value={`${economy.activeVisitors}`}
+              color="var(--px-cyan)"
+              mobile={isMobile}
+            />
+            <StatTile
+              icon={<TrendingUp className="px-icon-sm" color={netPositive ? 'var(--px-green-hi)' : 'var(--px-red)'} />}
+              label="NET"
+              value={`${netPositive ? '+' : ''}$${economy.netProfit.toLocaleString()}`}
+              color={netPositive ? 'var(--px-green-hi)' : 'var(--px-red)'}
+              mobile={isMobile}
+            />
+            <StatTile
+              icon={<FlaskConical className="px-icon-sm" color="var(--px-cyan)" />}
+              label="RESEARCH"
+              value={activeResearchLabel.toUpperCase()}
+              color="var(--px-text)"
+              mobile={isMobile}
+              compact
+            />
+          </div>
+
+          <div
+            className="px-card"
+            style={{
+              cursor: 'default',
+              padding: isMobile ? '10px' : '12px',
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(20,13,36,0.98) 100%)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Ticket className="px-icon-sm" color="var(--px-gold)" />
+                <div
+                  style={{
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: isMobile ? 9 : 10,
+                    color: 'var(--px-text)',
+                    lineHeight: 1.7
+                  }}
+                >
+                  ENTRY PRICE
+                </div>
+              </div>
+              <div className="px-chip" style={{ padding: isMobile ? '5px 8px' : '6px 9px', color: 'var(--px-gold)' }}>
+                ${Math.max(0, Math.min(50, Math.round(localTicketPrice || 0)))}
+              </div>
+            </div>
+
+            <div className="px-body" style={{ marginBottom: 10 }}>
+              Higher prices raise ticket income, but pushing too hard can slow long-term momentum.
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 11 : 13, color: 'var(--px-gold)' }}>$</span>
               <input
                 className="px-input"
                 type="number"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                aria-label="Entry ticket price (0–50)"
+                aria-label="Entry ticket price"
                 min={0}
                 max={50}
                 value={localTicketPrice}
                 onChange={e => onTicketPriceChange(Number(e.target.value))}
                 onBlur={onTicketPriceCommit}
                 onKeyDown={e => e.key === 'Enter' && onTicketPriceCommit()}
-                style={{ fontSize: 13, padding: '7px 10px' }}
+                style={{ fontSize: 13, padding: '8px 10px' }}
               />
             </div>
           </div>
 
-          <hr className="px-divider" />
-
-          {/* ── Active research ────────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FlaskConical className="px-icon-sm" color="var(--px-border)" style={{ flexShrink: 0 }} />
-            <div style={{ minWidth: 0 }}>
-              <div className="px-label" style={{ fontSize: isMobile ? 7 : 9, marginBottom: 4 }}>ACTIVE RESEARCH</div>
-              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 8 : 10, color: 'var(--px-text)', lineHeight: 1.8, wordBreak: 'break-word' }}>
-                {activeResearchLabel.toUpperCase()}
-              </div>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
+            <MiniStat
+              icon={<TrendingUp className="px-icon-sm" color="var(--px-green-hi)" />}
+              label="INCOME"
+              value={`$${economy.dailyIncome.toLocaleString()}`}
+              valueColor="var(--px-green-hi)"
+              mobile={isMobile}
+            />
+            <MiniStat
+              icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}
+              label="EXPENSES"
+              value={`$${economy.dailyExpenses.toLocaleString()}`}
+              valueColor="var(--px-red)"
+              mobile={isMobile}
+            />
           </div>
-
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  color,
+  mobile,
+  compact = false
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  color: string;
+  mobile: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        background: 'rgba(0,0,0,0.35)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        padding: mobile ? '7px 8px' : '8px 10px',
+        display: 'grid',
+        gap: 5,
+        minWidth: 0
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        {icon}
+        <span className="px-label" style={{ fontSize: mobile ? 7 : 8 }}>
+          {label}
+        </span>
+      </div>
+      <div
+        style={{
+          fontFamily: compact ? "ui-monospace, 'Consolas', 'Courier New', monospace" : "'Press Start 2P', monospace",
+          fontSize: compact ? (mobile ? 9 : 11) : (mobile ? 10 : 11),
+          color,
+          lineHeight: compact ? 1.4 : 1.6,
+          wordBreak: 'break-word'
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({
+  icon,
+  label,
+  value,
+  valueColor,
+  mobile
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  valueColor: string;
+  mobile: boolean;
+}) {
+  return (
+    <div
+      style={{
+        background: 'rgba(0,0,0,0.28)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        padding: mobile ? '8px 9px' : '9px 10px',
+        display: 'grid',
+        gap: 6
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {icon}
+        <span className="px-label" style={{ fontSize: mobile ? 7 : 8 }}>
+          {label}
+        </span>
+      </div>
+      <div
+        style={{
+          fontFamily: "'Press Start 2P', monospace",
+          fontSize: mobile ? 10 : 11,
+          color: valueColor,
+          lineHeight: 1.6
+        }}
+      >
+        {value}
       </div>
     </div>
   );
