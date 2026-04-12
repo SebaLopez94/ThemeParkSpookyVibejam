@@ -87,6 +87,15 @@ export class Game {
   private readonly RATING_UPDATE_INTERVAL = 1;
   private readonly MAINTENANCE_UPDATE_INTERVAL = 20;
 
+  // Selection highlight (shown when BuildingPanel is open)
+  private selectionHighlight: THREE.Group | null = null;
+  private selectionHighlightFill: THREE.Mesh | null = null;
+  private selectionHighlightTime = 0;
+  private readonly selectionFillMat = new THREE.MeshBasicMaterial({
+    color: 0xfbbf24, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide
+  });
+  private readonly selectionEdgeMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
+
   public onEconomyUpdate: ((state: EconomyState) => void) | null = null;
   public onBuildingSelected: ((info: SelectedBuildingInfo | null) => void) | null = null;
   public onBuildCancel: (() => void) | null = null;
@@ -279,6 +288,8 @@ export class Game {
     if ('ride' in result) {
       const { id, rideType, price, cost, position: buildingPosition } = result.ride.data;
       const display = BUILDING_DISPLAY[rideType];
+      const size = RIDE_SIZES[rideType];
+      this.showSelectionHighlight(buildingPosition, size.width, size.height);
       this.onBuildingSelected?.({
         id,
         buildingType: BuildingType.RIDE,
@@ -295,6 +306,7 @@ export class Game {
     if ('shop' in result) {
       const { id, shopType, price, cost, position: buildingPosition } = result.shop.data;
       const display = BUILDING_DISPLAY[shopType];
+      this.showSelectionHighlight(buildingPosition, 1, 1);
       this.onBuildingSelected?.({
         id,
         buildingType: BuildingType.SHOP,
@@ -311,6 +323,7 @@ export class Game {
     if ('service' in result) {
       const { id, serviceType, price, cost, position: buildingPosition } = result.service.data;
       const display = BUILDING_DISPLAY[serviceType];
+      this.showSelectionHighlight(buildingPosition, 1, 1);
       this.onBuildingSelected?.({
         id,
         buildingType: BuildingType.SERVICE,
@@ -326,6 +339,7 @@ export class Game {
 
     const { id, decorationType, cost, position: buildingPosition } = result.decoration.data;
     const display = BUILDING_DISPLAY[decorationType];
+    this.showSelectionHighlight(buildingPosition, 1, 1);
     this.onBuildingSelected?.({
       id,
       buildingType: BuildingType.DECORATION,
@@ -401,6 +415,7 @@ export class Game {
       this.economySystem.addMoney(refund);
       this.showFloatingText(`+$${refund}`, position, '#22c55e');
     }
+    this.hideSelectionHighlight();
     this.onBuildingSelected?.(null);
   }
 
@@ -437,6 +452,7 @@ export class Game {
   public startMoveBuilding(info: SelectedBuildingInfo): void {
     this.buildingSystem.removeBuilding(info.position);
     this.economySystem.addMoney(info.buildCost);
+    this.hideSelectionHighlight();
     this.onBuildingSelected?.(null);
     this.selectBuilding({
       type: info.buildingType,
@@ -628,11 +644,61 @@ export class Game {
     this.previewModelMeshes = [];
   }
 
+  private showSelectionHighlight(position: GridPosition, width: number, height: number): void {
+    this.hideSelectionHighlight();
+
+    // GridHelper.gridToWorld returns center of the single cell at 'position'
+    const cellCenter = GridHelper.gridToWorld(position);
+    const wx = cellCenter.x + (width  - 1) * GRID_SIZE / 2;
+    const wz = cellCenter.z + (height - 1) * GRID_SIZE / 2;
+    const w  = width  * GRID_SIZE - 0.12;
+    const h  = height * GRID_SIZE - 0.12;
+
+    const fillGeo = new THREE.PlaneGeometry(w, h);
+    this.selectionHighlightFill = new THREE.Mesh(fillGeo, this.selectionFillMat);
+    this.selectionHighlightFill.rotation.x = -Math.PI / 2;
+
+    const edgeGeo = new THREE.BufferGeometry();
+    const hw = w / 2; const hh = h / 2;
+    const verts = new Float32Array([
+      -hw, 0, -hh,   hw, 0, -hh,
+       hw, 0, -hh,   hw, 0,  hh,
+       hw, 0,  hh,  -hw, 0,  hh,
+      -hw, 0,  hh,  -hw, 0, -hh,
+    ]);
+    edgeGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    const edges = new THREE.LineSegments(edgeGeo, this.selectionEdgeMat);
+
+    this.selectionHighlight = new THREE.Group();
+    this.selectionHighlight.add(this.selectionHighlightFill, edges);
+    this.selectionHighlight.position.set(wx, 0.06, wz);
+    this.scene.scene.add(this.selectionHighlight);
+    this.selectionHighlightTime = 0;
+  }
+
+  private hideSelectionHighlight(): void {
+    if (!this.selectionHighlight) return;
+    this.scene.scene.remove(this.selectionHighlight);
+    this.selectionHighlight.children.forEach(child => {
+      if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
+        child.geometry.dispose();
+      }
+    });
+    this.selectionHighlight = null;
+    this.selectionHighlightFill = null;
+  }
+
+  public deselectBuilding(): void {
+    this.hideSelectionHighlight();
+  }
+
   public selectBuilding(definition: BuildingDefinition): void {
     this.selectedBuilding = definition;
     this.buildRotation = 0;
     this.onRotationChange?.(0);
     this.mouseController.onBuildRotate = dir => this.rotateBuild(dir);
+    this.mouseController.touchRotateMode =
+      definition.type !== BuildingType.PATH && definition.type !== BuildingType.DELETE;
     this.createPreviewMesh();
     this.updatePreview();
   }
@@ -640,6 +706,7 @@ export class Game {
   public cancelBuildMode(): void {
     this.selectedBuilding = null;
     this.mouseController.onBuildRotate = null;
+    this.mouseController.touchRotateMode = false;
     this.disposePreview();
   }
 
@@ -648,6 +715,13 @@ export class Game {
   }
 
   private update(deltaTime: number): void {
+    // Pulse the selection highlight
+    if (this.selectionHighlight && this.selectionHighlightFill) {
+      this.selectionHighlightTime += deltaTime;
+      const pulse = 0.12 + Math.sin(this.selectionHighlightTime * 3.5) * 0.10;
+      this.selectionFillMat.opacity = pulse;
+    }
+
     this.buildingSystem.update(deltaTime);
     this.visitorSystem.update(deltaTime, {
       rides: this.buildingSystem.getRides(),
@@ -680,8 +754,8 @@ export class Game {
       
       const counts = this.buildingSystem.getBuildingCounts();
       const maintenance =
-        counts[BuildingType.RIDE]    * 1 +
-        counts[BuildingType.SHOP]    * 1 +
+        counts[BuildingType.RIDE]    * 4 +
+        counts[BuildingType.SHOP]    * 2 +
         counts[BuildingType.SERVICE] * 1;
         
       if (maintenance > 0) this.economySystem.chargeMaintenance(maintenance);
@@ -690,10 +764,15 @@ export class Game {
     this.ratingUpdateTimer += deltaTime;
     if (this.ratingUpdateTimer >= this.RATING_UPDATE_INTERVAL) {
       this.ratingUpdateTimer = 0;
+      const _counts = this.buildingSystem.getBuildingCounts();
       this.economySystem.updateParkRating(
         this.visitorSystem.getAverageHappiness(),
         this.buildingSystem.getFacilityScore(),
-        this.buildingSystem.getDecorationAppeal()
+        this.buildingSystem.getDecorationAppeal(),
+        this.visitorSystem.getVisitorCount(),
+        _counts[BuildingType.RIDE],
+        _counts[BuildingType.SHOP],
+        _counts[BuildingType.SERVICE]
       );
 
       const counts = this.buildingSystem.getBuildingCounts();
@@ -718,10 +797,15 @@ export class Game {
         }
         if (claimed.reward.rating > 0) {
           const state = this.economySystem.getState();
+          const _rc = this.buildingSystem.getBuildingCounts();
           this.economySystem.updateParkRating(
             Math.min(100, state.averageHappiness + claimed.reward.rating),
             this.buildingSystem.getFacilityScore(),
-            this.buildingSystem.getDecorationAppeal() + claimed.reward.rating
+            this.buildingSystem.getDecorationAppeal() + claimed.reward.rating,
+            this.visitorSystem.getVisitorCount(),
+            _rc[BuildingType.RIDE],
+            _rc[BuildingType.SHOP],
+            _rc[BuildingType.SERVICE]
           );
         }
         this.showFloatingText(`Challenge +$${claimed.reward.money}`, { x: 24, z: 46 }, '#bef264');
@@ -752,6 +836,9 @@ export class Game {
     this.previewRedMat.dispose();
     this.previewEdgeGreenMat.dispose();
     this.previewEdgeRedMat.dispose();
+    this.selectionFillMat.dispose();
+    this.selectionEdgeMat.dispose();
+    this.hideSelectionHighlight();
     this.buildingSystem.clear();
     this.visitorSystem.clear();
     this.scene.dispose();

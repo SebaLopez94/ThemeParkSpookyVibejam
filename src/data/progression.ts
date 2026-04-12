@@ -8,50 +8,71 @@ import {
 } from '../types';
 
 export const RESEARCH_NODES: ResearchNode[] = [
+  // ── Tier 1 — no dependencies, affordable early ────────────────────────
   {
-    id: 'research_eye_of_doom',
-    name: 'Eye of Doom Blueprints',
-    description: 'Unlock the Ferris wheel to raise park prestige.',
-    cost: 600,
-    duration: 40,
-    unlocks: [RideType.FERRIS_WHEEL],
+    id: 'research_curse_kitchen',
+    name: 'Curse Kitchen',
+    description: 'Unlock the Food Stall. Feed your visitors before they haunt you.',
+    cost: 150,
+    duration: 25,
+    unlocks: [ShopType.FOOD_STALL],
     dependencies: []
   },
   {
-    id: 'research_voodoo_shop',
-    name: 'Souvenir Hexcraft',
-    description: 'Unlock the Voodoo Shop for premium impulse spending.',
-    cost: 350,
-    duration: 30,
-    unlocks: [ShopType.GIFT_SHOP],
+    id: 'research_witch_brew',
+    name: "Witch's Brew Stand",
+    description: 'Unlock the Drink Stand. Thirsty visitors spend more — and complain less.',
+    cost: 100,
+    duration: 20,
+    unlocks: [ShopType.DRINK_STAND],
     dependencies: []
   },
   {
     id: 'research_pumpkin_lights',
     name: 'Pumpkin Lantern Rituals',
-    description: 'Unlock glowing decor to improve atmosphere.',
-    cost: 250,
-    duration: 20,
+    description: 'Unlock glowing Jack-o-Lanterns to raise park atmosphere.',
+    cost: 200,
+    duration: 25,
     unlocks: [DecorationType.JACK_O_LANTERN],
     dependencies: []
   },
   {
-    id: 'research_terror_coaster',
-    name: 'Terror Coaster Engineering',
-    description: 'Unlock the most profitable high-thrill ride.',
-    cost: 1200,
-    duration: 65,
-    unlocks: [RideType.ROLLER_COASTER],
-    dependencies: ['research_eye_of_doom']
+    id: 'research_eye_of_doom',
+    name: 'Eye of Doom Blueprints',
+    description: 'Unlock the Ferris Wheel — a prestige ride that draws bigger crowds.',
+    cost: 500,
+    duration: 50,
+    unlocks: [RideType.FERRIS_WHEEL],
+    dependencies: []
+  },
+  // ── Tier 2 — require at least one Tier 1 unlock ───────────────────────
+  {
+    id: 'research_voodoo_shop',
+    name: 'Souvenir Hexcraft',
+    description: 'Unlock the Voodoo Shop. High-margin impulse buys from happy visitors.',
+    cost: 400,
+    duration: 40,
+    unlocks: [ShopType.GIFT_SHOP],
+    dependencies: ['research_curse_kitchen']
   },
   {
     id: 'research_haunted_house',
     name: 'House of Screams',
-    description: 'Unlock the walk-through horror experience for a premium scare.',
-    cost: 800,
-    duration: 50,
+    description: 'Unlock the Haunted House — a premium walk-through horror experience.',
+    cost: 750,
+    duration: 60,
     unlocks: [RideType.HAUNTED_HOUSE],
     dependencies: ['research_eye_of_doom']
+  },
+  // ── Tier 3 — endgame ─────────────────────────────────────────────────
+  {
+    id: 'research_terror_coaster',
+    name: 'Terror Coaster Engineering',
+    description: 'Unlock the Roller Coaster — the most thrilling and profitable ride in the park.',
+    cost: 1100,
+    duration: 90,
+    unlocks: [RideType.ROLLER_COASTER],
+    dependencies: ['research_eye_of_doom', 'research_haunted_house']
   }
 ];
 

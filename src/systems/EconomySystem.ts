@@ -6,8 +6,8 @@ export class EconomySystem {
 
   constructor() {
     this.state = {
-      money: 5000,
-      ticketPrice: 10,
+      money: 3500,
+      ticketPrice: 8,
       totalVisitors: 0,
       activeVisitors: 0,
       parkRating: 10,
@@ -64,13 +64,37 @@ export class EconomySystem {
     this.state.activeVisitors = Math.max(0, this.state.activeVisitors - 1);
   }
 
-  public updateParkRating(averageHappiness: number, facilityScore: number, decorationAppeal: number): void {
-    const happinessComponent = averageHappiness * 0.6;
-    const facilityComponent = Math.min(facilityScore * 2.5, 30);
-    const decorationComponent = Math.min(decorationAppeal, 10);
+  public updateParkRating(
+    averageHappiness: number,
+    facilityScore: number,
+    decorationAppeal: number,
+    activeVisitors = 0,
+    rideCount = 0,
+    shopCount = 0,
+    serviceCount = 0
+  ): void {
+    const happinessComponent  = averageHappiness * 0.65;
+    const facilityComponent   = Math.min(facilityScore * 1.0, 16);
+    const decorationComponent = Math.min(decorationAppeal, 8);
+
+    // Visitor gate: rating is capped without enough people to validate it
+    const visitorCap = activeVisitors === 0 ? 19
+                     : activeVisitors < 5   ? 29
+                     : activeVisitors < 10  ? 44
+                     : activeVisitors < 15  ? 64
+                     : 92;
+
+    // Diversity gate: a park with only one type of facility can't reach high stars
+    // 1 type (rides only)   → max 49  (2 stars)
+    // 2 types (+ shop)      → max 69  (3 stars)
+    // 3 types (+ service)   → max 92  (4–5 stars)
+    const diversityTypes = (rideCount > 0 ? 1 : 0) + (shopCount > 0 ? 1 : 0) + (serviceCount > 0 ? 1 : 0);
+    const diversityCap = diversityTypes <= 1 ? 49
+                       : diversityTypes === 2 ? 69
+                       : 92;
 
     this.state.averageHappiness = Math.round(averageHappiness);
-    this.state.parkRating = Math.max(10, Math.round(happinessComponent + facilityComponent + decorationComponent));
+    this.state.parkRating = Math.max(10, Math.min(visitorCap, diversityCap, Math.round(happinessComponent + facilityComponent + decorationComponent)));
   }
 
   public notify(): void {

@@ -26,8 +26,8 @@ function App() {
   const gameRef = useRef<Game | null>(null);
 
   const [economy, setEconomy] = useState<EconomyState>({
-    money: 5000,
-    ticketPrice: 10,
+    money: 3500,
+    ticketPrice: 8,
     totalVisitors: 0,
     activeVisitors: 0,
     parkRating: 10,
@@ -52,7 +52,7 @@ function App() {
   }));
   const [researchNodes, setResearchNodes] = useState<ResearchNode[]>([]);
   const [challenges, setChallenges] = useState<ChallengeState[]>([]);
-  const [localTicketPrice, setLocalTicketPrice] = useState(10);
+  const [localTicketPrice, setLocalTicketPrice] = useState(8);
   const [showResearch, setShowResearch] = useState(false);
   const [showChallenges, setShowChallenges] = useState(false);
   const [showParkPanel, setShowParkPanel] = useState(false);
@@ -93,15 +93,18 @@ function App() {
     game.onChallengesUpdate = state => setChallenges(state);
     game.onChallengeCompleted = challenge => {
       const celebrationIds: Record<string, { title: string; sub: string }> = {
-        challenge_first_ride:  { title: '🎡 FIRST RIDE OPEN!',     sub: 'The crowds are flooding in!' },
-        challenge_three_rides: { title: '🎢 THRILL PARK UNLOCKED!', sub: 'Three rides — fear is your product.' },
-        challenge_rating:      { title: '⭐ FIVE-STAR NIGHTMARE!',  sub: 'The park is legendary.' },
-        challenge_visitors_150:{ title: '💀 THOUSAND SCREAMS!',    sub: 'Your park is a phenomenon.' },
+        challenge_first_ride:   { title: '🎡 FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
+        challenge_three_rides:  { title: '🎢 THRILL PARK UNLOCKED!',  sub: 'Three rides — fear is your product.' },
+        challenge_rating:       { title: '⭐ FIVE-STAR NIGHTMARE!',   sub: 'The park is legendary.' },
+        challenge_visitors_150: { title: '💀 THOUSAND SCREAMS!',     sub: 'Your park is a phenomenon.' },
       };
       const cel = celebrationIds[challenge.id];
       if (cel) {
         setCelebration({ ...cel, reward: challenge.reward.money });
-        window.setTimeout(() => setCelebration(null), 3800);
+        window.setTimeout(() => setCelebration(null), 2400);
+      } else {
+        // All other challenges get a toast notification
+        pushToast('success', `✓ ${challenge.title} — +$${challenge.reward.money}`);
       }
     };
 
@@ -160,6 +163,7 @@ function App() {
   const handleClosePanel = () => {
     setSelectedBuilding(null);
     gameRef.current?.cancelBuildMode();
+    gameRef.current?.deselectBuilding();
   };
 
   const handleDeleteBuilding = (position: GridPosition) => {
@@ -433,9 +437,16 @@ function App() {
           <div style={{ position: 'fixed', bottom: 90, left: 8, right: 8, zIndex: 46 }}>
             <div className="px-panel px-panel--controls px-anim-enter-up" style={{ padding: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px' }}>
-                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)' }}>
-                  {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)' }}>
+                    {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
+                  </span>
+                  {activeBuildDefinition.type !== BuildingType.PATH && activeBuildDefinition.type !== BuildingType.DELETE && (
+                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-muted)' }}>
+                      ← SWIPE TO ROTATE →
+                    </span>
+                  )}
+                </div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {activeBuildDefinition.type === BuildingType.PATH && (
                     <button className="px-btn px-btn--danger" style={{ padding: '6px 10px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>

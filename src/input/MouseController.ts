@@ -25,6 +25,11 @@ export class MouseController {
   private lastPinchDistance = 0;
   private lastPinchCenter: THREE.Vector2 = new THREE.Vector2();
 
+  /** When true, single-finger horizontal drag in build mode rotates the preview instead of drawing tiles. */
+  public touchRotateMode = false;
+  private touchRotateAccum = 0;
+  private static readonly TOUCH_ROTATE_THRESHOLD = 50;
+
   public onCameraMove: ((delta: THREE.Vector2) => void) | null = null;
   public onCameraZoom: ((delta: number) => void) | null = null;
   public onGridHover: ((position: GridPosition | null) => void) | null = null;
@@ -164,14 +169,22 @@ export class MouseController {
       this.updateMouseCoordsFromTouch(t);
 
       if (this.onBuildRotate !== null) {
-        // Build mode — start drawing
-        const worldPos = this.getWorldPosition();
-        if (worldPos) {
-          const gridPos = GridHelper.worldToGrid(worldPos);
-          this.lastDragGridPosition = gridPos;
-          this.isLeftDragging = true;
-          this.onGridDrag?.(gridPos);
-          this.onGridHover?.(gridPos);
+        if (this.touchRotateMode) {
+          // Building placement — hold+drag will rotate
+          this.touchRotateAccum = 0;
+          this.updateMouseCoordsFromTouch(event.touches[0]);
+          const worldPos = this.getWorldPosition();
+          if (worldPos) this.onGridHover?.(GridHelper.worldToGrid(worldPos));
+        } else {
+          // Path draw mode — start drawing
+          const worldPos = this.getWorldPosition();
+          if (worldPos) {
+            const gridPos = GridHelper.worldToGrid(worldPos);
+            this.lastDragGridPosition = gridPos;
+            this.isLeftDragging = true;
+            this.onGridDrag?.(gridPos);
+            this.onGridHover?.(gridPos);
+          }
         }
       }
     } else if (event.touches.length === 2) {
@@ -196,8 +209,18 @@ export class MouseController {
       this.lastTouchPos.copy(this._currentPos);
       this.updateMouseCoordsFromTouch(t);
 
-      if (this.onBuildRotate !== null) {
-        // Build mode — draw path / update hover preview
+      if (this.onBuildRotate !== null && this.touchRotateMode) {
+        // Building rotate mode — horizontal swipe rotates the preview
+        this.touchRotateAccum += this._delta.x;
+        if (Math.abs(this.touchRotateAccum) >= MouseController.TOUCH_ROTATE_THRESHOLD) {
+          this.onBuildRotate(this.touchRotateAccum > 0 ? 1 : -1);
+          this.touchRotateAccum = 0;
+        }
+        // Still update hover position so the preview follows the finger
+        const worldPos = this.getWorldPosition();
+        if (worldPos) this.onGridHover?.(GridHelper.worldToGrid(worldPos));
+      } else if (this.onBuildRotate !== null) {
+        // Path draw mode — draw path / update hover preview
         const worldPos = this.getWorldPosition();
         if (worldPos) {
           const gridPos = GridHelper.worldToGrid(worldPos);

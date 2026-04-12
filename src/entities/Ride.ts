@@ -57,10 +57,10 @@ export class Ride {
 
   private getRidePrice(type: RideType): number {
     const prices: Record<RideType, number> = {
-      [RideType.CAROUSEL]: 5,
-      [RideType.FERRIS_WHEEL]: 8,
-      [RideType.ROLLER_COASTER]: 12,
-      [RideType.HAUNTED_HOUSE]: 10
+      [RideType.CAROUSEL]: 4,
+      [RideType.FERRIS_WHEEL]: 6,
+      [RideType.ROLLER_COASTER]: 10,
+      [RideType.HAUNTED_HOUSE]: 8
     };
     return prices[type];
   }

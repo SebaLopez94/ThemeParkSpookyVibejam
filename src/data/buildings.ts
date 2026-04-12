@@ -126,8 +126,6 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
 
 export const INITIAL_UNLOCKED_BUILDINGS: PlaceableBuildingKind[] = [
   RideType.CAROUSEL,
-  ShopType.FOOD_STALL,
-  ShopType.DRINK_STAND,
   ServiceType.RESTROOM,
   DecorationType.SPOOKY_TREE,
   DecorationType.STONE,
