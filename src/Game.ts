@@ -146,28 +146,30 @@ export class Game {
 
   private loadAudio(): void {
     const audioLoader = new THREE.AudioLoader();
-    
-    // Background Music
+
+    const tryPlay = (audio: THREE.Audio, volume: number, loop: boolean) => {
+      audio.setLoop(loop);
+      audio.setVolume(this.isMuted ? 0 : volume);
+      if (this.audioListener.context.state === 'running') {
+        audio.play();
+      }
+      // If context is still suspended the setupAudioResume handler will start it on first interaction
+    };
+
     audioLoader.load('/audio/main_song.mp3', (buffer) => {
       this.backgroundMusic.setBuffer(buffer);
-      this.backgroundMusic.setLoop(true);
-      this.backgroundMusic.setVolume(this.isMuted ? 0 : 0.12);
-      this.backgroundMusic.play();
+      tryPlay(this.backgroundMusic, 0.12, true);
     });
 
-    // Occasional Wind
     audioLoader.load('/audio/wind.mp3', (buffer) => {
       this.windAudio.setBuffer(buffer);
       this.windAudio.setVolume(this.isMuted ? 0 : 0.06);
-      this.nextWindTime = Math.random() * 15 + 10; // First wind in 10-25s
+      this.nextWindTime = Math.random() * 15 + 10;
     });
 
-    // Night Ambiance
     audioLoader.load('/audio/night.mp3', (buffer) => {
       this.nightAudio.setBuffer(buffer);
-      this.nightAudio.setLoop(true);
-      this.nightAudio.setVolume(this.isMuted ? 0 : 0.04); // Subtle crickets/owls
-      this.nightAudio.play();
+      tryPlay(this.nightAudio, 0.04, true);
     });
   }
 
@@ -186,19 +188,28 @@ export class Game {
 
   private setupAudioResume(): void {
     const resumeAudio = () => {
-      if (this.audioListener.context.state === 'suspended') {
-        this.audioListener.context.resume();
+      const ctx = this.audioListener.context;
+      const startAudio = () => {
+        if (this.backgroundMusic.buffer && !this.backgroundMusic.isPlaying) {
+          this.backgroundMusic.play();
+        }
+        if (this.nightAudio.buffer && !this.nightAudio.isPlaying) {
+          this.nightAudio.play();
+        }
+        // Keep listeners alive until both are actually playing (buffers may not be loaded yet)
+        const bgReady = !this.backgroundMusic.buffer || this.backgroundMusic.isPlaying;
+        const nightReady = !this.nightAudio.buffer || this.nightAudio.isPlaying;
+        if (bgReady && nightReady) {
+          window.removeEventListener('click', resumeAudio);
+          window.removeEventListener('keydown', resumeAudio);
+          window.removeEventListener('touchstart', resumeAudio);
+        }
+      };
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(startAudio);
+      } else {
+        startAudio();
       }
-      if (!this.backgroundMusic.isPlaying && this.backgroundMusic.buffer) {
-        this.backgroundMusic.play();
-      }
-      if (!this.nightAudio.isPlaying && this.nightAudio.buffer) {
-        this.nightAudio.play();
-      }
-      // Remove listeners once audio is successfully playing/resumed
-      window.removeEventListener('click', resumeAudio);
-      window.removeEventListener('keydown', resumeAudio);
-      window.removeEventListener('touchstart', resumeAudio);
     };
 
     window.addEventListener('click', resumeAudio);
