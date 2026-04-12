@@ -12,15 +12,18 @@ export class GameScene {
   public camera: THREE.PerspectiveCamera;
   public ambientLight: THREE.AmbientLight;
   public directionalLight: THREE.DirectionalLight;
+  public hemisphereLight: THREE.HemisphereLight;
   private textureLoader = new THREE.TextureLoader();
   private surroundingClones: THREE.Object3D[] = [];
 
 
   constructor() {
+    const mobile = isMobile();
+
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x150b24);
-    if (!isMobile()) {
-      this.scene.fog = new THREE.Fog(0x150b24, 80, 250);
+    this.scene.background = new THREE.Color(0x130b1d);
+    if (!mobile) {
+      this.scene.fog = new THREE.Fog(0x130b1d, 70, 210);
     }
 
     this.camera = new THREE.PerspectiveCamera(
@@ -32,13 +35,17 @@ export class GameScene {
     this.camera.position.set(40, 50, 40);
     this.camera.lookAt(0, 0, 0);
 
-    // Neutral but dim ambient light to keep object textures looking natural
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+    // Dark global fill so the park stays readable without flattening all shadows.
+    this.ambientLight = new THREE.AmbientLight(0x7c88a8, mobile ? 0.34 : 0.3);
     this.scene.add(this.ambientLight);
 
-    // Cool pale moonlight to cast shadows without washing out textures
-    this.directionalLight = new THREE.DirectionalLight(0xddeeff, 0.7); 
-    this.directionalLight.position.set(20, 100, 40); // Slightly more vertical to prevent overly stretched shadows
+    // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
+    this.hemisphereLight = new THREE.HemisphereLight(0x5d6f96, 0x241712, mobile ? 0.42 : 0.48);
+    this.scene.add(this.hemisphereLight);
+
+    // Cool moon key light for silhouettes and shadow shape.
+    this.directionalLight = new THREE.DirectionalLight(0xc6d7ff, mobile ? 0.82 : 0.95);
+    this.directionalLight.position.set(32, 88, 18);
     this.directionalLight.castShadow = true;
     this.directionalLight.shadow.camera.left = -100;
     this.directionalLight.shadow.camera.right = 100;
@@ -46,7 +53,8 @@ export class GameScene {
     this.directionalLight.shadow.camera.bottom = -100;
     this.directionalLight.shadow.mapSize.width = 1024;
     this.directionalLight.shadow.mapSize.height = 1024;
-    this.directionalLight.shadow.bias = -0.0001;
+    this.directionalLight.shadow.bias = -0.00015;
+    this.directionalLight.shadow.normalBias = 0.03;
     this.scene.add(this.directionalLight);
 
     this.createGround();
@@ -294,7 +302,10 @@ export class GameScene {
       uniforms: {
         map:    { value: terrainTexture },
         repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
-        fade:   { value: 0.03 }
+        fade:   { value: 0.03 },
+        moonTint: { value: new THREE.Color(0x3a4d43) },
+        shadowTint: { value: new THREE.Color(0x1a1021) },
+        sickTint: { value: new THREE.Color(0x4d5a2a) }
       },
       vertexShader: /* glsl */`
         varying vec2 vUv;
@@ -307,12 +318,51 @@ export class GameScene {
         uniform sampler2D map;
         uniform vec2      repeat;
         uniform float     fade;
+        uniform vec3      moonTint;
+        uniform vec3      shadowTint;
+        uniform vec3      sickTint;
         varying vec2      vUv;
+
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
+
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          float a = hash(i);
+          float b = hash(i + vec2(1.0, 0.0));
+          float c = hash(i + vec2(0.0, 1.0));
+          float d = hash(i + vec2(1.0, 1.0));
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+
         void main() {
-          vec4 color = texture2D(map, vUv * repeat);
+          vec2 tiledUv = vUv * repeat;
+          vec2 warpedUv = tiledUv + vec2(
+            noise(vUv * 7.0) * 0.16 - 0.08,
+            noise(vUv.yx * 7.0 + 13.4) * 0.16 - 0.08
+          );
+          vec3 base = texture2D(map, warpedUv).rgb;
+          vec3 detail = texture2D(map, tiledUv * 1.9 + vec2(4.7, 2.3)).rgb;
+
+          float mudBands = smoothstep(0.35, 0.9, noise(vUv * 10.0 + 8.0));
+          float rotPatches = smoothstep(0.48, 0.82, noise(vUv * 18.0 + detail.rg * 3.0));
+          float coldMist = smoothstep(0.2, 0.85, noise(vUv * 5.0 + vec2(2.0, 9.0)));
+
+          vec3 color = mix(base, base * moonTint, 0.42);
+          color = mix(color, color * 0.72 + shadowTint * 0.28, mudBands * 0.55);
+          color = mix(color, sickTint, rotPatches * 0.22);
+          color += detail * vec3(0.05, 0.035, 0.06);
+          color += coldMist * vec3(0.015, 0.02, 0.03);
+
+          float centerFalloff = distance(vUv, vec2(0.5));
+          color *= 1.0 - smoothstep(0.22, 0.72, centerFalloff) * 0.18;
+
           float fx = smoothstep(0.0, fade, vUv.x) * smoothstep(1.0, 1.0 - fade, vUv.x);
           float fz = smoothstep(0.0, fade, vUv.y) * smoothstep(1.0, 1.0 - fade, vUv.y);
-          gl_FragColor = vec4(color.rgb, fx * fz);
+          gl_FragColor = vec4(color, fx * fz);
         }
       `,
       transparent: true,
@@ -331,7 +381,12 @@ export class GameScene {
     outsideTex.wrapS = THREE.RepeatWrapping;
     outsideTex.wrapT = THREE.RepeatWrapping;
     outsideTex.repeat.set(30, 30);
-    const mat  = new THREE.MeshStandardMaterial({ map: outsideTex, roughness: 1.0, metalness: 0.0 });
+    const mat  = new THREE.MeshStandardMaterial({
+      map: outsideTex,
+      color: 0xb7a898,
+      roughness: 1.0,
+      metalness: 0.0,
+    });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = 0.01;
@@ -343,7 +398,7 @@ export class GameScene {
   private createGround(): void {
     // Infinite dark base — catches fog at the horizon
     const geo = new THREE.PlaneGeometry(4000, 4000);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x1a1208, roughness: 1.0 });
+    const mat = new THREE.MeshStandardMaterial({ color: 0x0f0914, roughness: 1.0 });
     const ground = new THREE.Mesh(geo, mat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.02;
@@ -366,23 +421,23 @@ export class GameScene {
 
   private createMoon(): void {
     const moonGroup = new THREE.Group();
-    const moonPos = new THREE.Vector3(-110, 20, -25);
+    const moonPos = new THREE.Vector3(-108, 28, -38);
 
     // Main moon body
     const moonGeo = new THREE.SphereGeometry(7, 32, 32);
     const moonMat = new THREE.MeshBasicMaterial({ 
-      color: 0xffffee,
+      color: 0xf3f6ff,
     });
     const moon = new THREE.Mesh(moonGeo, moonMat);
     moonGroup.add(moon);
 
     // Three layers of halo for a very diffuse look
-    const haloSizes = [11, 28, 60];
-    const haloOpacities = [0.08, 0.03, 0.01];
+    const haloSizes = [11, 26, 54];
+    const haloOpacities = [0.1, 0.045, 0.018];
     haloSizes.forEach((size, i) => {
       const geo = new THREE.SphereGeometry(size, 32, 32);
       const mat = new THREE.MeshBasicMaterial({
-        color: 0xddeeff,
+        color: 0xc7dcff,
         transparent: true,
         opacity: haloOpacities[i],
         depthWrite: false
@@ -391,7 +446,7 @@ export class GameScene {
     });
 
     // Extremely diffuse and subtle light source
-    const moonLight = new THREE.PointLight(0xddeeff, 0.1, 800);
+    const moonLight = new THREE.PointLight(0xc8d8ff, 0.18, 900);
     moonLight.position.set(0, 0, 0); 
     moonGroup.add(moonLight);
 

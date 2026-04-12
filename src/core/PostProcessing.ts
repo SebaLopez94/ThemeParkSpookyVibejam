@@ -55,7 +55,7 @@ const RetroShader = {
     void main() {
 
       // ── 1. Barrel warp ────────────────────────────────────────────────
-      vec2 uv = barrelWarp(vUv, 0.10);
+      vec2 uv = barrelWarp(vUv, 0.065);
       // Smooth rounded corners mask
       vec2 cornerMask = smoothstep(0.0, 0.02, uv) * smoothstep(1.0, 0.98, uv);
       float inScreen = cornerMask.x * cornerMask.y;
@@ -66,7 +66,7 @@ const RetroShader = {
 
       // ── 2. Chromatic aberration ───────────────────────────────────────
       vec2 edge = (uv - 0.5);
-      float ca  = 0.005;
+      float ca  = 0.0032;
       float r   = texture2D(tDiffuse, uv + edge * ca).r;
       float g   = texture2D(tDiffuse, uv + edge * ca * 0.3).g;
       float b   = texture2D(tDiffuse, uv - edge * ca).b;
@@ -76,7 +76,7 @@ const RetroShader = {
       vec2 px    = vec2(1.0) / resolution;
       vec3 smear = texture2D(tDiffuse, uv + vec2(px.x * 1.5, 0.0)).rgb * 0.25
                  + texture2D(tDiffuse, uv + vec2(px.x * 3.0, 0.0)).rgb * 0.10;
-      color += smear * 0.18;
+      color += smear * 0.11;
 
       float lineY = uv.y * resolution.y;
 
@@ -89,7 +89,7 @@ const RetroShader = {
         texture2D(tDiffuse, uv + vec2(0.0, -bpx.y)).rgb
       ) * 0.25;
       float bloomMask = smoothstep(0.45, 0.80, dot(bloom, vec3(0.333)));
-      color += bloom * bloomMask * 0.18;
+      color += bloom * bloomMask * 0.12;
 
       // ── 7. Colour grade — aged CRT phosphor ──────────────────────────
       float luma      = dot(color, vec3(0.299, 0.587, 0.114));
@@ -97,29 +97,31 @@ const RetroShader = {
       float highlight = smoothstep(0.65, 1.0, luma);
       float midtone   = clamp(1.0 - shadow - highlight, 0.0, 1.0);
 
-      color += vec3( 0.004,  0.004, -0.002) * shadow;
-      color += vec3( 0.006, -0.002,  0.010) * midtone;
-      color += vec3( 0.008,  0.006,  0.006) * highlight;
+      color += vec3(-0.002,  0.000,  0.006) * shadow;
+      color += vec3( 0.004, -0.001,  0.008) * midtone;
+      color += vec3( 0.010,  0.006,  0.010) * highlight;
 
-      // Desaturate toward neutral gray — kills the green cast
+      // Keep the CRT feel while preserving more scene colour separation.
       float luma2 = dot(color, vec3(0.299, 0.587, 0.114));
-      color = mix(color, vec3(luma2), 0.28);
+      color = mix(color, vec3(luma2), 0.18);
+      color = mix(color, color * vec3(0.92, 0.97, 1.05), 0.28);
+      color *= 1.03;
 
       // ── 9. Screen flicker ─────────────────────────────────────────────
       float flicker = 1.0
-        + sin(time * 2.1)  * 0.015
-        + sin(time * 5.3)  * 0.007;
+        + sin(time * 2.1)  * 0.01
+        + sin(time * 5.3)  * 0.004;
       color *= flicker;
 
       // ── 10. Vignette ─────────────────────────────────────────────────
       vec2  vig      = uv * 2.0 - 1.0;
       float vignette = 1.0 - dot(vig * 0.50, vig * 0.50);
-      vignette = clamp(pow(vignette, 0.55), 0.65, 1.0);
+      vignette = clamp(pow(vignette, 0.68), 0.76, 1.0);
       color *= vignette;
       color *= inScreen;
 
       // ── 11. Static noise ─────────────────────────────────────────────
-      float noise = rand(uv + fract(time * 0.29)) * 0.06 - 0.03;
+      float noise = rand(uv + fract(time * 0.29)) * 0.03 - 0.015;
       color += noise;
 
       // ── 12. Gamma correction (linear → sRGB) ─────────────────────────

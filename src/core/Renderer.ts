@@ -20,9 +20,11 @@ export class GameRenderer {
     });
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
     this.renderer.shadowMap.enabled = !mobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.NoToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
 
     // EffectComposer renders to a linear render target — disable automatic sRGB
     // conversion so values aren't gamma-corrected twice (or not at all).
