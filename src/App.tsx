@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
-import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, XCircle } from 'lucide-react';
+import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, Volume2, VolumeX, XCircle } from 'lucide-react';
 import { Game } from './Game';
 import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
@@ -58,6 +58,7 @@ function App() {
   const [activeBuildDefinition, setActiveBuildDefinition] = useState<BuildingDefinition | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [celebration, setCelebration] = useState<{ title: string; sub: string; reward: number } | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
 
   const pushToast = (tone: ToastItem['tone'], message: string) => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -187,6 +188,13 @@ function App() {
     pushToast('success', `Park entry price updated to $${clamped}.`);
   };
 
+  const handleToggleMute = () => {
+    const newState = !isMuted;
+    setIsMuted(newState);
+    gameRef.current?.setMuted(newState);
+    pushToast('info', newState ? 'Audio muted' : 'Audio unmuted');
+  };
+
   const canAfford = (cost: number): boolean => gameRef.current?.canAfford(cost) ?? false;
   const isBuildMenuVisible = showBuildMenu && !selectedBuilding;
   const activeResearchLabel = useMemo(
@@ -220,6 +228,10 @@ function App() {
               localTicketPrice={localTicketPrice}
               onTicketPriceChange={value => setLocalTicketPrice(value)}
               onTicketPriceCommit={handleTicketCommit}
+              onToggleParkOpen={isOpen => {
+                gameRef.current?.setParkOpen(isOpen);
+                pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
+              }}
               activeResearchLabel={activeResearchLabel}
             />
           )}
@@ -267,6 +279,10 @@ function App() {
                   localTicketPrice={localTicketPrice}
                   onTicketPriceChange={value => setLocalTicketPrice(value)}
                   onTicketPriceCommit={handleTicketCommit}
+                  onToggleParkOpen={isOpen => {
+                    gameRef.current?.setParkOpen(isOpen);
+                    pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
+                  }}
                   activeResearchLabel={activeResearchLabel}
                 />
               )}
@@ -342,6 +358,14 @@ function App() {
           }}
         >
           ?
+        </button>
+        <button
+          className="px-btn"
+          style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, justifyContent: 'center', flexShrink: 0 }}
+          onClick={handleToggleMute}
+          title={isMuted ? "Unmute audio" : "Mute audio"}
+        >
+          {isMuted ? <VolumeX /> : <Volume2 />}
         </button>
       </div>
 

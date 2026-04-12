@@ -14,7 +14,8 @@ export class EconomySystem {
       averageHappiness: 10,
       dailyIncome: 0,
       dailyExpenses: 0,
-      netProfit: 0
+      netProfit: 0,
+      isOpen: true
     };
   }
 
@@ -75,6 +76,11 @@ export class EconomySystem {
 
   public setTicketPrice(price: number): void {
     this.state.ticketPrice = Math.max(0, Math.min(price, 50));
+    this.notifyListeners();
+  }
+
+  public setParkOpen(isOpen: boolean): void {
+    this.state.isOpen = isOpen;
     this.notifyListeners();
   }
 

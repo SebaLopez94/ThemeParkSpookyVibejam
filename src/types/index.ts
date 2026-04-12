@@ -166,6 +166,7 @@ export interface EconomyState {
   dailyIncome: number;
   dailyExpenses: number;
   netProfit: number;
+  isOpen: boolean;
 }
 
 export interface BuildingDefinition {

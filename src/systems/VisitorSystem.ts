@@ -21,6 +21,7 @@ interface SimulationEntities {
   services: Service[];
   decorations: Decoration[];
   getLocalDecorationBonus: (position: GridPosition) => number;
+  isOpen: boolean;
 }
 
 interface TargetChoice {
@@ -55,7 +56,7 @@ export class VisitorSystem {
 
   public update(deltaTime: number, entities: SimulationEntities): void {
     this.spawnTimer += deltaTime;
-    if (this.spawnTimer >= this.spawnInterval && this.visitors.size < 30) {
+    if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < 30) {
       this.spawnVisitor();
       this.spawnTimer = 0;
     }
@@ -69,6 +70,16 @@ export class VisitorSystem {
       if (visitor.data.needs.money <= 0 || visitor.data.needs.happiness < 15) {
         toRemove.push(id);
         return;
+      }
+
+      // If park is closed, visitors head to the entrance and leave gradually
+      if (!entities.isOpen) {
+        const gridPos = GridHelper.worldToGrid(visitor.data.position);
+        const distToEntrance = Math.abs(gridPos.x - this.entrancePosition.x) + Math.abs(gridPos.z - this.entrancePosition.z);
+        if (distToEntrance < 2) {
+          toRemove.push(id);
+          return;
+        }
       }
 
       if (!visitor.data.targetPosition && !visitor.data.currentActivity) {
@@ -185,7 +196,7 @@ export class VisitorSystem {
     );
     options.sort((a, b) => b.score - a.score);
 
-    if (options.length > 0 && options[0].score > 0.12) {
+    if (options.length > 0 && options[0].score > 0.12 && entities.isOpen) {
       const best = options[0];
       visitor.setPath(best.path);
       this.visitorTargets.set(visitor.data.id, { type: best.type, id: best.id });
@@ -194,14 +205,16 @@ export class VisitorSystem {
     }
 
     this.visitorTargets.delete(visitor.data.id);
-    const randomPos = this.pathfinding.getRandomPathPosition();
-    if (!randomPos) return;
+    // If closed or no good activity, either head to entrance (if closed) or wander
+    const targetPos = entities.isOpen ? this.pathfinding.getRandomPathPosition() : this.entrancePosition;
+    if (!targetPos) return;
 
-    const path = this.pathfinding.findPath(currentGridPos, randomPos);
+    const path = this.pathfinding.findPath(currentGridPos, targetPos);
     if (path.length > 0) {
       visitor.setPath(path);
-      this.visitorTargets.set(visitor.data.id, { type: 'wander', id: `wander:${randomPos.x},${randomPos.z}` });
-      if ((densityMap.get(GridHelper.getGridKey(currentGridPos)) ?? 0) > 3) {
+      const wanderType = entities.isOpen ? 'wander' : 'leaving';
+      this.visitorTargets.set(visitor.data.id, { type: 'wander', id: `${wanderType}:${targetPos.x},${targetPos.z}` });
+      if (entities.isOpen && (densityMap.get(GridHelper.getGridKey(currentGridPos)) ?? 0) > 3) {
         visitor.setThought({ type: 'crowd', message: 'Need some breathing room.' });
       }
     }

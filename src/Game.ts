@@ -42,6 +42,12 @@ export class Game {
   private challengeSystem: ChallengeSystem;
   private mouseController: MouseController;
   private cameraController: CameraController;
+  private audioListener: THREE.AudioListener;
+  private backgroundMusic: THREE.Audio;
+  private windAudio: THREE.Audio;
+  private nightAudio: THREE.Audio;
+  private nextWindTime = 0;
+  private isMuted = false;
 
   // Preview group holds both the footprint indicator and the GLB ghost model
   private previewGroup: THREE.Group | null = null;
@@ -111,9 +117,17 @@ export class Game {
     this.mouseController = new MouseController(this.scene.camera, this.renderer.renderer.domElement);
     this.cameraController = new CameraController(this.scene.camera);
 
+    this.audioListener = new THREE.AudioListener();
+    this.scene.camera.add(this.audioListener);
+    this.backgroundMusic = new THREE.Audio(this.audioListener);
+    this.windAudio = new THREE.Audio(this.audioListener);
+    this.nightAudio = new THREE.Audio(this.audioListener);
+    this.loadAudio();
+
     this.renderer.initPostProcessing(this.scene.scene, this.scene.camera);
     this.setupMouseControls();
     this.setupWindowResize();
+    this.setupAudioResume();
     this.initializeEntrance();
 
     this.economySystem.subscribe(state => this.onEconomyUpdate?.(state));
@@ -128,6 +142,68 @@ export class Game {
       this.buildingSystem.placePath({ x: 13, z });
     }
     this.visitorSystem.setEntrancePosition({ x: 12, z: 24 });
+  }
+
+  private loadAudio(): void {
+    const audioLoader = new THREE.AudioLoader();
+    
+    // Background Music
+    audioLoader.load('/audio/main_song.mp3', (buffer) => {
+      this.backgroundMusic.setBuffer(buffer);
+      this.backgroundMusic.setLoop(true);
+      this.backgroundMusic.setVolume(this.isMuted ? 0 : 0.12);
+      this.backgroundMusic.play();
+    });
+
+    // Occasional Wind
+    audioLoader.load('/audio/wind.mp3', (buffer) => {
+      this.windAudio.setBuffer(buffer);
+      this.windAudio.setVolume(this.isMuted ? 0 : 0.06);
+      this.nextWindTime = Math.random() * 15 + 10; // First wind in 10-25s
+    });
+
+    // Night Ambiance
+    audioLoader.load('/audio/night.mp3', (buffer) => {
+      this.nightAudio.setBuffer(buffer);
+      this.nightAudio.setLoop(true);
+      this.nightAudio.setVolume(this.isMuted ? 0 : 0.04); // Subtle crickets/owls
+      this.nightAudio.play();
+    });
+  }
+
+  public setMuted(muted: boolean): void {
+    this.isMuted = muted;
+    if (this.backgroundMusic) {
+      this.backgroundMusic.setVolume(muted ? 0 : 0.12);
+    }
+    if (this.windAudio) {
+      this.windAudio.setVolume(muted ? 0 : 0.06);
+    }
+    if (this.nightAudio) {
+      this.nightAudio.setVolume(muted ? 0 : 0.04);
+    }
+  }
+
+  private setupAudioResume(): void {
+    const resumeAudio = () => {
+      if (this.audioListener.context.state === 'suspended') {
+        this.audioListener.context.resume();
+      }
+      if (!this.backgroundMusic.isPlaying && this.backgroundMusic.buffer) {
+        this.backgroundMusic.play();
+      }
+      if (!this.nightAudio.isPlaying && this.nightAudio.buffer) {
+        this.nightAudio.play();
+      }
+      // Remove listeners once audio is successfully playing/resumed
+      window.removeEventListener('click', resumeAudio);
+      window.removeEventListener('keydown', resumeAudio);
+      window.removeEventListener('touchstart', resumeAudio);
+    };
+
+    window.addEventListener('click', resumeAudio);
+    window.addEventListener('keydown', resumeAudio);
+    window.addEventListener('touchstart', resumeAudio);
   }
 
   private setupMouseControls(): void {
@@ -359,6 +435,10 @@ export class Game {
     this.economySystem.setTicketPrice(price);
   }
 
+  public setParkOpen(isOpen: boolean): void {
+    this.economySystem.setParkOpen(isOpen);
+  }
+
   public getResearchNodes(): ResearchNode[] {
     return this.researchSystem.getNodes();
   }
@@ -548,12 +628,24 @@ export class Game {
       shops: this.buildingSystem.getShops(),
       services: this.buildingSystem.getServices(),
       decorations: this.buildingSystem.getDecorations(),
-      getLocalDecorationBonus: position => this.buildingSystem.getLocalDecorationBonus(position)
+      getLocalDecorationBonus: position => this.buildingSystem.getLocalDecorationBonus(position),
+      isOpen: this.economySystem.getState().isOpen
     });
 
     const unlocked = this.researchSystem.update(deltaTime);
     if (unlocked.length > 0) {
       this.showFloatingText('Research complete!', { x: 24, z: 47 }, '#facc15');
+    }
+
+    // Occasional Wind logic
+    if (this.windAudio.buffer && !this.isMuted) {
+      this.nextWindTime -= deltaTime;
+      if (this.nextWindTime <= 0) {
+        if (!this.windAudio.isPlaying) {
+          this.windAudio.play();
+        }
+        this.nextWindTime = Math.random() * 30 + 30; // Next wind in 30-60s
+      }
     }
 
     this.ratingUpdateTimer += deltaTime;
@@ -629,5 +721,7 @@ export class Game {
     this.visitorSystem.clear();
     this.scene.dispose();
     this.renderer.dispose();
+    if (this.backgroundMusic.isPlaying) this.backgroundMusic.stop();
+    this.scene.camera.remove(this.audioListener);
   }
 }
