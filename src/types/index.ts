@@ -132,6 +132,12 @@ export interface PathData extends BuildingData {
 
 export type VisitorNeedType = 'fun' | 'hunger' | 'thirst' | 'hygiene';
 
+/**
+ * Personality archetype assigned at spawn.
+ * Drives individual decay rates, scoring biases, and crowd tolerance.
+ */
+export type VisitorPersonality = 'thrill_seeker' | 'foodie' | 'relaxer';
+
 export interface VisitorNeeds {
   fun: number;
   hunger: number;
@@ -141,7 +147,7 @@ export interface VisitorNeeds {
   happiness: number;
 }
 
-export type VisitorMoodKind = 'hunger' | 'thirst' | 'bored' | 'happy' | 'sad' | 'sick' | 'crowded' | 'price' | 'shopping';
+export type VisitorMoodKind = 'hunger' | 'thirst' | 'bored' | 'happy' | 'sad' | 'sick' | 'crowded' | 'price' | 'shopping' | 'excited' | 'broke';
 
 export interface VisitorThought {
   kind: VisitorMoodKind;
@@ -159,6 +165,28 @@ export interface VisitorData {
   currentActivity: string | null;
   activityTimer: number;
   lastThought: VisitorThought | null;
+
+  /** Assigned at spawn; drives decay rates and scoring biases. */
+  personality: VisitorPersonality;
+
+  /**
+   * Emotional history: [-1, +1].
+   * Accumulates from positive/negative events; decays toward 0 over time.
+   * Boosts price tolerance when positive, lowers leave threshold when negative.
+   */
+  moodMomentum: number;
+
+  /** Total seconds spent inside the park. */
+  timeInPark: number;
+
+  /**
+   * Randomised visit budget in seconds (180–300 s).
+   * After this, the visitor gradually raises their own leave threshold.
+   */
+  naturalLeaveDuration: number;
+
+  /** How many times each ride has been used (by ride id). Drives variety bonus. */
+  rideUseCounts: Record<string, number>;
 }
 
 export interface EconomyState {
@@ -208,12 +236,17 @@ export interface ResearchState {
 
 export type ChallengeType =
   | 'visitor_count'
+  | 'active_visitors'
   | 'happiness_streak'
   | 'profit_streak'
   | 'build_count'
   | 'ride_count'
   | 'shop_count'
+  | 'service_count'
+  | 'decoration_count'
   | 'rating_threshold';
+
+export type ChallengeTier = 1 | 2 | 3 | 4 | 5;
 
 export interface ChallengeReward {
   money: number;
@@ -228,6 +261,7 @@ export interface ChallengeDefinition {
   target: number;
   duration?: number;
   reward: ChallengeReward;
+  tier: ChallengeTier;
 }
 
 export interface ChallengeState extends ChallengeDefinition {
@@ -238,6 +272,7 @@ export interface ChallengeState extends ChallengeDefinition {
 
 export interface SimulationSnapshot {
   totalVisitors: number;
+  activeVisitors: number;
   averageHappiness: number;
   netProfit: number;
   parkRating: number;
@@ -245,4 +280,6 @@ export interface SimulationSnapshot {
   serviceAndDecorationCount: number;
   rideCount: number;
   shopCount: number;
+  serviceCount: number;
+  decorationCount: number;
 }

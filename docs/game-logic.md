@@ -14,7 +14,7 @@ This document describes the gameplay rules and simulation behavior implemented i
 ## 2. Economy and Park State
 
 - Starting money: `$3,500`
-- Default ticket price: `$8`
+- Default ticket price: `$5`
 - Each new visitor pays the current ticket price when spawning.
 - Buildings have an upfront construction cost.
 - Rides, shops, and services can charge a configurable usage price.
@@ -106,19 +106,42 @@ Economy tracks:
 
 ### Visitor spawn and limits
 
-- Spawn rate: randomized between `20` and `32` seconds
-- Maximum concurrent visitors: `18`
-- Starting money per visitor: `$30-$100`
+- Spawn rate: randomized between `15` and `23` seconds
+- Maximum concurrent visitors: `22`
+- Starting money per visitor: `$60–$150`
+
+### Personality archetypes
+
+Each visitor is assigned a personality at spawn that modifies their behaviour:
+
+| Personality | Effect |
+|---|---|
+| `thrill_seeker` | Ride score ×1.4, shop score ×0.85, fun decay ×1.25 |
+| `foodie` | Food/drink shop score ×1.4, ride score ×0.85, hunger/thirst decay ×1.15–1.20 |
+| `relaxer` | Density penalty ×0.5, fun decay ×0.80, hunger/thirst decay ×0.85, gift shop score ×1.2 |
+
+### Mood momentum
+
+- Each visitor tracks a `moodMomentum` value in `[-1, +1]`.
+- Positive events (fair ride price, fun boost) push it toward `+1`.
+- Negative events (price rejection, crowd frustration) push it toward `-1`.
+- It decays toward `0` naturally over time.
+- A positive momentum raises price tolerance; a negative one lowers it.
+
+### Natural leave arc
+
+- Each visitor has a `naturalLeaveDuration` (180–300 s) randomised at spawn.
+- After that time, the leave threshold rises from `15` toward `40`, so long-staying visitors gradually become harder to retain.
 
 ### Needs
 
 Visitors track:
 
-- `fun` - starts at `50`
-- `hunger` - starts at `100`
-- `thirst` - starts at `100`
-- `hygiene` - starts at `100`
-- `money` - starts between `$30` and `$100`
+- `fun` - starts at `30` (excited to be at the park)
+- `hunger` - starts at `70`
+- `thirst` - starts at `70`
+- `hygiene` - starts at `90`
+- `money` - starts between `$60` and `$150`
 - `happiness`
 
 ### Happiness
@@ -130,32 +153,55 @@ Visitors track:
   - `20% thirst`
   - `20% hygiene`
 
-### Need decay
+### Need decay (per second, base rates modified by personality)
 
-- `fun` decays fastest
-- `thirst` decays faster than hunger
-- `hygiene` decays slowest
+| Need | Base rate |
+|---|---|
+| `fun` | 0.45 |
+| `hunger` | 0.50 |
+| `thirst` | 0.60 |
+| `hygiene` | 0.30 |
+
+- Thirst decays fastest — drink stands are the most urgently needed shop.
+- Hygiene decays slowest — restrooms are a comfort upgrade, not an emergency.
 
 ### Leaving the park
 
 A visitor leaves when:
 
 - `money <= 0`
-- `happiness < 15`
+- `happiness < leaveThreshold` (starts at 15; rises after `naturalLeaveDuration`)
 - the park is closed and they reach the entrance
 
 ### Activity choice
 
 Visitors score reachable targets using:
 
-- dominant need
+- dominant need (amplified by personality multiplier)
+- ride variety penalty (each repeated ride scores lower)
 - affordability
-- price fairness
-- travel distance
-- local crowd density
+- price fairness (adjusted by moodMomentum)
+- travel distance (Manhattan heuristic for scoring; A* only for the winner)
+- local crowd density (relaxers less sensitive; thrill-seekers slightly more)
 - nearby decoration appeal
 
+Gift shop desire scales with happiness: happy visitors with spare cash (> $20) treat themselves proportionally more.
+
 If no strong target exists, they wander to another path tile. If the park is closed, they head to the entrance instead.
+
+### Ride fun boost
+
+Fun gained from a ride is based on the ride's intrinsic `funFactor` and `quality`, **not** the admission price set by the player. Price affects only whether the visitor accepts the cost, not how much fun they get.
+
+```
+funBoost = Min(100, funFactor × (quality / 60) + decorationBonus)
+```
+
+### Ride cooldown and variety penalty
+
+- `60 seconds` before a visitor will re-enter the same ride.
+- Repeated use of the same ride applies a cumulative variety penalty (`-12%` per extra use, max `-40%`).
+- Multiple different rides are required to keep fun levels high throughout a visit.
 
 ### Visitor mood emojis
 
@@ -169,11 +215,14 @@ Current mood mapping:
 - low `hunger` -> food emoji
 - low `thirst` -> drink emoji
 - low `fun` -> bored emoji
-- high `happiness` -> happy emoji
+- very high `happiness` (> 88) -> excited emoji (🤩)
+- high `happiness` (> 78) -> happy emoji (😊)
 - low `happiness` -> sad emoji
 - very low `hygiene` -> sick / disgust emoji
 - crowd frustration -> annoyed emoji
 - price rejection -> money / frustration emoji
+- very low `money` (< 12) -> broke emoji (😔)
+- spawn -> excitement burst (🎉, suppressed during ride entry animation)
 
 Priority order:
 
@@ -260,43 +309,122 @@ Notes:
 
 - Challenges update automatically during play.
 - Rewards are granted once, auto-claimed, and then marked as completed.
+- Challenges are grouped into 5 thematic tiers visible in the panel.
+- All challenges are always visible — no artificial gating.
 
-### Current challenge set
+### Challenge types
 
-- Build `1` ride
-- Reach `10` total visitors
-- Build `3` services or decorations
-- Reach `25` total visitors
-- Build `2` shops
-- Keep average happiness above `65` for `20` seconds
-- Maintain positive net profit for `30` seconds
-- Build `3` rides
-- Reach `75` total visitors
-- Keep happiness above `75` for `30` seconds
-- Reach park rating `80`
-- Reach `150` total visitors
-- Stay profitable for `60` seconds
+- `visitor_count` — total visitors who have entered the park
+- `active_visitors` — concurrent visitors present at the same time
+- `ride_count` — number of rides built
+- `shop_count` — number of shops built
+- `service_count` — number of services (restrooms) built
+- `decoration_count` — number of decorations placed
+- `build_count` — combined services + decorations count
+- `happiness_streak` — average happiness above `target` sustained for `duration` seconds
+- `profit_streak` — positive net profit sustained for `duration` seconds
+- `rating_threshold` — park rating reaches `target`
 
-### Rewards
+### Tier structure and challenge set
 
-- Rewards are combinations of:
-  - bonus money
-  - rating boosts or rating pressure relief
+**Tier I — The Gates Open**
+- Build first ride → $400 + 3★
+- Open a shop → $250 + 2★
+- Welcome 15 visitors → $300 + 3★
+
+**Tier II — The Haunting Begins**
+- Place 3 decorations → $300 + 2★
+- Reach 30 total visitors → $500 + 3★
+- Build a restroom → $300 + 2★
+- Keep happiness above 60 for 25s → $500 + 4★
+- Stay profitable for 30s → $600 + 3★
+
+**Tier III — A Real Nightmare**
+- Build all 3 shop types → $700 + 4★
+- Reach 60 total visitors → $800 + 4★
+- Build 3 rides → $900 + 5★
+- Reach park rating 50 → $800
+
+**Tier IV — Empire of Fear**
+- Reach 100 total visitors → $1500 + 6★
+- Have 15 active visitors at once → $1000 + 4★
+- Keep happiness above 72 for 45s → $1200 + 6★
+- Reach park rating 70 → $1800
+- Stay profitable for 90s → $1500 + 5★
+
+**Tier V — Legend of the Damned**
+- Reach 200 total visitors → $3500 + 8★
+- Keep happiness above 80 for 60s → $2500 + 7★
+- Reach park rating 85 → $3000
+- Stay profitable for 120s → $2500 + 6★
+
+Total reward pool: ~$24 850 across 20 challenges.
 
 ## 9. Park Rating
 
 - Park rating updates once per second.
-- Rating is based on:
-  - average visitor happiness
-  - facility score from the current park layout
-  - decoration appeal bonus
+- Rating formula:
+
+```
+happinessComponent  = averageHappiness × 0.55        (max ~55)
+facilityComponent   = Min(facilityScore, 28)          (max 28)
+decorationComponent = Min(decorationAppeal, 18)       (max 18)
+
+base = happinessComponent + facilityComponent + decorationComponent
+```
+
+The facility score cap was raised from 16 → 28 so parks with 7+ buildings still gain rating value. The decoration cap was raised from 8 → 18 to reward continued theming.
 
 ### Rating caps
 
-- Rating is capped by current active visitors.
+- Rating is capped by current active visitors:
+
+| Active visitors | Max rating |
+|---|---|
+| 0 | 19 |
+| 1–4 | 29 |
+| 5–9 | 44 |
+| 10–14 | 64 |
+| 15+ | 92 |
+
 - Rating is also capped by facility diversity:
   - one facility type: max `49`
   - two facility types: max `69`
   - three facility types: max `92`
 
 This keeps visitor happiness, facility variety, and layout growth all relevant to long-term progression.
+
+## 10. Architecture & Utilities
+
+### Event Communication (EventBus)
+
+`Game` exposes a typed `events: EventBus<GameEvents>` instead of nullable public callbacks.
+React UI subscribes via `game.events.on('economyUpdate', handler)`.
+
+Typed events:
+- `economyUpdate` — EconomyState snapshot
+- `buildingSelected` — SelectedBuildingInfo | null
+- `buildCancel` — void
+- `rotationChange` — degrees (number)
+- `researchUpdate` — ResearchState
+- `challengesUpdate` — ChallengeState[]
+- `challengeCompleted` — ChallengeState
+
+### Pathfinding (PathfindingSystem)
+
+- A* uses a **min-heap** instead of array sort for O(log n) open-list operations.
+- Path results are **cached by (start, goal) pair**; cache is invalidated whenever the walkable grid changes (path placed or removed).
+
+### Visitor Activity Scoring
+
+Activity targets are selected in two phases to minimize A* calls:
+
+1. **Phase 1** — All candidates are scored using **Manhattan distance** (no pathfinding).
+2. **Phase 2** — A* is run **only for the winning candidate**.
+
+Previously, A* was called for every candidate building on every activity assignment, making the cost O(buildings × visitors) per frame.
+
+### Platform Detection
+
+A single `isMobile(): boolean` is exported from `src/utils/platform.ts`.
+Previously duplicated in `Scene.ts`, `Renderer.ts`, and `Visitor.ts`.

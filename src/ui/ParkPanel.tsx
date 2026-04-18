@@ -1,4 +1,4 @@
-import { Coins, FlaskConical, Lock, Ticket, TrendingDown, TrendingUp, Unlock, Users, X } from 'lucide-react';
+import { Coins, FlaskConical, Lock, Ticket, Unlock, Users, X } from 'lucide-react';
 import { EconomyState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -22,8 +22,6 @@ export function ParkPanel({
   onClose
 }: ParkPanelProps) {
   const isMobile = useIsMobile();
-  const netPositive = economy.netProfit >= 0;
-
   return (
     <div className="px-panel px-panel--park px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '52vh', padding: 0 }}>
       <div className="px-overlay-panel__top">
@@ -69,16 +67,19 @@ export function ParkPanel({
                 </div>
               </div>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <label className="px-toggle" style={{ gap: isMobile ? 8 : 10 }}>
                 <span className="px-label" style={{ fontSize: isMobile ? 7 : 8, color: economy.isOpen ? 'var(--px-green-hi)' : 'var(--px-red)' }}>
                   {economy.isOpen ? 'OPEN' : 'CLOSED'}
                 </span>
                 <input
+                  className="px-toggle__input"
                   type="checkbox"
                   checked={economy.isOpen}
                   onChange={e => onToggleParkOpen(e.target.checked)}
-                  style={{ width: 18, height: 18, accentColor: 'var(--px-green)', cursor: 'pointer' }}
                 />
+                <span className="px-toggle__track" aria-hidden="true">
+                  <span className="px-toggle__thumb" />
+                </span>
               </label>
             </div>
 
@@ -89,7 +90,7 @@ export function ParkPanel({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap: isMobile ? 6 : 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, minmax(0, 1fr))', gap: isMobile ? 6 : 8 }}>
             <StatTile
               icon={<Coins className="px-icon-sm" color="var(--px-gold)" />}
               label="CASH"
@@ -102,13 +103,6 @@ export function ParkPanel({
               label="GUESTS"
               value={`${economy.activeVisitors}`}
               color="var(--px-cyan)"
-              mobile={isMobile}
-            />
-            <StatTile
-              icon={<TrendingUp className="px-icon-sm" color={netPositive ? 'var(--px-green-hi)' : 'var(--px-red)'} />}
-              label="NET"
-              value={`${netPositive ? '+' : ''}$${economy.netProfit.toLocaleString()}`}
-              color={netPositive ? 'var(--px-green-hi)' : 'var(--px-red)'}
               mobile={isMobile}
             />
             <StatTile
@@ -171,22 +165,6 @@ export function ParkPanel({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
-            <MiniStat
-              icon={<TrendingUp className="px-icon-sm" color="var(--px-green-hi)" />}
-              label="INCOME"
-              value={`$${economy.dailyIncome.toLocaleString()}`}
-              valueColor="var(--px-green-hi)"
-              mobile={isMobile}
-            />
-            <MiniStat
-              icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}
-              label="EXPENSES"
-              value={`$${economy.dailyExpenses.toLocaleString()}`}
-              valueColor="var(--px-red)"
-              mobile={isMobile}
-            />
-          </div>
       </div>
     </div>
   );
@@ -231,49 +209,6 @@ function StatTile({
           color,
           lineHeight: compact ? 1.4 : 1.6,
           wordBreak: 'break-word'
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({
-  icon,
-  label,
-  value,
-  valueColor,
-  mobile
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  valueColor: string;
-  mobile: boolean;
-}) {
-  return (
-    <div
-      style={{
-        background: 'rgba(0,0,0,0.28)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        padding: mobile ? '8px 9px' : '9px 10px',
-        display: 'grid',
-        gap: 6
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {icon}
-        <span className="px-label" style={{ fontSize: mobile ? 7 : 8 }}>
-          {label}
-        </span>
-      </div>
-      <div
-        style={{
-          fontFamily: "'Press Start 2P', monospace",
-          fontSize: mobile ? 10 : 11,
-          color: valueColor,
-          lineHeight: 1.6
         }}
       >
         {value}

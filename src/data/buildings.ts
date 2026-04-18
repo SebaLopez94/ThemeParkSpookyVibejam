@@ -86,7 +86,7 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     ...BUILDING_DISPLAY[ServiceType.RESTROOM],
     cost: 100,
     quality: 52,
-    valueScore: 2
+    valueScore: 4
   },
   [DecorationType.SPOOKY_TREE]: {
     type: BuildingType.DECORATION,

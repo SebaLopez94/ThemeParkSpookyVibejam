@@ -7,7 +7,7 @@ export class EconomySystem {
   constructor() {
     this.state = {
       money: 3500,
-      ticketPrice: 2,
+      ticketPrice: 5,
       totalVisitors: 0,
       activeVisitors: 0,
       parkRating: 10,
@@ -73,9 +73,9 @@ export class EconomySystem {
     shopCount = 0,
     serviceCount = 0
   ): void {
-    const happinessComponent  = averageHappiness * 0.65;
-    const facilityComponent   = Math.min(facilityScore * 1.0, 16);
-    const decorationComponent = Math.min(decorationAppeal, 8);
+    const happinessComponent  = averageHappiness * 0.55;
+    const facilityComponent   = Math.min(facilityScore * 1.0, 28);
+    const decorationComponent = Math.min(decorationAppeal, 18);
 
     // Visitor gate: rating is capped without enough people to validate it
     const visitorCap = activeVisitors === 0 ? 19

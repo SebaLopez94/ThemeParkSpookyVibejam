@@ -25,8 +25,17 @@ export class ChallengeSystem {
         case 'visitor_count':
           challenge.progress = Math.min(snapshot.totalVisitors, challenge.target);
           break;
+        case 'active_visitors':
+          challenge.progress = Math.min(snapshot.activeVisitors, challenge.target);
+          break;
         case 'build_count':
           challenge.progress = Math.min(snapshot.serviceAndDecorationCount, challenge.target);
+          break;
+        case 'decoration_count':
+          challenge.progress = Math.min(snapshot.decorationCount, challenge.target);
+          break;
+        case 'service_count':
+          challenge.progress = Math.min(snapshot.serviceCount, challenge.target);
           break;
         case 'happiness_streak': {
           const current = snapshot.averageHappiness >= challenge.target

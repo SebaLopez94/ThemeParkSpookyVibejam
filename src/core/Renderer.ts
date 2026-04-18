@@ -1,10 +1,6 @@
 import * as THREE from 'three';
 import { PostProcessing } from './PostProcessing';
-
-function isMobile(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i.test(navigator.userAgent)
-    || window.innerWidth < 768;
-}
+import { isMobile } from '../utils/platform';
 
 export class GameRenderer {
   public renderer: THREE.WebGLRenderer;

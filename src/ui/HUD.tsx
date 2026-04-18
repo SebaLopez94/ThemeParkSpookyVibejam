@@ -6,7 +6,6 @@ import {
   HeartPulse,
   Landmark,
   TrendingDown,
-  TrendingUp,
   Users,
 } from 'lucide-react';
 import { EconomyState } from '../types';
@@ -109,10 +108,6 @@ export function HUD({ economy }: HUDProps) {
 
   if (!mounted) return null;
 
-  const netPositive = economy.netProfit >= 0;
-  const netIcon = netPositive ? <TrendingUp className="px-icon-sm" color="var(--px-green-hi)" /> : <TrendingDown className="px-icon-sm" color="var(--px-red)" />;
-  const netValue = `${netPositive ? '+' : '-'}$${Math.abs(economy.netProfit).toLocaleString()}`;
-
   return (
     <div
       style={{
@@ -174,12 +169,6 @@ export function HUD({ economy }: HUDProps) {
                 icon={<Users className="px-icon-sm" color="var(--px-cyan)" />}
                 label="Guests"
                 value={economy.activeVisitors.toLocaleString()}
-              />
-              <InlineStat icon={netIcon} label="Balance" value={netValue} />
-              <InlineStat
-                icon={<TrendingUp className="px-icon-sm" color="var(--px-green-hi)" />}
-                label="Income"
-                value={`$${economy.dailyIncome.toLocaleString()}`}
               />
               <InlineStat
                 icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}

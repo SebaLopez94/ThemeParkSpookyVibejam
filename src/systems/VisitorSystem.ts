@@ -40,7 +40,7 @@ export class VisitorSystem {
   private spawnInterval = 15 + Math.random() * 8;
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
-  private readonly maxVisitors = 22;
+  private readonly maxVisitors = 200;
 
   public onVisitorSpawn: (() => void) | null = null;
   public onVisitorLeave: (() => void) | null = null;
@@ -70,7 +70,15 @@ export class VisitorSystem {
       visitor.update(deltaTime);
       this.tryShowAmbientMood(visitor);
 
-      if (visitor.data.needs.money <= 0 || visitor.data.needs.happiness < 15) {
+      if (visitor.data.needs.money <= 0) {
+        toRemove.push(id);
+        return;
+      }
+
+      // Natural leave arc: overtime in the park gradually lowers the leave threshold
+      const overstayFactor = Math.max(0, visitor.data.timeInPark - visitor.data.naturalLeaveDuration) / 120;
+      const leaveThreshold = 15 + overstayFactor * 25;
+      if (visitor.data.needs.happiness < leaveThreshold) {
         toRemove.push(id);
         return;
       }
@@ -123,11 +131,12 @@ export class VisitorSystem {
       if (visitor.spendMoney(ride.data.price)) {
         this.onVisitorSpend?.(ride.data.price);
         const decorBonus = Math.min(entities.getLocalDecorationBonus(ride.data.accessCell), 20);
-        const funBoost = Math.min(100, ride.data.funFactor * (ride.data.price / 5) + decorBonus);
+        const funBoost = Math.min(100, ride.data.funFactor * (ride.data.quality / 60) + decorBonus);
         visitor.boostFun(funBoost);
         visitor.markRideUsed(ride.data.id);
         visitor.startActivity('ride', ride.data.duration);
         if (fairness < 0.45) visitor.adjustHappiness(-6);
+        else visitor.adjustHappiness(3); // positive memory from a fair ride
       }
       return;
     }
@@ -262,17 +271,25 @@ export class VisitorSystem {
     const funNeed = (100 - visitor.data.needs.fun) / 100;
     if (funNeed < 0.12) return null;
 
+    const p = visitor.data.personality;
+    const personalityMult = p === 'thrill_seeker' ? 1.4 : p === 'foodie' ? 0.85 : 1.0;
+
     return this.pickBestTarget(
-      rides.filter(ride => visitor.canUseRide(ride.data.id)).map(ride => ({
-        id: ride.data.id,
-        type: 'ride' as const,
-        accessCell: ride.data.accessCell,
-        baseNeedScore: funNeed * (ride.data.funFactor / 40),
-        price: ride.data.price,
-        valueScore: ride.data.valueScore,
-        quality: ride.data.quality,
-        decorationBonus: getLocalDecorationBonus(ride.data.accessCell)
-      })),
+      rides.filter(ride => visitor.canUseRide(ride.data.id)).map(ride => {
+        // Variety penalty: repeated rides feel less exciting
+        const useCount = visitor.data.rideUseCounts[ride.data.id] ?? 0;
+        const varietyPenalty = Math.min(useCount * 0.12, 0.4);
+        return {
+          id: ride.data.id,
+          type: 'ride' as const,
+          accessCell: ride.data.accessCell,
+          baseNeedScore: funNeed * (ride.data.funFactor / 40) * personalityMult * (1 - varietyPenalty),
+          price: ride.data.price,
+          valueScore: ride.data.valueScore,
+          quality: ride.data.quality,
+          decorationBonus: getLocalDecorationBonus(ride.data.accessCell)
+        };
+      }),
       current,
       visitor,
       densityMap
@@ -288,21 +305,34 @@ export class VisitorSystem {
   ): TargetChoice | null {
     const hungerNeed = (100 - visitor.data.needs.hunger) / 100;
     const thirstNeed = (100 - visitor.data.needs.thirst) / 100;
-    const giftNeed = visitor.data.needs.money > 25 && visitor.data.needs.happiness > 45 ? 0.18 : 0;
+    const giftNeed = visitor.data.needs.money > 20 && visitor.data.needs.happiness > 40
+      ? (visitor.data.needs.happiness / 100) * 0.4
+      : 0;
+
+    const p = visitor.data.personality;
+    const foodMult = p === 'foodie' ? 1.4 : 1.0;
+    const giftMult = p === 'relaxer' ? 1.2 : p === 'thrill_seeker' ? 0.75 : 1.0;
 
     return this.pickBestTarget(
       shops.map(shop => {
-        const needScore = shop.data.shopType === ShopType.FOOD_STALL
-          ? hungerNeed
-          : shop.data.shopType === ShopType.DRINK_STAND
-            ? thirstNeed
-            : giftNeed;
+        let needScore: number;
+        let personalityMult: number;
+        if (shop.data.shopType === ShopType.FOOD_STALL) {
+          needScore = hungerNeed;
+          personalityMult = foodMult;
+        } else if (shop.data.shopType === ShopType.DRINK_STAND) {
+          needScore = thirstNeed;
+          personalityMult = foodMult;
+        } else {
+          needScore = giftNeed;
+          personalityMult = giftMult;
+        }
 
         return {
           id: shop.data.id,
           type: 'shop' as const,
           accessCell: shop.data.accessCell,
-          baseNeedScore: needScore * (shop.data.quality / 55),
+          baseNeedScore: needScore * (shop.data.quality / 55) * personalityMult,
           price: shop.data.price,
           valueScore: shop.data.valueScore,
           quality: shop.data.quality,
@@ -356,27 +386,42 @@ export class VisitorSystem {
     visitor: Visitor,
     densityMap: Map<string, number>
   ): TargetChoice | null {
-    let best: TargetChoice | null = null;
+    // Phase 1: score every candidate using cheap Manhattan distance (no A*).
+    // This avoids O(buildings) A* calls per visitor per frame.
+    let bestCandidate: (typeof candidates)[0] | null = null;
+    let bestHeuristicScore = -Infinity;
 
-    candidates.forEach(candidate => {
-      if (candidate.baseNeedScore <= 0 || visitor.data.needs.money < candidate.price) return;
+    // Relaxers tolerate crowds better; thrill-seekers prefer busy, exciting areas
+    const crowdSensitivity = visitor.data.personality === 'relaxer' ? 0.5
+                           : visitor.data.personality === 'thrill_seeker' ? 1.1
+                           : 1.0;
 
-      const path = this.pathfinding.findPath(current, candidate.accessCell);
-      if (path.length <= 1) return; // Skip if already at destination
+    for (const candidate of candidates) {
+      if (candidate.baseNeedScore <= 0 || visitor.data.needs.money < candidate.price) continue;
+
+      const manhattanDist = GridHelper.getDistance(current, candidate.accessCell);
+      if (manhattanDist === 0) continue; // Already standing on access cell
 
       const fairness = this.getPriceFairness(candidate.price, candidate.valueScore, candidate.quality);
       const density = densityMap.get(GridHelper.getGridKey(candidate.accessCell)) ?? 0;
-      const travelPenalty = Math.min(path.length / 30, 0.45);
-      const densityPenalty = Math.min(density * 0.08, 0.32);
+      const travelPenalty = Math.min(manhattanDist / 30, 0.45);
+      const densityPenalty = Math.min(density * 0.08, 0.32) * crowdSensitivity;
       const decorBonus = Math.min(candidate.decorationBonus / 40, 0.18);
       const score = candidate.baseNeedScore * 0.6 + fairness * 0.25 + decorBonus - travelPenalty - densityPenalty;
 
-      if (!best || score > best.score) {
-        best = { id: candidate.id, type: candidate.type, score, path };
+      if (score > bestHeuristicScore) {
+        bestHeuristicScore = score;
+        bestCandidate = candidate;
       }
-    });
+    }
 
-    return best;
+    if (!bestCandidate || bestHeuristicScore <= 0) return null;
+
+    // Phase 2: run A* only for the winning candidate.
+    const path = this.pathfinding.findPath(current, bestCandidate.accessCell);
+    if (path.length <= 1) return null;
+
+    return { id: bestCandidate.id, type: bestCandidate.type, score: bestHeuristicScore, path };
   }
 
   private getPriceFairness(price: number, valueScore: number, quality: number): number {
@@ -385,7 +430,9 @@ export class VisitorSystem {
   }
 
   private acceptPrice(visitor: Visitor, fairness: number, thoughtType: 'price'): boolean {
-    const priceTolerance = Math.max(0.1, Math.min(0.95, fairness + visitor.data.needs.happiness / 200));
+    // moodMomentum [-1,+1] shifts tolerance: happy streak = more willing to spend
+    const momentumBonus = visitor.data.moodMomentum * 0.08;
+    const priceTolerance = Math.max(0.1, Math.min(0.95, fairness + visitor.data.needs.happiness / 200 + momentumBonus));
     if (Math.random() <= priceTolerance) {
       visitor.clearMood('price');
       return true;
@@ -415,6 +462,8 @@ export class VisitorSystem {
     const sadSeverity = THREE.MathUtils.clamp((38 - needs.happiness) / 22, 0, 1);
     const sickSeverity = THREE.MathUtils.clamp((18 - needs.hygiene) / 14, 0, 1);
     const happySeverity = THREE.MathUtils.clamp((needs.happiness - 78) / 18, 0, 1);
+    const excitedSeverity = THREE.MathUtils.clamp((needs.happiness - 88) / 10, 0, 1);
+    const brokeSeverity = THREE.MathUtils.clamp((12 - needs.money) / 10, 0, 1);
 
     const moods: Array<{ thought: VisitorThought; threshold: boolean; chancePerTick: number }> = [
       {
@@ -441,6 +490,16 @@ export class VisitorSystem {
         thought: { kind: 'sad', emoji: '☹️', message: 'I am not having a great time.', duration: 1.8 },
         threshold: sadSeverity > 0,
         chancePerTick: 0.004 + sadSeverity * 0.01,
+      },
+      {
+        thought: { kind: 'broke', emoji: '😔', message: 'I am running out of money.', duration: 1.8 },
+        threshold: brokeSeverity > 0,
+        chancePerTick: 0.006 + brokeSeverity * 0.015,
+      },
+      {
+        thought: { kind: 'excited', emoji: '🤩', message: 'This park is amazing!', duration: 2.0 },
+        threshold: excitedSeverity > 0,
+        chancePerTick: 0.001 + excitedSeverity * 0.004,
       },
       {
         thought: { kind: 'happy', emoji: '😊', message: 'This place is great!', duration: 1.7 },

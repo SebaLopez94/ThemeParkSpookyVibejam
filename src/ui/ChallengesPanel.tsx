@@ -1,6 +1,6 @@
 import { CSSProperties } from 'react';
 import { Coins, Crown, Sparkles, TimerReset, Trophy, X } from 'lucide-react';
-import { ChallengeState } from '../types';
+import { ChallengeTier, ChallengeState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface ChallengesPanelProps {
@@ -9,24 +9,27 @@ interface ChallengesPanelProps {
   onClose?: () => void;
 }
 
+const TIER_LABELS: Record<ChallengeTier, string> = {
+  1: 'I · The Gates Open',
+  2: 'II · The Haunting Begins',
+  3: 'III · A Real Nightmare',
+  4: 'IV · Empire of Fear',
+  5: 'V · Legend of the Damned',
+};
+
 function getChallengeLabel(challenge: ChallengeState): string {
   switch (challenge.type) {
-    case 'visitor_count':
-      return 'VISITORS';
-    case 'build_count':
-      return 'LAYOUT';
-    case 'happiness_streak':
-      return 'HAPPINESS';
-    case 'profit_streak':
-      return 'PROFIT';
-    case 'ride_count':
-      return 'RIDES';
-    case 'shop_count':
-      return 'SHOPS';
-    case 'rating_threshold':
-      return 'RATING';
-    default:
-      return 'GOAL';
+    case 'visitor_count':   return 'VISITORS';
+    case 'active_visitors': return 'CROWD';
+    case 'build_count':     return 'LAYOUT';
+    case 'decoration_count':return 'DECOR';
+    case 'service_count':   return 'SERVICE';
+    case 'happiness_streak':return 'HAPPINESS';
+    case 'profit_streak':   return 'PROFIT';
+    case 'ride_count':      return 'RIDES';
+    case 'shop_count':      return 'SHOPS';
+    case 'rating_threshold':return 'RATING';
+    default:                return 'GOAL';
   }
 }
 
@@ -49,6 +52,13 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
   const finishedCount = completed.length;
   const totalCount = challenges.length;
   const totalRewardMoney = challenges.reduce((sum, challenge) => sum + challenge.reward.money, 0);
+
+  // Group active challenges by tier for a clearer progression arc
+  const activeTiers = ([1, 2, 3, 4, 5] as ChallengeTier[]).map(tier => ({
+    tier,
+    label: TIER_LABELS[tier],
+    challenges: active.filter(c => c.tier === tier)
+  })).filter(group => group.challenges.length > 0);
 
   return (
     <div className="px-panel px-panel--challenges px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', padding: 0, ...style }}>
@@ -100,12 +110,12 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
             </div>
           </div>
 
-          {active.length > 0 && (
-            <div className="px-soft-section">
-              <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
-                ACTIVE OBJECTIVES
+          {activeTiers.map(group => (
+            <div key={group.tier} className="px-soft-section">
+              <div className="px-label" style={{ fontSize: isMobile ? 8 : 9, color: group.challenges.some(c => c.completed && !c.claimed) ? 'var(--px-green-hi)' : 'var(--px-orange)' }}>
+                TIER {group.label}
               </div>
-              {active.map(challenge => {
+              {group.challenges.map(challenge => {
                 const goal = challenge.duration ?? challenge.target;
                 const progress = Math.min(goal, challenge.progress);
                 const percent = goal > 0 ? (progress / goal) * 100 : 0;
@@ -193,7 +203,7 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                 );
               })}
             </div>
-          )}
+          ))}
 
           {completed.length > 0 && (
             <div className="px-soft-section">

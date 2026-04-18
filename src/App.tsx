@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { useIsMobile } from './hooks/useIsMobile';
-import { FlaskConical, Hammer, Landmark, MousePointer2, RotateCw, ScrollText, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+import { FlaskConical, Hammer, Landmark, MousePointer2, Route, RotateCw, ScrollText, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { Game } from './Game';
 import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
@@ -45,7 +45,6 @@ function App() {
   const [isPlacing, setIsPlacing] = useState(false);
   // Pre-populate with initial unlocked buildings so they show in the build
   // menu immediately — the ResearchSystem fires its first notify() before
-  // game.onResearchUpdate is assigned, so React state would otherwise start empty.
   const [researchState, setResearchState] = useState<ResearchState>(() => ({
     unlocked: [...INITIAL_UNLOCKED_BUILDINGS],
     completed: [],
@@ -77,23 +76,22 @@ function App() {
     const game = new Game(containerRef.current);
     gameRef.current = game;
 
-    game.onEconomyUpdate = state => {
-      setEconomy(state);
-    };
-    game.onBuildingSelected = info => {
+    const { events } = game;
+    events.on('economyUpdate', state => setEconomy(state));
+    events.on('buildingSelected', info => {
       setSelectedBuilding(info);
       if (info !== null) setShowBuildMenu(false);
-    };
-    game.onBuildCancel = () => {
+    });
+    events.on('buildCancel', () => {
       setSelectedBuilding(null);
       setShowBuildMenu(false);
       setIsPlacing(false);
       setActiveBuildDefinition(null);
-    };
-    game.onRotationChange = degree => setBuildRotation(degree);
-    game.onResearchUpdate = state => setResearchState(state);
-    game.onChallengesUpdate = state => setChallenges(state);
-    game.onChallengeCompleted = challenge => {
+    });
+    events.on('rotationChange', degree => setBuildRotation(degree));
+    events.on('researchUpdate', state => setResearchState(state));
+    events.on('challengesUpdate', state => setChallenges(state));
+    events.on('challengeCompleted', challenge => {
       const celebrationIds: Record<string, { title: string; sub: string }> = {
         challenge_first_ride:   { title: '🎡 FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
         challenge_three_rides:  { title: '🎢 THRILL PARK UNLOCKED!',  sub: 'Three rides — fear is your product.' },
@@ -102,7 +100,7 @@ function App() {
       };
       const cel = celebrationIds[challenge.id] || { title: `🎯 ${challenge.title.toUpperCase()}`, sub: challenge.description };
       setCelebration({ ...cel, reward: challenge.reward.money });
-      
+
       confetti({
         particleCount: isMobile ? 60 : 120,
         spread: 70,
@@ -111,7 +109,7 @@ function App() {
       });
 
       window.setTimeout(() => setCelebration(null), 3400);
-    };
+    });
 
     setResearchNodes(game.getResearchNodes());
 
@@ -374,7 +372,7 @@ function App() {
             setShowBuildMenu(false);
           }}
         >
-          <span className="px-emoji" style={{ fontSize: 22 }}>🛤️</span>
+          <Route />
           PATH
         </button>
         <button

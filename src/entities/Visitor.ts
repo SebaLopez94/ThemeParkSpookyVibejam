@@ -1,14 +1,16 @@
 import * as THREE from 'three';
-import { GridPosition, VisitorData, VisitorNeedType, VisitorThought } from '../types';
+import { GridPosition, VisitorData, VisitorNeedType, VisitorPersonality, VisitorThought } from '../types';
 import { GridHelper } from '../utils/GridHelper';
 import { sharedGLTFLoader } from '../core/AssetLoader';
+import { isMobile } from '../utils/platform';
+
+const PERSONALITIES: VisitorPersonality[] = ['thrill_seeker', 'foodie', 'relaxer'];
+
+function pickRandomPersonality(): VisitorPersonality {
+  return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+}
 
 const EMOJI_TEXTURE_CACHE = new Map<string, THREE.CanvasTexture>();
-
-function isMobile(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i.test(navigator.userAgent)
-    || window.innerWidth < 768;
-}
 
 function getEmojiTexture(emoji: string): THREE.CanvasTexture {
   const cached = EMOJI_TEXTURE_CACHE.get(emoji);
@@ -65,11 +67,13 @@ export class Visitor {
   private entryAnimTimer = 0;
   private exitAnimTimer = 0;
   private static readonly RIDE_ANIM_DURATION = 0.35;
-  private static readonly RIDE_COOLDOWN = 120; // seconds before re-entering same ride
+  private static readonly RIDE_COOLDOWN = 60; // seconds before re-entering same ride
   private rideLastUsed: Map<string, number> = new Map();
 
   constructor(id: string, startPosition: GridPosition) {
     const worldPos = GridHelper.gridToWorld(startPosition);
+
+    const personality = pickRandomPersonality();
 
     this.data = {
       id,
@@ -77,16 +81,21 @@ export class Visitor {
       targetPosition: null,
       path: [],
       needs: {
-        fun: 0,        // no fun yet — visitor hasn't done anything in the park
-        hunger: 60,    // travelled here, somewhat hungry
-        thirst: 60,    // somewhat thirsty
-        hygiene: 85,   // arrived clean
-        money: 30 + Math.floor(Math.random() * 71),
-        happiness: 0 * 0.4 + 60 * 0.2 + 60 * 0.2 + 85 * 0.2 // = 41 → NEUTRAL
+        fun: 30,
+        hunger: 70,
+        thirst: 70,
+        hygiene: 90,
+        money: 60 + Math.floor(Math.random() * 91), // $60–$150
+        happiness: 30 * 0.4 + 70 * 0.2 + 70 * 0.2 + 90 * 0.2 // = 58
       },
       currentActivity: null,
       activityTimer: 0,
-      lastThought: null
+      lastThought: null,
+      personality,
+      moodMomentum: 0,
+      timeInPark: 0,
+      naturalLeaveDuration: 180 + Math.random() * 120,
+      rideUseCounts: {},
     };
 
     this.mesh = new THREE.Group();
@@ -144,6 +153,12 @@ export class Visitor {
 
       this.mesh.frustumCulled = false;
       this.mesh.add(model);
+
+      // Show brief excitement burst on spawn
+      this.showMoodWithOptions(
+        { kind: 'excited', emoji: '🎉', message: 'Arrived at the park!', duration: 2.2 },
+        { force: true, cooldownSeconds: 0 }
+      );
 
       if (gltf.animations.length > 0) {
         this.mixer = new THREE.AnimationMixer(model);
@@ -275,11 +290,21 @@ export class Visitor {
   }
 
   private updateNeeds(deltaTime: number): void {
-    this.data.needs.fun = Math.max(0, this.data.needs.fun - deltaTime * 0.7);
-    this.data.needs.hunger = Math.max(0, this.data.needs.hunger - deltaTime * 0.6);
-    this.data.needs.thirst = Math.max(0, this.data.needs.thirst - deltaTime * 0.8);
-    this.data.needs.hygiene = Math.max(0, this.data.needs.hygiene - deltaTime * 0.45);
+    const p = this.data.personality;
+    // Personality modifies individual decay rates
+    const funMult    = p === 'thrill_seeker' ? 1.25 : p === 'relaxer' ? 0.80 : 1.0;
+    const hungerMult = p === 'foodie'        ? 1.20 : p === 'relaxer' ? 0.85 : 1.0;
+    const thirstMult = p === 'foodie'        ? 1.15 : p === 'relaxer' ? 0.85 : 1.0;
+
+    this.data.needs.fun     = Math.max(0, this.data.needs.fun     - deltaTime * 0.45 * funMult);
+    this.data.needs.hunger  = Math.max(0, this.data.needs.hunger  - deltaTime * 0.50 * hungerMult);
+    this.data.needs.thirst  = Math.max(0, this.data.needs.thirst  - deltaTime * 0.60 * thirstMult);
+    this.data.needs.hygiene = Math.max(0, this.data.needs.hygiene - deltaTime * 0.30);
     this.data.needs.happiness = this.calculateHappiness();
+
+    this.data.timeInPark += deltaTime;
+    // Emotional history decays toward neutral over time
+    this.data.moodMomentum *= Math.pow(0.995, deltaTime * 60);
   }
 
   private calculateHappiness(): number {
@@ -293,7 +318,8 @@ export class Visitor {
 
   private updateMoodSprite(): void {
     const now = performance.now() / 1000;
-    const isMoodVisible = this.mesh.visible && this.data.lastThought !== null && now < this.activeMoodUntil;
+    const suppressedByAnim = this.entryAnimTimer > 0;
+    const isMoodVisible = !suppressedByAnim && this.mesh.visible && this.data.lastThought !== null && now < this.activeMoodUntil;
     this.emojiSprite.visible = isMoodVisible;
 
     if (!isMoodVisible) {
@@ -374,6 +400,7 @@ export class Visitor {
   public boostFun(amount: number): void {
     this.data.needs.fun = Math.min(100, this.data.needs.fun + amount);
     this.data.needs.happiness = this.calculateHappiness();
+    this.data.moodMomentum = Math.min(1, this.data.moodMomentum + amount * 0.004);
   }
 
   public boostNeed(need: VisitorNeedType, amount: number): void {
@@ -383,6 +410,7 @@ export class Visitor {
 
   public adjustHappiness(amount: number): void {
     this.data.needs.happiness = Math.max(0, Math.min(100, this.data.needs.happiness + amount));
+    this.data.moodMomentum = Math.max(-1, Math.min(1, this.data.moodMomentum + amount * 0.015));
   }
 
   public setThought(thought: VisitorThought | null): void {
@@ -395,6 +423,7 @@ export class Visitor {
 
   public markRideUsed(rideId: string): void {
     this.rideLastUsed.set(rideId, performance.now() / 1000);
+    this.data.rideUseCounts[rideId] = (this.data.rideUseCounts[rideId] ?? 0) + 1;
   }
 
   public canUseRide(rideId: string): boolean {

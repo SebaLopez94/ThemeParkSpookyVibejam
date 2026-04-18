@@ -1,11 +1,7 @@
 import * as THREE from 'three';
 import { GRID_WIDTH, GRID_HEIGHT, GRID_SIZE } from '../utils/GridHelper';
 import { sharedGLTFLoader } from './AssetLoader';
-
-function isMobile(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i.test(navigator.userAgent)
-    || window.innerWidth < 768;
-}
+import { isMobile } from '../utils/platform';
 
 export class GameScene {
   public scene: THREE.Scene;

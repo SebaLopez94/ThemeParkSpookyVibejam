@@ -11,6 +11,7 @@ import { PathfindingSystem } from './systems/PathfindingSystem';
 import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
+import { EventBus } from './utils/EventBus';
 import { sharedGLTFLoader } from './core/AssetLoader';
 import {
   BUILDING_DISPLAY,
@@ -30,6 +31,22 @@ import {
   ShopType
 } from './types';
 
+interface AudioTrack {
+  audio: THREE.Audio;
+  baseVolume: number;
+  loop: boolean;
+}
+
+export interface GameEvents {
+  economyUpdate: EconomyState;
+  buildingSelected: SelectedBuildingInfo | null;
+  buildCancel: void;
+  rotationChange: number;
+  researchUpdate: ResearchState;
+  challengesUpdate: ChallengeState[];
+  challengeCompleted: ChallengeState;
+}
+
 export class Game {
   private scene: GameScene;
   private renderer: GameRenderer;
@@ -42,18 +59,16 @@ export class Game {
   private challengeSystem: ChallengeSystem;
   private mouseController: MouseController;
   private cameraController: CameraController;
-  private audioListener: THREE.AudioListener;
-  private backgroundMusic: THREE.Audio;
-  private windAudio: THREE.Audio;
-  private nightAudio: THREE.Audio;
-  private ambience1Audio: THREE.Audio;
-  private ambience2Audio: THREE.Audio;
-  private nextWindTime = 0;
-  private nextAmbience1Time = 0;
-  private nextAmbience2Time = 0;
+  private readonly audioListener: THREE.AudioListener;
+  private readonly loopTracks: AudioTrack[] = [];
+  private readonly windTrack: { audio: THREE.Audio; baseVolume: number; nextTime: number };
+  private readonly ambience1Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
+  private readonly ambience2Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
+  private readonly challengeTrack: { audio: THREE.Audio; baseVolume: number };
+  private readonly buildTrack: { audio: THREE.Audio; baseVolume: number };
   private isMuted = false;
-  private audioResumeEvents: Array<keyof WindowEventMap> = ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'];
-  private audioResumeHandler = (): void => {
+  private readonly audioResumeEvents: Array<keyof WindowEventMap> = ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'];
+  private readonly audioResumeHandler = (): void => {
     void this.ensureAudioRunning();
   };
 
@@ -105,13 +120,7 @@ export class Game {
   });
   private readonly selectionEdgeMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
 
-  public onEconomyUpdate: ((state: EconomyState) => void) | null = null;
-  public onBuildingSelected: ((info: SelectedBuildingInfo | null) => void) | null = null;
-  public onBuildCancel: (() => void) | null = null;
-  public onRotationChange: ((deg: number) => void) | null = null;
-  public onResearchUpdate: ((state: ResearchState) => void) | null = null;
-  public onChallengesUpdate: ((state: ChallengeState[]) => void) | null = null;
-  public onChallengeCompleted: ((challenge: ChallengeState) => void) | null = null;
+  public readonly events = new EventBus<GameEvents>();
 
   private resizeHandler = (): void => {
     this.scene.onWindowResize();
@@ -139,11 +148,17 @@ export class Game {
 
     this.audioListener = new THREE.AudioListener();
     this.scene.camera.add(this.audioListener);
-    this.backgroundMusic = new THREE.Audio(this.audioListener);
-    this.windAudio = new THREE.Audio(this.audioListener);
-    this.nightAudio = new THREE.Audio(this.audioListener);
-    this.ambience1Audio = new THREE.Audio(this.audioListener);
-    this.ambience2Audio = new THREE.Audio(this.audioListener);
+
+    const makeAudio = () => new THREE.Audio(this.audioListener);
+    this.loopTracks = [
+      { audio: makeAudio(), baseVolume: 0.12, loop: true },  // background music
+      { audio: makeAudio(), baseVolume: 0.04, loop: true },  // night ambience
+    ];
+    this.windTrack    = { audio: makeAudio(), baseVolume: 0.06, nextTime: Math.random() * 15 + 10 };
+    this.ambience1Track = { audio: makeAudio(), baseVolume: 0.09, nextTime: Math.random() * 10 + 12 };
+    this.ambience2Track = { audio: makeAudio(), baseVolume: 0.08, nextTime: Math.random() * 14 + 20 };
+    this.challengeTrack = { audio: makeAudio(), baseVolume: 0.14 };
+    this.buildTrack = { audio: makeAudio(), baseVolume: 0.16 };
     this.loadAudio();
 
     this.renderer.initPostProcessing(this.scene.scene, this.scene.camera);
@@ -152,9 +167,9 @@ export class Game {
     this.setupAudioResume();
     this.initializeEntrance();
 
-    this.economySystem.subscribe(state => this.onEconomyUpdate?.(state));
-    this.researchSystem.subscribe(state => this.onResearchUpdate?.(state));
-    this.challengeSystem.subscribe(state => this.onChallengesUpdate?.(state));
+    this.economySystem.subscribe(state => this.events.emit('economyUpdate', state));
+    this.researchSystem.subscribe(state => this.events.emit('researchUpdate', state));
+    this.challengeSystem.subscribe(state => this.events.emit('challengesUpdate', state));
   }
 
   private initializeEntrance(): void {
@@ -167,100 +182,92 @@ export class Game {
   }
 
   private loadAudio(): void {
-    const audioLoader = new THREE.AudioLoader();
+    const loader = new THREE.AudioLoader();
+    const filePaths = ['/audio/main_song.mp3', '/audio/night.mp3'];
 
-    const tryPlay = (audio: THREE.Audio, volume: number, loop: boolean) => {
-      audio.setLoop(loop);
-      audio.setVolume(this.isMuted ? 0 : volume);
-      if (this.audioListener.context.state === 'running') {
-        audio.play();
-      }
-      // If context is still suspended the setupAudioResume handler will start it on first interaction
+    filePaths.forEach((path, i) => {
+      const track = this.loopTracks[i];
+      loader.load(path, buffer => {
+        track.audio.setBuffer(buffer);
+        track.audio.setLoop(true);
+        track.audio.setVolume(this.isMuted ? 0 : track.baseVolume);
+        if (this.audioListener.context.state === 'running') {
+          track.audio.play();
+        }
+      });
+    });
+
+    const loadOneShot = (path: string, track: { audio: THREE.Audio; baseVolume: number }) => {
+      loader.load(path, buffer => {
+        track.audio.setBuffer(buffer);
+        track.audio.setLoop(false);
+        track.audio.setVolume(this.isMuted ? 0 : track.baseVolume);
+      });
     };
 
-    audioLoader.load('/audio/main_song.mp3', (buffer) => {
-      this.backgroundMusic.setBuffer(buffer);
-      tryPlay(this.backgroundMusic, 0.12, true);
-    });
-
-    audioLoader.load('/audio/wind.mp3', (buffer) => {
-      this.windAudio.setBuffer(buffer);
-      this.windAudio.setVolume(this.isMuted ? 0 : 0.06);
-      this.nextWindTime = Math.random() * 15 + 10;
-    });
-
-    audioLoader.load('/audio/night.mp3', (buffer) => {
-      this.nightAudio.setBuffer(buffer);
-      tryPlay(this.nightAudio, 0.04, true);
-    });
-
-    audioLoader.load('/audio/ambience1.mp3', (buffer) => {
-      this.ambience1Audio.setBuffer(buffer);
-      this.ambience1Audio.setLoop(false);
-      this.ambience1Audio.setVolume(this.isMuted ? 0 : 0.09);
-      this.nextAmbience1Time = Math.random() * 10 + 12;
-    });
-
-    audioLoader.load('/audio/ambience2.mp3', (buffer) => {
-      this.ambience2Audio.setBuffer(buffer);
-      this.ambience2Audio.setLoop(false);
-      this.ambience2Audio.setVolume(this.isMuted ? 0 : 0.08);
-      this.nextAmbience2Time = Math.random() * 14 + 20;
-    });
+    loadOneShot('/audio/wind.mp3', this.windTrack);
+    loadOneShot('/audio/ambience1.mp3', this.ambience1Track);
+    loadOneShot('/audio/ambience2.mp3', this.ambience2Track);
+    loadOneShot('/audio/challenges.mp3', this.challengeTrack);
+    loadOneShot('/audio/build.mp3', this.buildTrack);
   }
 
   public setMuted(muted: boolean): void {
     this.isMuted = muted;
-    if (this.backgroundMusic) {
-      this.backgroundMusic.setVolume(muted ? 0 : 0.12);
+
+    for (const track of this.loopTracks) {
+      track.audio.setVolume(muted ? 0 : track.baseVolume);
     }
-    if (this.windAudio) {
-      this.windAudio.setVolume(muted ? 0 : 0.06);
+    for (const oneShot of [this.windTrack, this.ambience1Track, this.ambience2Track]) {
+      oneShot.audio.setVolume(muted ? 0 : oneShot.baseVolume);
     }
-    if (this.nightAudio) {
-      this.nightAudio.setVolume(muted ? 0 : 0.04);
+    for (const oneShot of [this.challengeTrack, this.buildTrack]) {
+      oneShot.audio.setVolume(muted ? 0 : oneShot.baseVolume);
     }
-    if (this.ambience1Audio) {
-      this.ambience1Audio.setVolume(muted ? 0 : 0.09);
-    }
-    if (this.ambience2Audio) {
-      this.ambience2Audio.setVolume(muted ? 0 : 0.08);
-    }
-    if (!muted) {
-      void this.ensureAudioRunning();
-    }
+
+    if (!muted) void this.ensureAudioRunning();
   }
 
   private async ensureAudioRunning(): Promise<void> {
     const ctx = this.audioListener.context;
     if (ctx.state !== 'running') {
-      try {
-        await ctx.resume();
-      } catch {
-        return;
-      }
+      try { await ctx.resume(); } catch { return; }
     }
 
     if (this.isMuted) return;
 
     const tryStart = (audio: THREE.Audio): void => {
       if (!audio.buffer || audio.isPlaying) return;
-      try {
-        audio.play();
-      } catch {
-        // Mobile browsers may still reject until the next gesture; listeners stay attached.
-      }
+      try { audio.play(); } catch { /* mobile may reject before next gesture */ }
     };
 
-    tryStart(this.backgroundMusic);
-    tryStart(this.nightAudio);
+    for (const track of this.loopTracks) tryStart(track.audio);
 
-    const bgReady = !this.backgroundMusic.buffer || this.backgroundMusic.isPlaying;
-    const nightReady = !this.nightAudio.buffer || this.nightAudio.isPlaying;
+    const allLoopReady = this.loopTracks.every(t => !t.audio.buffer || t.audio.isPlaying);
+    if (allLoopReady) this.teardownAudioResume();
+  }
 
-    if (bgReady && nightReady) {
-      this.teardownAudioResume();
+  private tickOneShotAudio(
+    track: { audio: THREE.Audio; nextTime: number },
+    deltaTime: number,
+    [minInterval, spread]: [number, number]
+  ): void {
+    if (!track.audio.buffer || this.isMuted) return;
+    track.nextTime -= deltaTime;
+    if (track.nextTime <= 0) {
+      if (!track.audio.isPlaying && this.audioListener.context.state === 'running') {
+        track.audio.play();
+      }
+      track.nextTime = minInterval + Math.random() * spread;
     }
+  }
+
+  private playInstantOneShot(track: { audio: THREE.Audio }): void {
+    if (this.isMuted || !track.audio.buffer || this.audioListener.context.state !== 'running') return;
+    if (track.audio.isPlaying) {
+      track.audio.stop();
+    }
+    track.audio.play();
   }
 
   private setupAudioResume(): void {
@@ -283,7 +290,7 @@ export class Game {
     this.mouseController.onRightClick = () => {
       if (!this.selectedBuilding) return false;
       this.cancelBuildMode();
-      this.onBuildCancel?.();
+      this.events.emit('buildCancel', undefined as void);
       return true;
     };
     this.mouseController.onGridHover = position => {
@@ -306,7 +313,7 @@ export class Game {
 
   private rotateBuild(direction: number): void {
     this.buildRotation = (this.buildRotation + direction * Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
-    this.onRotationChange?.(Math.round(this.buildRotation * 180 / Math.PI));
+    this.events.emit('rotationChange', Math.round(this.buildRotation * 180 / Math.PI));
     this.updatePreview();
   }
 
@@ -328,7 +335,7 @@ export class Game {
     const result = this.buildingSystem.getBuildingAtCell(position);
     if (!result) {
       this.deselectBuilding();
-      this.onBuildingSelected?.(null);
+      this.events.emit('buildingSelected', null);
       return;
     }
 
@@ -337,7 +344,7 @@ export class Game {
       const display = BUILDING_DISPLAY[rideType];
       const size = RIDE_SIZES[rideType];
       this.showSelectionHighlight(buildingPosition, size.width, size.height);
-      this.onBuildingSelected?.({
+      this.events.emit('buildingSelected', {
         id,
         buildingType: BuildingType.RIDE,
         subType: rideType,
@@ -355,7 +362,7 @@ export class Game {
       const { id, shopType, price, cost, position: buildingPosition } = result.shop.data;
       const display = BUILDING_DISPLAY[shopType];
       this.showSelectionHighlight(buildingPosition, 1, 1);
-      this.onBuildingSelected?.({
+      this.events.emit('buildingSelected', {
         id,
         buildingType: BuildingType.SHOP,
         subType: shopType,
@@ -373,7 +380,7 @@ export class Game {
       const { id, serviceType, price, cost, position: buildingPosition } = result.service.data;
       const display = BUILDING_DISPLAY[serviceType];
       this.showSelectionHighlight(buildingPosition, 1, 1);
-      this.onBuildingSelected?.({
+      this.events.emit('buildingSelected', {
         id,
         buildingType: BuildingType.SERVICE,
         subType: serviceType,
@@ -390,7 +397,7 @@ export class Game {
     const { id, decorationType, cost, position: buildingPosition } = result.decoration.data;
     const display = BUILDING_DISPLAY[decorationType];
     this.showSelectionHighlight(buildingPosition, 1, 1);
-    this.onBuildingSelected?.({
+    this.events.emit('buildingSelected', {
       id,
       buildingType: BuildingType.DECORATION,
       subType: decorationType,
@@ -435,6 +442,7 @@ export class Game {
     }
 
     if (success) {
+      this.playInstantOneShot(this.buildTrack);
       if (this.movingBuilding) {
         this.movingBuilding = null;
         return;
@@ -471,7 +479,7 @@ export class Game {
       this.showFloatingText(`+$${refund}`, position, '#22c55e');
     }
     this.hideSelectionHighlight();
-    this.onBuildingSelected?.(null);
+    this.events.emit('buildingSelected', null);
   }
 
   private showFloatingText(text: string, gridPos: GridPosition, color: string): void {
@@ -508,7 +516,7 @@ export class Game {
     this.buildingSystem.removeBuilding(info.position);
     this.movingBuilding = info;
     this.hideSelectionHighlight();
-    this.onBuildingSelected?.(null);
+    this.events.emit('buildingSelected', null);
     this.selectBuilding({
       type: info.buildingType,
       subType: info.subType,
@@ -518,7 +526,7 @@ export class Game {
       icon: info.icon
     });
     this.buildRotation = info.rotationY;
-    this.onRotationChange?.(Math.round(this.buildRotation * 180 / Math.PI));
+    this.events.emit('rotationChange', Math.round(this.buildRotation * 180 / Math.PI));
     this.updatePreview();
   }
 
@@ -764,7 +772,7 @@ export class Game {
     }
     this.selectedBuilding = definition;
     this.buildRotation = 0;
-    this.onRotationChange?.(0);
+    this.events.emit('rotationChange', 0);
     this.mouseController.onBuildRotate = dir => this.rotateBuild(dir);
     this.mouseController.touchRotateMode =
       definition.type !== BuildingType.PATH && definition.type !== BuildingType.DELETE;
@@ -843,36 +851,9 @@ export class Game {
       this.showFloatingText('Research complete!', { x: 24, z: 47 }, '#facc15');
     }
 
-    // Occasional Wind logic
-    if (this.windAudio.buffer && !this.isMuted) {
-      this.nextWindTime -= deltaTime;
-      if (this.nextWindTime <= 0) {
-        if (!this.windAudio.isPlaying) {
-          this.windAudio.play();
-        }
-        this.nextWindTime = Math.random() * 30 + 30; // Next wind in 30-60s
-      }
-    }
-
-    if (this.ambience1Audio.buffer && !this.isMuted) {
-      this.nextAmbience1Time -= deltaTime;
-      if (this.nextAmbience1Time <= 0) {
-        if (!this.ambience1Audio.isPlaying && this.audioListener.context.state === 'running') {
-          this.ambience1Audio.play();
-        }
-        this.nextAmbience1Time = Math.random() * 18 + 22; // Next ambience 1 in 22-40s
-      }
-    }
-
-    if (this.ambience2Audio.buffer && !this.isMuted) {
-      this.nextAmbience2Time -= deltaTime;
-      if (this.nextAmbience2Time <= 0) {
-        if (!this.ambience2Audio.isPlaying && this.audioListener.context.state === 'running') {
-          this.ambience2Audio.play();
-        }
-        this.nextAmbience2Time = Math.random() * 22 + 28; // Next ambience 2 in 28-50s
-      }
-    }
+    this.tickOneShotAudio(this.windTrack, deltaTime, [30, 30]);
+    this.tickOneShotAudio(this.ambience1Track, deltaTime, [22, 18]);
+    this.tickOneShotAudio(this.ambience2Track, deltaTime, [28, 22]);
 
     this.maintenanceUpdateTimer += deltaTime;
     if (this.maintenanceUpdateTimer >= this.MAINTENANCE_UPDATE_INTERVAL) {
@@ -902,15 +883,19 @@ export class Game {
       );
 
       const counts = this.buildingSystem.getBuildingCounts();
+      const econState = this.economySystem.getState();
       const completed = this.challengeSystem.update(this.RATING_UPDATE_INTERVAL, {
-        totalVisitors: this.economySystem.getState().totalVisitors,
+        totalVisitors: econState.totalVisitors,
+        activeVisitors: econState.activeVisitors,
         averageHappiness: this.visitorSystem.getAverageHappiness(),
-        netProfit: this.economySystem.getState().netProfit,
-        parkRating: this.economySystem.getState().parkRating,
+        netProfit: econState.netProfit,
+        parkRating: econState.parkRating,
         buildingCounts: counts,
         serviceAndDecorationCount: counts[BuildingType.SERVICE] + counts[BuildingType.DECORATION],
         rideCount: counts[BuildingType.RIDE],
-        shopCount: counts[BuildingType.SHOP]
+        shopCount: counts[BuildingType.SHOP],
+        serviceCount: counts[BuildingType.SERVICE],
+        decorationCount: counts[BuildingType.DECORATION]
       });
 
       this.economySystem.notify();
@@ -935,7 +920,8 @@ export class Game {
           );
         }
         this.showFloatingText(`Challenge +$${claimed.reward.money}`, { x: 24, z: 46 }, '#bef264');
-        this.onChallengeCompleted?.(claimed);
+        this.playInstantOneShot(this.challengeTrack);
+        this.events.emit('challengeCompleted', claimed);
       });
     }
   }
@@ -970,11 +956,13 @@ export class Game {
     this.visitorSystem.clear();
     this.scene.dispose();
     this.renderer.dispose();
-    if (this.backgroundMusic.isPlaying) this.backgroundMusic.stop();
-    if (this.windAudio.isPlaying) this.windAudio.stop();
-    if (this.nightAudio.isPlaying) this.nightAudio.stop();
-    if (this.ambience1Audio.isPlaying) this.ambience1Audio.stop();
-    if (this.ambience2Audio.isPlaying) this.ambience2Audio.stop();
+    for (const track of this.loopTracks) {
+      if (track.audio.isPlaying) track.audio.stop();
+    }
+    for (const oneShot of [this.windTrack, this.ambience1Track, this.ambience2Track, this.challengeTrack, this.buildTrack]) {
+      if (oneShot.audio.isPlaying) oneShot.audio.stop();
+    }
+    this.events.clear();
     this.scene.camera.remove(this.audioListener);
   }
 }
