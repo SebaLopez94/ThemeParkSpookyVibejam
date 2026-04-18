@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { useIsMobile } from './hooks/useIsMobile';
-import { FlaskConical, Hammer, HelpCircle, Landmark, MousePointer2, Route, RotateCw, Trash2, Trophy, Volume2, VolumeX, X } from 'lucide-react';
+import { FlaskConical, Gem, Hammer, HelpCircle, Landmark, MousePointer2, Route, RotateCw, Trash2, Trophy, Volume2, VolumeX, X } from 'lucide-react';
 import { Game } from './Game';
 import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
@@ -215,6 +215,7 @@ function App() {
     () => researchNodes.find(node => node.id === researchState.activeResearchId)?.name ?? 'Idle',
     [researchNodes, researchState.activeResearchId]
   );
+  const celebrationTitle = celebration?.title.replace(/^[^A-Za-z0-9]+/u, '').trim() ?? '';
 
   const controlsRight = 16;
 
@@ -650,8 +651,18 @@ function App() {
           onClick={() => setCelebration(null)}
         >
           <div className="px-celebration" role="button" aria-label="Dismiss challenge celebration">
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                color: 'var(--px-gold)',
+                marginBottom: 10
+              }}
+            >
+              <Gem size={28} strokeWidth={2.3} />
+            </div>
             <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(14px, 4vw, 22px)', color: 'var(--px-gold)', textShadow: '2px 2px 0 #000', lineHeight: 1.6 }}>
-              {celebration.title}
+              {celebrationTitle}
             </div>
             <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(9px, 2vw, 11px)', color: 'var(--px-green-hi)', marginTop: 12, lineHeight: 1.8 }}>
               {celebration.sub}

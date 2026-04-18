@@ -20,7 +20,7 @@ const PATH_DEFINITION: BuildingCatalogItem = {
   valueScore: 0
 };
 
-const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
+const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogItem>> = {
   [RideType.CAROUSEL]: {
     type: BuildingType.RIDE,
     subType: RideType.CAROUSEL,
@@ -96,15 +96,6 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     quality: 45,
     valueScore: 0
   },
-  [DecorationType.JACK_O_LANTERN]: {
-    type: BuildingType.DECORATION,
-    subType: DecorationType.JACK_O_LANTERN,
-    ...BUILDING_DISPLAY[DecorationType.JACK_O_LANTERN],
-    cost: 50,
-    quality: 52,
-    valueScore: 0,
-    unlockRequirement: 'research_pumpkin_lights'
-  },
   [DecorationType.STONE]: {
     type: BuildingType.DECORATION,
     subType: DecorationType.STONE,
@@ -117,9 +108,10 @@ const BUILDING_CATALOG: Record<PlaceableBuildingKind, BuildingCatalogItem> = {
     type: BuildingType.DECORATION,
     subType: DecorationType.PUMPKIN,
     ...BUILDING_DISPLAY[DecorationType.PUMPKIN],
-    cost: 15,
-    quality: 46,
-    valueScore: 0
+    cost: 50,
+    quality: 52,
+    valueScore: 0,
+    unlockRequirement: 'research_pumpkin_lights'
   }
 };
 
@@ -130,8 +122,7 @@ export const INITIAL_UNLOCKED_BUILDINGS: PlaceableBuildingKind[] = [
   ShopType.GIFT_SHOP,
   ServiceType.RESTROOM,
   DecorationType.SPOOKY_TREE,
-  DecorationType.STONE,
-  DecorationType.PUMPKIN
+  DecorationType.STONE
 ];
 
 export function getPathDefinition(): BuildingDefinition {
@@ -139,9 +130,15 @@ export function getPathDefinition(): BuildingDefinition {
 }
 
 export function getBuildingCatalogItem(kind: PlaceableBuildingKind): BuildingCatalogItem {
-  return { ...BUILDING_CATALOG[kind] };
+  const item = BUILDING_CATALOG[kind];
+  if (!item) {
+    throw new Error(`Missing building catalog entry for ${kind}`);
+  }
+  return { ...item };
 }
 
 export function getAllCatalogItems(): BuildingCatalogItem[] {
-  return Object.values(BUILDING_CATALOG).map(item => ({ ...item }));
+  return Object.values(BUILDING_CATALOG)
+    .filter((item): item is BuildingCatalogItem => Boolean(item))
+    .map(item => ({ ...item }));
 }

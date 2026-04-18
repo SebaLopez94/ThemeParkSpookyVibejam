@@ -230,7 +230,7 @@ export class Ride {
       model.position.x -= center.x;
       model.position.z -= center.z;
       model.position.y -= scaledBox.min.y;
-      model.position.y += 0.04;
+      model.position.y += 0.02;
 
       model.traverse(child => {
         if (child instanceof THREE.Mesh) {

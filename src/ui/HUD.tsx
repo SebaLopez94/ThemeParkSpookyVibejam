@@ -4,7 +4,8 @@ import {
   ChevronUp,
   Coins,
   HeartPulse,
-  Landmark,
+  Radio,
+  Star,
   TrendingDown,
   Users,
 } from 'lucide-react';
@@ -121,7 +122,7 @@ export function HUD({ economy }: HUDProps) {
       <div className="px-panel px-panel--hud px-hud-panel" style={{ padding: 0 }}>
         <div className="px-titlebar px-titlebar--hud px-hud-bar">
           <div className="px-titlebar__label px-hud-bar__label">
-            <Landmark className="px-icon-sm" />
+            <Radio className="px-icon-sm" />
             <span className="px-hud-bar__title">Park Live</span>
           </div>
 
@@ -186,7 +187,7 @@ export function HUD({ economy }: HUDProps) {
                 type="face"
               />
               <InlineRating
-                icon={<Landmark className="px-icon-sm" color="var(--px-cyan)" />}
+                icon={<Star className="px-icon-sm" color="var(--px-gold)" />}
                 label="Park Rating"
                 stars={ratingStars}
                 mobile={isMobile}

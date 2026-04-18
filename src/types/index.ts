@@ -59,7 +59,7 @@ export interface BuildingDisplay {
 
 export const BUILDING_DISPLAY: Record<PlaceableBuildingKind, BuildingDisplay> = {
   [RideType.CAROUSEL]: { name: 'Cursed Carousel', icon: '🎠', description: 'Spins visitors into gleeful dread' },
-  [RideType.FERRIS_WHEEL]: { name: 'Eye of Doom', icon: '🎡', description: 'A towering view over the haunted grounds' },
+  [RideType.FERRIS_WHEEL]: { name: 'Eye of Doom', icon: '👁️', description: 'A towering view over the haunted grounds' },
   [RideType.ROLLER_COASTER]: { name: 'Terror Coaster', icon: '🎢', description: 'High thrill route through the underworld' },
   [RideType.HAUNTED_HOUSE]: { name: 'Haunted House', icon: '👻', description: 'A walk-through horror experience that leaves guests screaming' },
   [ShopType.FOOD_STALL]: { name: 'Witch Cauldron', icon: '🍲', description: 'Warm stew that fights off hunger' },

@@ -1,15 +1,18 @@
 import {
-  FlaskConical,
+  ChessKnight,
+  CupSoda,
+  FerrisWheel,
   Gift,
+  Hamburger,
   Hammer,
   Landmark,
   LucideProps,
-  Mountain,
   Package,
   PartyPopper,
   Route,
-  Soup,
+  RollerCoaster,
   Sparkles,
+  Toilet,
   Trash2,
   TreePine,
 } from 'lucide-react';
@@ -31,21 +34,21 @@ function getBuildingIcon(type: BuildingType, subType?: PlaceableBuildingKind) {
 
   switch (subType) {
     case RideType.CAROUSEL:
-      return PartyPopper;
+      return ChessKnight;
     case RideType.FERRIS_WHEEL:
-      return Landmark;
+      return FerrisWheel;
     case RideType.ROLLER_COASTER:
-      return Mountain;
+      return RollerCoaster;
     case RideType.HAUNTED_HOUSE:
       return Landmark;
     case ShopType.FOOD_STALL:
-      return Soup;
+      return Hamburger;
     case ShopType.DRINK_STAND:
-      return FlaskConical;
+      return CupSoda;
     case ShopType.GIFT_SHOP:
       return Gift;
     case ServiceType.RESTROOM:
-      return Package;
+      return Toilet;
     case DecorationType.SPOOKY_TREE:
       return TreePine;
     case DecorationType.JACK_O_LANTERN:

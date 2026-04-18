@@ -623,7 +623,7 @@ export class Game {
       model.position.z -= center.z;
       if (path === '/models/house.glb') {
         model.position.y -= scaled.min.y;
-        model.position.y += 0.04;
+        model.position.y += 0.02;
         model.scale.setScalar(scale * 0.72);
       } else {
         model.position.y -= scaled.min.y;

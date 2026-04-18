@@ -10,10 +10,10 @@ export const RESEARCH_NODES: ResearchNode[] = [
   {
     id: 'research_pumpkin_lights',
     name: 'Pumpkin Lantern Rituals',
-    description: 'Unlock glowing Jack-o-Lanterns to raise park atmosphere.',
+    description: 'Unlock glowing Pumpkins to raise park atmosphere.',
     cost: 200,
     duration: 25,
-    unlocks: [DecorationType.JACK_O_LANTERN],
+    unlocks: [DecorationType.PUMPKIN],
     dependencies: []
   },
   {
