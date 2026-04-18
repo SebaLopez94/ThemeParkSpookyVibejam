@@ -14,6 +14,7 @@ export class EconomySystem {
       averageHappiness: 50,
       dailyIncome: 0,
       dailyExpenses: 0,
+      maintenancePerMinute: 0,
       netProfit: 0,
       isOpen: true
     };
@@ -48,6 +49,10 @@ export class EconomySystem {
     this.state.dailyExpenses += intAmount;
     this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
     this.notifyListeners();
+  }
+
+  public setMaintenancePerMinute(amount: number): void {
+    this.state.maintenancePerMinute = Math.max(0, Math.round(amount));
   }
 
   public canAfford(amount: number): boolean {

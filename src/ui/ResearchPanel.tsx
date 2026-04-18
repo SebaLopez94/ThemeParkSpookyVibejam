@@ -1,7 +1,8 @@
 import { CSSProperties } from 'react';
-import { Clock3, FlaskConical, LockKeyhole, Sparkles, X } from 'lucide-react';
-import { BUILDING_DISPLAY, ResearchNode, ResearchState } from '../types';
+import { Clock3, FlaskConical, LockKeyhole, Play, Sparkles, X } from 'lucide-react';
+import { BUILDING_DISPLAY, BuildingType, DecorationType, PlaceableBuildingKind, ResearchNode, ResearchState, RideType, ServiceType, ShopType } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { BuildingIcon } from './BuildingIcon';
 
 interface ResearchPanelProps {
   nodes: ResearchNode[];
@@ -16,6 +17,14 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.ceil(seconds % 60);
   return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function getBuildingTypeFromUnlock(kind: PlaceableBuildingKind): BuildingType {
+  if ((Object.values(RideType) as string[]).includes(kind)) return BuildingType.RIDE;
+  if ((Object.values(ShopType) as string[]).includes(kind)) return BuildingType.SHOP;
+  if ((Object.values(ServiceType) as string[]).includes(kind)) return BuildingType.SERVICE;
+  if ((Object.values(DecorationType) as string[]).includes(kind)) return BuildingType.DECORATION;
+  return BuildingType.DECORATION;
 }
 
 export function ResearchPanel({
@@ -168,9 +177,11 @@ export function ResearchPanel({
                               background: 'rgba(103,232,249,0.06)',
                             }}
                           >
-                            <span className="px-emoji" style={{ fontSize: isMobile ? 18 : 24 }}>
-                              {unlockDisplay.icon}
-                            </span>
+                            <BuildingIcon
+                              type={unlockItem === undefined ? undefined as never : getBuildingTypeFromUnlock(unlockItem)}
+                              subType={unlockItem}
+                              size={isMobile ? 18 : 24}
+                            />
                           </div>
 
                           <div style={{ minWidth: 0 }}>
@@ -197,7 +208,8 @@ export function ResearchPanel({
                             {node.duration}s
                           </div>
                           <div className="px-soft-chip">
-                            UNLOCKS {unlockDisplay.icon}
+                            <BuildingIcon type={getBuildingTypeFromUnlock(unlockItem)} subType={unlockItem} className="px-icon-sm" />
+                            UNLOCKS
                           </div>
                           {!affordable && (
                             <div className="px-soft-chip" style={{ color: 'var(--px-red)' }}>
@@ -219,6 +231,13 @@ export function ResearchPanel({
                           disabled={disabled}
                           onClick={() => onStartResearch(node.id)}
                         >
+                          {active ? (
+                            <Clock3 className="px-icon-sm" />
+                          ) : blockedByActiveResearch ? (
+                            <LockKeyhole className="px-icon-sm" />
+                          ) : (
+                            <Play className="px-icon-sm" />
+                          )}
                           {active ? 'ACTIVE' : blockedByActiveResearch ? 'BUSY' : 'START'}
                         </button>
                       </div>

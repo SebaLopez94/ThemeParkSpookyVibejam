@@ -855,16 +855,17 @@ export class Game {
     this.tickOneShotAudio(this.ambience1Track, deltaTime, [22, 18]);
     this.tickOneShotAudio(this.ambience2Track, deltaTime, [28, 22]);
 
+    const counts = this.buildingSystem.getBuildingCounts();
+    const maintenance =
+      counts[BuildingType.RIDE]    * 6 +
+      counts[BuildingType.SHOP]    * 3 +
+      counts[BuildingType.SERVICE] * 2;
+    this.economySystem.setMaintenancePerMinute(maintenance * (60 / this.MAINTENANCE_UPDATE_INTERVAL));
+
     this.maintenanceUpdateTimer += deltaTime;
     if (this.maintenanceUpdateTimer >= this.MAINTENANCE_UPDATE_INTERVAL) {
       this.maintenanceUpdateTimer = 0;
-      
-      const counts = this.buildingSystem.getBuildingCounts();
-      const maintenance =
-        counts[BuildingType.RIDE]    * 6 +
-        counts[BuildingType.SHOP]    * 3 +
-        counts[BuildingType.SERVICE] * 2;
-        
+
       if (maintenance > 0) this.economySystem.chargeMaintenance(maintenance);
     }
 

@@ -198,6 +198,7 @@ export interface EconomyState {
   averageHappiness: number;
   dailyIncome: number;
   dailyExpenses: number;
+  maintenancePerMinute: number;
   netProfit: number;
   isOpen: boolean;
 }

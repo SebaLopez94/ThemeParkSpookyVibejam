@@ -146,6 +146,10 @@ export function ParkPanel({
               Higher prices raise ticket income, but pushing too hard can slow long-term momentum.
             </div>
 
+            <div className="px-body" style={{ marginBottom: 10, fontSize: isMobile ? 10 : 12, lineHeight: 1.45 }}>
+              Current upkeep is ${economy.maintenancePerMinute.toLocaleString()} per minute.
+            </div>
+
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 11 : 13, color: 'var(--px-gold)' }}>$</span>
               <input

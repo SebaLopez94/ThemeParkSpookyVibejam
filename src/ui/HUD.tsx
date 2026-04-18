@@ -172,8 +172,8 @@ export function HUD({ economy }: HUDProps) {
               />
               <InlineStat
                 icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}
-                label="Expenses"
-                value={`$${economy.dailyExpenses.toLocaleString()}`}
+                label="Expenses / Min"
+                value={`$${economy.maintenancePerMinute.toLocaleString()}`}
               />
             </div>
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { useIsMobile } from './hooks/useIsMobile';
-import { FlaskConical, Hammer, Landmark, MousePointer2, Route, RotateCw, ScrollText, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+import { FlaskConical, Hammer, HelpCircle, Landmark, MousePointer2, Route, RotateCw, Trash2, Trophy, Volume2, VolumeX, X } from 'lucide-react';
 import { Game } from './Game';
 import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
@@ -10,6 +10,7 @@ import { BuildingPanel } from './ui/BuildingPanel';
 import { HUD } from './ui/HUD';
 import { ParkPanel } from './ui/ParkPanel';
 import { ResearchPanel } from './ui/ResearchPanel';
+import { BuildingIcon } from './ui/BuildingIcon';
 import { ToastItem, ToastStack } from './ui/ToastStack';
 import {
   BuildingType,
@@ -35,6 +36,7 @@ function App() {
     averageHappiness: 10,
     dailyIncome: 0,
     dailyExpenses: 0,
+    maintenancePerMinute: 0,
     netProfit: 0,
     isOpen: true
   });
@@ -258,7 +260,7 @@ function App() {
             aria-label="Challenges"
             onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
           >
-            <ScrollText />
+            <Trophy />
             CHALLENGES
             {challenges.some(c => c.completed && !c.claimed) && (
               <span className="px-notif-dot" aria-hidden="true" />
@@ -343,7 +345,7 @@ function App() {
               aria-pressed={showChallenges}
               onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
             >
-              <ScrollText size={16} />
+              <Trophy size={16} />
               GOALS
               {challenges.some(c => c.completed && !c.claimed) && (
                 <span className="px-notif-dot" aria-hidden="true" />
@@ -400,7 +402,7 @@ function App() {
             setShowBuildMenu(false);
           }}
         >
-          ?
+          <HelpCircle />
         </button>
         <button
           className="px-btn"
@@ -441,8 +443,9 @@ function App() {
             <div className="px-panel px-panel--controls px-anim-enter-up" style={{ padding: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)' }}>
-                    {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
+                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <BuildingIcon type={activeBuildDefinition.type} subType={activeBuildDefinition.subType} size={14} />
+                    {activeBuildDefinition.name.toUpperCase()}
                   </span>
                   {activeBuildDefinition.type !== BuildingType.PATH && activeBuildDefinition.type !== BuildingType.DELETE && (
                     <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-muted)' }}>
@@ -470,7 +473,11 @@ function App() {
               <div className="px-titlebar">
                 <span className="px-titlebar__label">
                   <MousePointer2 size={16} />
-                  BUILD MODE — {activeBuildDefinition.icon} {activeBuildDefinition.name.toUpperCase()}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    BUILD MODE
+                    <BuildingIcon type={activeBuildDefinition.type} subType={activeBuildDefinition.subType} size={16} />
+                    {activeBuildDefinition.name.toUpperCase()}
+                  </span>
                 </span>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {activeBuildDefinition.type === BuildingType.PATH && (

@@ -3,6 +3,7 @@ import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'l
 import { getAllCatalogItems } from '../data/buildings';
 import { BuildingCatalogItem, BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { BuildingIcon } from './BuildingIcon';
 
 interface BuildMenuProps {
   onSelectBuilding: (definition: BuildingDefinition) => void;
@@ -240,7 +241,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
                       }}
                     >
                       <div className="px-build-item__thumb">
-                        <span className="px-emoji px-build-item__emoji">{item.icon}</span>
+                        <BuildingIcon type={item.type} subType={item.subType} className="px-build-item__emoji" />
                       </div>
 
                       <div className="px-build-item__body">
@@ -299,7 +300,7 @@ function BuildSelectionCard({
     <div className={`px-build-selection ${compact ? 'px-build-selection--compact' : ''}`}>
       <div className="px-build-selection__top">
         <div className="px-build-selection__identity">
-          <span className="px-emoji px-build-selection__emoji">{item.icon}</span>
+          <BuildingIcon type={item.type} subType={item.subType} className="px-build-selection__emoji" />
           <div className="px-build-selection__copy">
             <div className="px-build-selection__name">{item.name}</div>
             <p className="px-body px-build-selection__description">{item.description}</p>

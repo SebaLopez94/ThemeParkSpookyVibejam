@@ -63,6 +63,23 @@ export class BuildingSystem {
     return this.paths.has(key) || this.occupiedCells.has(key);
   }
 
+  private updatePathConnectionsAt(position: GridPosition): void {
+    const key = GridHelper.getGridKey(position);
+    const path = this.paths.get(key);
+    if (!path) return;
+
+    const connections = GridHelper
+      .getAdjacentPositions(position)
+      .filter(neighbor => this.paths.has(GridHelper.getGridKey(neighbor)));
+
+    path.updateConnections(connections);
+  }
+
+  private refreshPathConnectionsAround(position: GridPosition): void {
+    this.updatePathConnectionsAt(position);
+    GridHelper.getAdjacentPositions(position).forEach(neighbor => this.updatePathConnectionsAt(neighbor));
+  }
+
   public canPlaceBuilding(
     position: GridPosition,
     type: BuildingType,
@@ -101,6 +118,7 @@ export class BuildingSystem {
     this.paths.set(key, path);
     this.scene.add(path.mesh);
     this.pathfinding.registerPath(position);
+    this.refreshPathConnectionsAround(position);
 
     return path;
   }
@@ -178,6 +196,7 @@ export class BuildingSystem {
       path.dispose();
       this.paths.delete(key);
       this.pathfinding.unregisterPath(position);
+      this.refreshPathConnectionsAround(position);
       return true;
     }
 

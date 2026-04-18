@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRightLeft, Coins, Settings2, Trash2, X } from 'lucide-react';
 import { GridPosition, SelectedBuildingInfo } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { BuildingIcon } from './BuildingIcon';
 
 interface BuildingPanelProps {
   building: SelectedBuildingInfo;
@@ -73,7 +74,10 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
           }}
         >
           <div className="px-chip-row">
-            <div className="px-chip" style={{ fontSize: isMobile ? 9 : 11 }}>{building.icon} {building.buildingType}</div>
+            <div className="px-chip" style={{ fontSize: isMobile ? 9 : 11 }}>
+              <BuildingIcon type={building.buildingType} subType={building.subType} className="px-icon-sm" />
+              {building.buildingType}
+            </div>
             <div className="px-chip" style={{ fontSize: isMobile ? 9 : 11 }}>
               <Coins className="px-icon-sm" /> Build ${building.buildCost}
             </div>

@@ -743,7 +743,9 @@ button {
 }
 
 .px-build-selection__emoji {
-  font-size: 26px;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
 }
 
 .px-build-selection__copy {
@@ -865,7 +867,8 @@ button {
 }
 
 .px-build-item__emoji {
-  font-size: 28px;
+  width: 28px;
+  height: 28px;
 }
 
 .px-build-item__body {
@@ -1110,7 +1113,8 @@ button {
   }
 
   .px-build-selection__emoji {
-    font-size: 22px;
+    width: 22px;
+    height: 22px;
   }
 
   .px-build-selection__name {
@@ -1149,7 +1153,8 @@ button {
   }
 
   .px-build-item__emoji {
-    font-size: 20px;
+    width: 20px;
+    height: 20px;
   }
 
   .px-build-item__name {
