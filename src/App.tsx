@@ -11,6 +11,7 @@ import { HUD } from './ui/HUD';
 import { ParkPanel } from './ui/ParkPanel';
 import { ResearchPanel } from './ui/ResearchPanel';
 import { BuildingIcon } from './ui/BuildingIcon';
+import { LoadingScreen } from './ui/LoadingScreen';
 import { ToastItem, ToastStack } from './ui/ToastStack';
 import {
   BuildingType,
@@ -26,6 +27,7 @@ import {
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Game | null>(null);
+  const loadInputRef = useRef<HTMLInputElement>(null);
 
   const [economy, setEconomy] = useState<EconomyState>({
     money: 3500,
@@ -63,6 +65,7 @@ function App() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [celebration, setCelebration] = useState<{ title: string; sub: string; reward: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [isLoadingSave, setIsLoadingSave] = useState(false);
 
   const pushToast = (tone: ToastItem['tone'], message: string) => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -209,6 +212,66 @@ function App() {
     pushToast('info', newState ? 'Audio muted' : 'Audio unmuted');
   };
 
+  const handleSaveGame = () => {
+    const game = gameRef.current;
+    if (!game) return;
+
+    try {
+      const save = game.exportSaveData();
+      const blob = new Blob([JSON.stringify(save, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date(save.savedAt)
+        .toISOString()
+        .slice(0, 16)
+        .replace(/[:T]/g, '-');
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `theme-park-vibes-save-${stamp}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      pushToast('success', 'Save file downloaded.');
+    } catch {
+      pushToast('warning', 'Could not create save file.');
+    }
+  };
+
+  const handleLoadGame = () => {
+    const game = gameRef.current;
+    if (!game) return;
+    if (game.hasUserBuiltContent()) {
+      const confirmed = window.confirm('Loading a save will replace your current park. Continue?');
+      if (!confirmed) return;
+    }
+    loadInputRef.current?.click();
+  };
+
+  const handleLoadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      setIsLoadingSave(true);
+      await new Promise(resolve => window.setTimeout(resolve, 60));
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+      gameRef.current?.importSaveData(parsed);
+      const restored = gameRef.current?.exportSaveData();
+      if (restored) setLocalTicketPrice(restored.economy.ticketPrice);
+      setSelectedBuilding(null);
+      setShowBuildMenu(false);
+      setIsPlacing(false);
+      setActiveBuildDefinition(null);
+      pushToast('success', 'Save file loaded.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not load save file.';
+      pushToast('warning', message);
+      setIsLoadingSave(false);
+    }
+  };
+
   const canAfford = (cost: number): boolean => gameRef.current?.canAfford(cost) ?? false;
   const isBuildMenuVisible = showBuildMenu && !selectedBuilding;
   const activeResearchLabel = useMemo(
@@ -222,6 +285,14 @@ function App() {
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       <div ref={containerRef} className="w-full h-full" />
+      <input
+        ref={loadInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+        onChange={handleLoadFile}
+      />
+      {isLoadingSave && <LoadingScreen mode="transition" onDone={() => setIsLoadingSave(false)} />}
       <ToastStack items={toasts} />
 
       <HUD economy={economy} />
@@ -247,6 +318,8 @@ function App() {
                   gameRef.current?.setParkOpen(isOpen);
                   pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
                 }}
+                onSaveGame={handleSaveGame}
+                onLoadGame={handleLoadGame}
                 activeResearchLabel={activeResearchLabel}
                 onClose={() => setShowParkPanel(false)}
               />
@@ -312,6 +385,8 @@ function App() {
                     gameRef.current?.setParkOpen(isOpen);
                     pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
                   }}
+                  onSaveGame={handleSaveGame}
+                  onLoadGame={handleLoadGame}
                   activeResearchLabel={activeResearchLabel}
                   onClose={() => setShowParkPanel(false)}
                 />

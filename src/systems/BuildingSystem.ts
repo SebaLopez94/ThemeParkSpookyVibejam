@@ -11,6 +11,7 @@ import {
   PlaceableBuildingKind,
   RideType,
   RIDE_SIZES,
+  SavedBuildingsData,
   ServiceType,
   ShopType
 } from '../types';
@@ -319,6 +320,32 @@ export class BuildingSystem {
     };
   }
 
+  public exportSaveData(): SavedBuildingsData {
+    return {
+      paths: Array.from(this.paths.values()).map(path => ({
+        position: { ...path.data.position }
+      })),
+      rides: this.getRides().map(ride => ({
+        position: { ...ride.data.position },
+        subType: ride.data.rideType,
+        price: ride.data.price
+      })),
+      shops: this.getShops().map(shop => ({
+        position: { ...shop.data.position },
+        subType: shop.data.shopType,
+        price: shop.data.price
+      })),
+      services: this.getServices().map(service => ({
+        position: { ...service.data.position },
+        subType: service.data.serviceType
+      })),
+      decorations: this.getDecorations().map(decoration => ({
+        position: { ...decoration.data.position },
+        subType: decoration.data.decorationType
+      }))
+    };
+  }
+
   public getFacilityScore(): number {
     return this.rides.size * 4 + this.shops.size * 3 + this.services.size * 3 + this.decorations.size * 2 + this.paths.size;
   }
@@ -344,6 +371,7 @@ export class BuildingSystem {
       path.dispose();
     });
     this.paths.clear();
+    this.pathfinding.clear();
 
     this.rides.forEach(ride => {
       this.scene.remove(ride.mesh);
@@ -374,5 +402,6 @@ export class BuildingSystem {
     this.decorationsCache = null;
 
     this.occupiedCells.clear();
+    this.buildingIdCounter = 0;
   }
 }

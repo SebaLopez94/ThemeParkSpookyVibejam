@@ -271,6 +271,60 @@ export interface ChallengeState extends ChallengeDefinition {
   claimed: boolean;
 }
 
+export interface SavedEconomyData {
+  money: number;
+  ticketPrice: number;
+  totalVisitors: number;
+  activeVisitors: number;
+  dailyIncome: number;
+  dailyExpenses: number;
+  netProfit: number;
+  isOpen: boolean;
+}
+
+export interface SavedPathEntry {
+  position: GridPosition;
+}
+
+export interface SavedRideEntry {
+  position: GridPosition;
+  subType: RideType;
+  price: number;
+}
+
+export interface SavedShopEntry {
+  position: GridPosition;
+  subType: ShopType;
+  price: number;
+}
+
+export interface SavedServiceEntry {
+  position: GridPosition;
+  subType: ServiceType;
+}
+
+export interface SavedDecorationEntry {
+  position: GridPosition;
+  subType: DecorationType;
+}
+
+export interface SavedBuildingsData {
+  paths: SavedPathEntry[];
+  rides: SavedRideEntry[];
+  shops: SavedShopEntry[];
+  services: SavedServiceEntry[];
+  decorations: SavedDecorationEntry[];
+}
+
+export interface SaveGameData {
+  version: 1;
+  savedAt: string;
+  economy: SavedEconomyData;
+  research: ResearchState;
+  challenges: ChallengeState[];
+  buildings: SavedBuildingsData;
+}
+
 export interface SimulationSnapshot {
   totalVisitors: number;
   activeVisitors: number;

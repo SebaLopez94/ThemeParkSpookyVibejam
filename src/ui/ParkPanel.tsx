@@ -1,4 +1,4 @@
-import { Coins, FlaskConical, Lock, Ticket, Unlock, Users, X } from 'lucide-react';
+import { Coins, Download, FlaskConical, Lock, Ticket, Unlock, Upload, Users, X } from 'lucide-react';
 import { EconomyState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -8,6 +8,8 @@ interface ParkPanelProps {
   onTicketPriceChange: (value: number) => void;
   onTicketPriceCommit: () => void;
   onToggleParkOpen: (isOpen: boolean) => void;
+  onSaveGame: () => void;
+  onLoadGame: () => void;
   activeResearchLabel: string;
   onClose?: () => void;
 }
@@ -18,6 +20,8 @@ export function ParkPanel({
   onTicketPriceChange,
   onTicketPriceCommit,
   onToggleParkOpen,
+  onSaveGame,
+  onLoadGame,
   activeResearchLabel,
   onClose
 }: ParkPanelProps) {
@@ -150,9 +154,9 @@ export function ParkPanel({
               Current upkeep is ${economy.maintenancePerMinute.toLocaleString()} per minute.
             </div>
 
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 11 : 13, color: 'var(--px-gold)' }}>$</span>
-              <input
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 11 : 13, color: 'var(--px-gold)' }}>$</span>
+            <input
                 className="px-input"
                 type="number"
                 inputMode="numeric"
@@ -166,6 +170,45 @@ export function ParkPanel({
                 onKeyDown={e => e.key === 'Enter' && onTicketPriceCommit()}
                 style={{ fontSize: 13, padding: isMobile ? '7px 10px' : '8px 10px' }}
               />
+            </div>
+          </div>
+
+          <div
+            className="px-card"
+            style={{
+              cursor: 'default',
+              padding: isMobile ? '10px' : '12px',
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(14,10,28,0.98) 100%)'
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: isMobile ? 'stretch' : 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexDirection: isMobile ? 'column' : 'row'
+              }}
+            >
+              <div>
+                <div className="px-label" style={{ fontSize: isMobile ? 8 : 9 }}>
+                  SAVE FILE
+                </div>
+                <div className="px-body" style={{ marginTop: 8, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
+                  Export the current park to a file or load a saved park from your device.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="px-btn" style={{ minWidth: isMobile ? 0 : 118, justifyContent: 'center' }} onClick={onSaveGame}>
+                  <Download size={15} />
+                  SAVE
+                </button>
+                <button className="px-btn" style={{ minWidth: isMobile ? 0 : 118, justifyContent: 'center' }} onClick={onLoadGame}>
+                  <Upload size={15} />
+                  LOAD
+                </button>
+              </div>
             </div>
           </div>
 

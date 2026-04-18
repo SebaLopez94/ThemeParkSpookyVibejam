@@ -38,11 +38,15 @@ export class VisitorSystem {
   private pathfinding: PathfindingSystem;
   private spawnTimer = 0;
   private spawnInterval = 15 + Math.random() * 8;
+  private restoreSpawnRemaining = 0;
+  private restoreSpawnTimer = 0;
+  private restoreSpawnInterval = 0.22;
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
   private readonly maxVisitors = 200;
 
   public onVisitorSpawn: (() => void) | null = null;
+  public onVisitorRestoreSpawn: (() => void) | null = null;
   public onVisitorLeave: (() => void) | null = null;
   public onVisitorSpend: ((amount: number) => void) | null = null;
 
@@ -56,9 +60,21 @@ export class VisitorSystem {
   }
 
   public update(deltaTime: number, entities: SimulationEntities): void {
+    if (this.restoreSpawnRemaining > 0) {
+      this.restoreSpawnTimer += deltaTime;
+      while (
+        this.restoreSpawnRemaining > 0 &&
+        this.restoreSpawnTimer >= this.restoreSpawnInterval &&
+        this.visitors.size < this.maxVisitors
+      ) {
+        this.restoreSpawnTimer -= this.restoreSpawnInterval;
+        this.spawnVisitor(true);
+      }
+    }
+
     this.spawnTimer += deltaTime;
     if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < this.maxVisitors) {
-      this.spawnVisitor();
+      this.spawnVisitor(false);
       this.spawnTimer = 0;
       this.spawnInterval = 15 + Math.random() * 8;
     }
@@ -206,14 +222,24 @@ export class VisitorSystem {
     }
   }
 
-  private spawnVisitor(): void {
+  public scheduleRestoreVisitors(count: number): void {
+    this.restoreSpawnRemaining = Math.max(0, Math.min(Math.round(count), this.maxVisitors));
+    this.restoreSpawnTimer = 0;
+  }
+
+  private spawnVisitor(isRestoreSpawn: boolean): void {
     if (!this.pathfinding.hasPath(this.entrancePosition)) return;
 
     const id = `visitor_${this.visitorIdCounter++}`;
     const visitor = new Visitor(id, this.entrancePosition);
     this.visitors.set(id, visitor);
     this.scene.add(visitor.mesh);
-    this.onVisitorSpawn?.();
+    if (isRestoreSpawn) {
+      this.restoreSpawnRemaining = Math.max(0, this.restoreSpawnRemaining - 1);
+      this.onVisitorRestoreSpawn?.();
+    } else {
+      this.onVisitorSpawn?.();
+    }
   }
 
   private assignNewActivity(
@@ -570,5 +596,9 @@ export class VisitorSystem {
     });
     this.visitors.clear();
     this.visitorTargets.clear();
+    this.spawnTimer = 0;
+    this.spawnInterval = 15 + Math.random() * 8;
+    this.restoreSpawnRemaining = 0;
+    this.restoreSpawnTimer = 0;
   }
 }

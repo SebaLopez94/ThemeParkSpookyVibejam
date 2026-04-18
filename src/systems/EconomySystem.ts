@@ -1,11 +1,15 @@
-import { EconomyState } from '../types';
+import { EconomyState, SavedEconomyData } from '../types';
 
 export class EconomySystem {
   private state: EconomyState;
   private listeners: Set<(state: EconomyState) => void> = new Set();
 
   constructor() {
-    this.state = {
+    this.state = this.createInitialState();
+  }
+
+  private createInitialState(): EconomyState {
+    return {
       money: 3500,
       ticketPrice: 5,
       totalVisitors: 0,
@@ -22,6 +26,39 @@ export class EconomySystem {
 
   public getState(): EconomyState {
     return { ...this.state };
+  }
+
+  public exportSaveData(): SavedEconomyData {
+    return {
+      money: this.state.money,
+      ticketPrice: this.state.ticketPrice,
+      totalVisitors: this.state.totalVisitors,
+      activeVisitors: this.state.activeVisitors,
+      dailyIncome: this.state.dailyIncome,
+      dailyExpenses: this.state.dailyExpenses,
+      netProfit: this.state.netProfit,
+      isOpen: this.state.isOpen
+    };
+  }
+
+  public restoreSaveData(data: SavedEconomyData): void {
+    this.state = {
+      ...this.createInitialState(),
+      money: Math.round(data.money),
+      ticketPrice: Math.round(data.ticketPrice),
+      totalVisitors: Math.max(0, Math.round(data.totalVisitors)),
+      activeVisitors: 0,
+      dailyIncome: Math.max(0, Math.round(data.dailyIncome)),
+      dailyExpenses: Math.max(0, Math.round(data.dailyExpenses)),
+      netProfit: Math.round(data.netProfit),
+      isOpen: data.isOpen
+    };
+    this.notifyListeners();
+  }
+
+  public reset(): void {
+    this.state = this.createInitialState();
+    this.notifyListeners();
   }
 
   public addMoney(amount: number): void {
@@ -63,6 +100,11 @@ export class EconomySystem {
     this.state.totalVisitors += 1;
     this.state.activeVisitors += 1;
     this.addMoney(this.state.ticketPrice);
+  }
+
+  public addRestoredVisitor(): void {
+    this.state.activeVisitors += 1;
+    this.notifyListeners();
   }
 
   public removeVisitor(): void {

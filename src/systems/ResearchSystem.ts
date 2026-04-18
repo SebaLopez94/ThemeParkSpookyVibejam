@@ -4,13 +4,17 @@ import { PlaceableBuildingKind, ResearchNode, ResearchState } from '../types';
 
 export class ResearchSystem {
   private nodes: ResearchNode[] = RESEARCH_NODES;
-  private state: ResearchState = {
-    unlocked: [...INITIAL_UNLOCKED_BUILDINGS],
-    completed: [],
-    activeResearchId: null,
-    remainingTime: 0
-  };
+  private state: ResearchState = this.createInitialState();
   private listeners: Set<(state: ResearchState) => void> = new Set();
+
+  private createInitialState(): ResearchState {
+    return {
+      unlocked: [...INITIAL_UNLOCKED_BUILDINGS],
+      completed: [],
+      activeResearchId: null,
+      remainingTime: 0
+    };
+  }
 
   public getState(): ResearchState {
     return {
@@ -19,6 +23,21 @@ export class ResearchSystem {
       activeResearchId: this.state.activeResearchId,
       remainingTime: this.state.remainingTime
     };
+  }
+
+  public restoreSaveData(state: ResearchState): void {
+    this.state = {
+      unlocked: [...state.unlocked],
+      completed: [...state.completed],
+      activeResearchId: state.activeResearchId,
+      remainingTime: state.remainingTime
+    };
+    this.notify();
+  }
+
+  public reset(): void {
+    this.state = this.createInitialState();
+    this.notify();
   }
 
   public getNodes(): ResearchNode[] {

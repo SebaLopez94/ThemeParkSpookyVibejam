@@ -321,9 +321,11 @@ export class GameScene {
         map:    { value: terrainTexture },
         repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
         fade:   { value: 0.03 },
-        moonTint: { value: new THREE.Color(0x3a4d43) },
-        shadowTint: { value: new THREE.Color(0x1a1021) },
-        sickTint: { value: new THREE.Color(0x4d5a2a) }
+        moonTint: { value: new THREE.Color(0x3d4a3d) },
+        shadowTint: { value: new THREE.Color(0x21161c) },
+        sickTint: { value: new THREE.Color(0x4b5532) },
+        earthTint: { value: new THREE.Color(0x564735) },
+        wetTint: { value: new THREE.Color(0x252b2d) }
       },
       vertexShader: /* glsl */`
         varying vec2 vUv;
@@ -339,6 +341,8 @@ export class GameScene {
         uniform vec3      moonTint;
         uniform vec3      shadowTint;
         uniform vec3      sickTint;
+        uniform vec3      earthTint;
+        uniform vec3      wetTint;
         varying vec2      vUv;
 
         float hash(vec2 p) {
@@ -358,25 +362,43 @@ export class GameScene {
 
         void main() {
           vec2 tiledUv = vUv * repeat;
+          vec2 macroUv = vUv * (repeat * 0.48);
           vec2 warpedUv = tiledUv + vec2(
             noise(vUv * 7.0) * 0.16 - 0.08,
             noise(vUv.yx * 7.0 + 13.4) * 0.16 - 0.08
           );
+          vec2 warpedUvAlt = tiledUv * 0.73 + vec2(
+            noise(vUv * 4.0 + 17.0) * 0.22 - 0.11,
+            noise(vUv.yx * 4.4 + 3.7) * 0.22 - 0.11
+          );
           vec3 base = texture2D(map, warpedUv).rgb;
+          vec3 altBase = texture2D(map, warpedUvAlt + vec2(8.2, 5.4)).rgb;
           vec3 detail = texture2D(map, tiledUv * 1.9 + vec2(4.7, 2.3)).rgb;
+          vec3 fineDetail = texture2D(map, tiledUv * 3.4 + vec2(11.6, 7.8)).rgb;
 
-          float mudBands = smoothstep(0.35, 0.9, noise(vUv * 10.0 + 8.0));
+          float macroBreakup = noise(macroUv + vec2(5.0, 11.0));
+          float mudBands = smoothstep(0.38, 0.9, noise(vUv * 10.0 + 8.0));
           float rotPatches = smoothstep(0.48, 0.82, noise(vUv * 18.0 + detail.rg * 3.0));
           float coldMist = smoothstep(0.2, 0.85, noise(vUv * 5.0 + vec2(2.0, 9.0)));
+          float wetPatches = smoothstep(0.46, 0.86, noise(vUv * 8.0 + vec2(19.0, 4.0)));
+          float dryPatches = smoothstep(0.4, 0.8, noise(vUv * 6.0 + vec2(1.0, 15.0)));
+          float hoofMarks = smoothstep(0.58, 0.9, noise(vUv * 26.0 + fineDetail.rg * 4.0));
 
-          vec3 color = mix(base, base * moonTint, 0.42);
-          color = mix(color, color * 0.72 + shadowTint * 0.28, mudBands * 0.55);
-          color = mix(color, sickTint, rotPatches * 0.22);
-          color += detail * vec3(0.05, 0.035, 0.06);
-          color += coldMist * vec3(0.015, 0.02, 0.03);
+          vec3 terrain = mix(base, altBase, smoothstep(0.3, 0.72, macroBreakup) * 0.45);
+          vec3 color = mix(terrain, terrain * moonTint, 0.48);
+          color = mix(color, color * 0.78 + earthTint * 0.22, dryPatches * 0.22);
+          color = mix(color, color * 0.62 + shadowTint * 0.38, mudBands * 0.5);
+          color = mix(color, wetTint, wetPatches * 0.28);
+          color = mix(color, sickTint, rotPatches * 0.14);
+          color += detail * vec3(0.008, 0.006, 0.007);
+          color += fineDetail * vec3(0.005, 0.0035, 0.004);
+          color += coldMist * vec3(0.003, 0.004, 0.0045);
+          color -= hoofMarks * vec3(0.032, 0.022, 0.015);
 
           float centerFalloff = distance(vUv, vec2(0.5));
-          color *= 1.0 - smoothstep(0.22, 0.72, centerFalloff) * 0.18;
+          color *= 0.82;
+          color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.14;
+          color = clamp(color, vec3(0.0), vec3(1.0));
 
           float fx = smoothstep(0.0, fade, vUv.x) * smoothstep(1.0, 1.0 - fade, vUv.x);
           float fz = smoothstep(0.0, fade, vUv.y) * smoothstep(1.0, 1.0 - fade, vUv.y);

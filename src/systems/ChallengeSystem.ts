@@ -2,17 +2,33 @@ import { INITIAL_CHALLENGES } from '../data/progression';
 import { ChallengeState, SimulationSnapshot } from '../types';
 
 export class ChallengeSystem {
-  private challenges: ChallengeState[] = INITIAL_CHALLENGES.map(challenge => ({
-    ...challenge,
-    progress: 0,
-    completed: false,
-    claimed: false
-  }));
+  private challenges: ChallengeState[] = this.createInitialChallenges();
   private streaks: Map<string, number> = new Map();
   private listeners: Set<(state: ChallengeState[]) => void> = new Set();
 
+  private createInitialChallenges(): ChallengeState[] {
+    return INITIAL_CHALLENGES.map(challenge => ({
+      ...challenge,
+      progress: 0,
+      completed: false,
+      claimed: false
+    }));
+  }
+
   public getState(): ChallengeState[] {
     return this.challenges.map(challenge => ({ ...challenge, reward: { ...challenge.reward } }));
+  }
+
+  public restoreSaveData(state: ChallengeState[]): void {
+    this.challenges = state.map(challenge => ({ ...challenge, reward: { ...challenge.reward } }));
+    this.streaks.clear();
+    this.notify();
+  }
+
+  public reset(): void {
+    this.challenges = this.createInitialChallenges();
+    this.streaks.clear();
+    this.notify();
   }
 
   public update(deltaTime: number, snapshot: SimulationSnapshot): ChallengeState[] {

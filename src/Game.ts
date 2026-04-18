@@ -26,6 +26,14 @@ import {
   ResearchState,
   RideType,
   RIDE_SIZES,
+  SaveGameData,
+  SavedBuildingsData,
+  SavedDecorationEntry,
+  SavedEconomyData,
+  SavedPathEntry,
+  SavedRideEntry,
+  SavedServiceEntry,
+  SavedShopEntry,
   SelectedBuildingInfo,
   ServiceType,
   ShopType
@@ -48,6 +56,8 @@ export interface GameEvents {
 }
 
 export class Game {
+  private static readonly SAVE_VERSION = 1;
+  private static readonly DEFAULT_ENTRANCE_PATH_COUNT = 14;
   private scene: GameScene;
   private renderer: GameRenderer;
   private gameLoop: GameLoop;
@@ -141,6 +151,7 @@ export class Game {
     this.challengeSystem = new ChallengeSystem();
 
     this.visitorSystem.onVisitorSpawn = () => this.economySystem.addVisitor();
+    this.visitorSystem.onVisitorRestoreSpawn = () => this.economySystem.addRestoredVisitor();
     this.visitorSystem.onVisitorLeave = () => this.economySystem.removeVisitor();
     this.visitorSystem.onVisitorSpend = amount => this.economySystem.addMoney(amount);
 
@@ -546,6 +557,61 @@ export class Game {
     this.economySystem.setParkOpen(isOpen);
   }
 
+  public exportSaveData(): SaveGameData {
+    return {
+      version: Game.SAVE_VERSION,
+      savedAt: new Date().toISOString(),
+      economy: this.economySystem.exportSaveData(),
+      research: this.researchSystem.getState(),
+      challenges: this.challengeSystem.getState(),
+      buildings: this.buildingSystem.exportSaveData()
+    };
+  }
+
+  public hasUserBuiltContent(): boolean {
+    const counts = this.buildingSystem.getBuildingCounts();
+    return counts[BuildingType.RIDE] > 0
+      || counts[BuildingType.SHOP] > 0
+      || counts[BuildingType.SERVICE] > 0
+      || counts[BuildingType.DECORATION] > 0
+      || counts[BuildingType.PATH] > Game.DEFAULT_ENTRANCE_PATH_COUNT;
+  }
+
+  public importSaveData(raw: unknown): void {
+    const save = this.validateSaveData(raw);
+
+    this.cancelBuildMode();
+    this.selectedBuilding = null;
+    this.hoveredGridPosition = null;
+    this.movingBuilding = null;
+    this.hideSelectionHighlight();
+    this.events.emit('buildCancel', undefined as void);
+    this.events.emit('buildingSelected', null);
+
+    this.ratingUpdateTimer = 0;
+    this.maintenanceUpdateTimer = 0;
+
+    this.visitorSystem.clear();
+    this.buildingSystem.clear();
+    this.researchSystem.reset();
+    this.challengeSystem.reset();
+    this.economySystem.reset();
+
+    this.restoreBuildings(save.buildings);
+    this.researchSystem.restoreSaveData(save.research);
+    this.challengeSystem.restoreSaveData(save.challenges);
+    this.economySystem.restoreSaveData(save.economy);
+    this.visitorSystem.scheduleRestoreVisitors(save.economy.activeVisitors);
+
+    const counts = this.buildingSystem.getBuildingCounts();
+    const maintenance =
+      counts[BuildingType.RIDE] * 6 +
+      counts[BuildingType.SHOP] * 3 +
+      counts[BuildingType.SERVICE] * 2;
+    this.economySystem.setMaintenancePerMinute(maintenance * (60 / this.MAINTENANCE_UPDATE_INTERVAL));
+    this.economySystem.notify();
+  }
+
   public getResearchNodes(): ResearchNode[] {
     return this.researchSystem.getNodes();
   }
@@ -830,6 +896,305 @@ export class Game {
 
   public canAfford(cost: number): boolean {
     return this.economySystem.canAfford(cost);
+  }
+
+  private restoreBuildings(buildings: SavedBuildingsData): void {
+    buildings.paths.forEach(entry => {
+      const placed = this.buildingSystem.placePath(entry.position);
+      if (!placed) throw new Error(`Failed to restore path at ${entry.position.x},${entry.position.z}.`);
+    });
+
+    buildings.rides.forEach(entry => {
+      const placed = this.buildingSystem.placeRide(entry.position, entry.subType);
+      if (!placed) throw new Error(`Failed to restore ride at ${entry.position.x},${entry.position.z}.`);
+      this.buildingSystem.updateBuildingPrice(entry.position, entry.price);
+    });
+
+    buildings.shops.forEach(entry => {
+      const placed = this.buildingSystem.placeShop(entry.position, entry.subType);
+      if (!placed) throw new Error(`Failed to restore shop at ${entry.position.x},${entry.position.z}.`);
+      this.buildingSystem.updateBuildingPrice(entry.position, entry.price);
+    });
+
+    buildings.services.forEach(entry => {
+      const placed = this.buildingSystem.placeService(entry.position, entry.subType);
+      if (!placed) throw new Error(`Failed to restore service at ${entry.position.x},${entry.position.z}.`);
+    });
+
+    buildings.decorations.forEach(entry => {
+      const placed = this.buildingSystem.placeDecoration(entry.position, entry.subType);
+      if (!placed) throw new Error(`Failed to restore decoration at ${entry.position.x},${entry.position.z}.`);
+    });
+  }
+
+  private validateSaveData(raw: unknown): SaveGameData {
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Save file is invalid.');
+    }
+
+    const save = raw as Partial<SaveGameData>;
+    if (save.version !== Game.SAVE_VERSION) {
+      throw new Error('Unsupported save version.');
+    }
+    if (typeof save.savedAt !== 'string' || !save.savedAt) {
+      throw new Error('Save file is missing a valid timestamp.');
+    }
+    if (!save.economy || !save.research || !save.challenges || !save.buildings) {
+      throw new Error('Save file is incomplete.');
+    }
+
+    const economy = this.validateEconomySave(save.economy);
+    const research = this.validateResearchSave(save.research);
+    const challenges = this.validateChallengesSave(save.challenges);
+    const buildings = this.validateBuildingsSave(save.buildings);
+
+    return {
+      version: Game.SAVE_VERSION,
+      savedAt: save.savedAt,
+      economy,
+      research,
+      challenges,
+      buildings
+    };
+  }
+
+  private validateEconomySave(raw: unknown): SavedEconomyData {
+    const value = raw as Partial<SavedEconomyData>;
+    const requiredNumbers: Array<keyof SavedEconomyData> = [
+      'money',
+      'ticketPrice',
+      'totalVisitors',
+      'activeVisitors',
+      'dailyIncome',
+      'dailyExpenses',
+      'netProfit'
+    ];
+
+    requiredNumbers.forEach(key => {
+      if (typeof value[key] !== 'number' || !Number.isFinite(value[key] as number)) {
+        throw new Error('Save economy data is invalid.');
+      }
+    });
+    if (typeof value.isOpen !== 'boolean') {
+      throw new Error('Save economy data is invalid.');
+    }
+
+    return {
+      money: value.money!,
+      ticketPrice: value.ticketPrice!,
+      totalVisitors: value.totalVisitors!,
+      activeVisitors: value.activeVisitors!,
+      dailyIncome: value.dailyIncome!,
+      dailyExpenses: value.dailyExpenses!,
+      netProfit: value.netProfit!,
+      isOpen: value.isOpen!
+    };
+  }
+
+  private validateResearchSave(raw: unknown): ResearchState {
+    const value = raw as Partial<ResearchState>;
+    if (!Array.isArray(value.unlocked) || !Array.isArray(value.completed)) {
+      throw new Error('Save research data is invalid.');
+    }
+    if (!(typeof value.activeResearchId === 'string' || value.activeResearchId === null)) {
+      throw new Error('Save research data is invalid.');
+    }
+    if (typeof value.remainingTime !== 'number' || !Number.isFinite(value.remainingTime)) {
+      throw new Error('Save research data is invalid.');
+    }
+
+    const knownKinds = new Set<PlaceableBuildingKind>([
+      ...Object.values(RideType),
+      ...Object.values(ShopType),
+      ...Object.values(ServiceType),
+      ...Object.values(DecorationType)
+    ]);
+    const knownResearchIds = new Set(this.researchSystem.getNodes().map(node => node.id));
+
+    value.unlocked.forEach(kind => {
+      if (!knownKinds.has(kind as PlaceableBuildingKind)) {
+        throw new Error('Save research data contains unknown unlocks.');
+      }
+    });
+    value.completed.forEach(id => {
+      if (!knownResearchIds.has(id)) {
+        throw new Error('Save research data contains unknown research nodes.');
+      }
+    });
+    if (value.activeResearchId !== null && !knownResearchIds.has(value.activeResearchId)) {
+      throw new Error('Save research data contains an unknown active research node.');
+    }
+
+    return {
+      unlocked: [...value.unlocked] as PlaceableBuildingKind[],
+      completed: [...value.completed],
+      activeResearchId: value.activeResearchId,
+      remainingTime: Math.max(0, value.remainingTime)
+    };
+  }
+
+  private validateChallengesSave(raw: unknown): ChallengeState[] {
+    if (!Array.isArray(raw)) {
+      throw new Error('Save challenge data is invalid.');
+    }
+
+    const templateById = new Map(this.challengeSystem.getState().map(challenge => [challenge.id, challenge]));
+    return raw.map((entry): ChallengeState => {
+      const challenge = entry as Partial<ChallengeState>;
+      const template = challenge.id ? templateById.get(challenge.id) : undefined;
+      if (!template) {
+        throw new Error('Save challenge data contains unknown challenges.');
+      }
+      if (
+        typeof challenge.progress !== 'number' ||
+        !Number.isFinite(challenge.progress) ||
+        typeof challenge.completed !== 'boolean' ||
+        typeof challenge.claimed !== 'boolean'
+      ) {
+        throw new Error('Save challenge data is invalid.');
+      }
+
+      return {
+        ...template,
+        progress: challenge.progress,
+        completed: challenge.completed,
+        claimed: challenge.claimed
+      };
+    });
+  }
+
+  private validateBuildingsSave(raw: unknown): SavedBuildingsData {
+    const value = raw as Partial<SavedBuildingsData>;
+    if (
+      !Array.isArray(value.paths) ||
+      !Array.isArray(value.rides) ||
+      !Array.isArray(value.shops) ||
+      !Array.isArray(value.services) ||
+      !Array.isArray(value.decorations)
+    ) {
+      throw new Error('Save buildings data is invalid.');
+    }
+
+    const pathSet = new Set<string>();
+    const occupied = new Set<string>();
+
+    const paths = value.paths.map(entry => this.validatePathEntry(entry, pathSet));
+    const rides = value.rides.map(entry => this.validateRideEntry(entry, occupied, pathSet));
+    const shops = value.shops.map(entry => this.validateShopEntry(entry, occupied, pathSet));
+    const services = value.services.map(entry => this.validateServiceEntry(entry, occupied, pathSet));
+    const decorations = value.decorations.map(entry => this.validateDecorationEntry(entry, occupied, pathSet));
+
+    return { paths, rides, shops, services, decorations };
+  }
+
+  private validatePosition(raw: unknown, label: string): GridPosition {
+    const position = raw as Partial<GridPosition>;
+    if (
+      typeof position?.x !== 'number' ||
+      typeof position?.z !== 'number' ||
+      !Number.isInteger(position.x) ||
+      !Number.isInteger(position.z)
+    ) {
+      throw new Error(`${label} has an invalid position.`);
+    }
+    const validated = { x: position.x, z: position.z };
+    if (!GridHelper.isValidGridPosition(validated)) {
+      throw new Error(`${label} is outside the map.`);
+    }
+    return validated;
+  }
+
+  private validatePathEntry(raw: unknown, pathSet: Set<string>): SavedPathEntry {
+    const entry = raw as Partial<SavedPathEntry>;
+    const position = this.validatePosition(entry.position, 'Path');
+    const key = GridHelper.getGridKey(position);
+    if (pathSet.has(key)) throw new Error('Save contains duplicate paths.');
+    pathSet.add(key);
+    return { position };
+  }
+
+  private validateRideEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedRideEntry {
+    const entry = raw as Partial<SavedRideEntry>;
+    if (!Object.values(RideType).includes(entry.subType as RideType)) {
+      throw new Error('Save contains an unknown ride.');
+    }
+    if (typeof entry.price !== 'number' || !Number.isFinite(entry.price)) {
+      throw new Error('Save ride price is invalid.');
+    }
+    const position = this.validatePosition(entry.position, 'Ride');
+    const cells: GridPosition[] = [];
+    const size = RIDE_SIZES[entry.subType as RideType];
+    for (let dx = 0; dx < size.width; dx++) {
+      for (let dz = 0; dz < size.height; dz++) {
+        const cell = { x: position.x + dx, z: position.z + dz };
+        if (!GridHelper.isValidGridPosition(cell)) {
+          throw new Error('Save contains a ride outside the map.');
+        }
+        const key = GridHelper.getGridKey(cell);
+        if (occupied.has(key) || pathSet.has(key)) {
+          throw new Error('Save contains overlapping buildings.');
+        }
+        occupied.add(key);
+        cells.push(cell);
+      }
+    }
+    const hasPathAccess = cells.some(cell =>
+      GridHelper.getAdjacentPositions(cell).some(neighbor => pathSet.has(GridHelper.getGridKey(neighbor)))
+    );
+    if (!hasPathAccess) throw new Error('Save contains a ride without path access.');
+
+    return { position, subType: entry.subType as RideType, price: Math.round(entry.price) };
+  }
+
+  private validateShopEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedShopEntry {
+    const entry = raw as Partial<SavedShopEntry>;
+    if (!Object.values(ShopType).includes(entry.subType as ShopType)) {
+      throw new Error('Save contains an unknown shop.');
+    }
+    if (typeof entry.price !== 'number' || !Number.isFinite(entry.price)) {
+      throw new Error('Save shop price is invalid.');
+    }
+    const position = this.validateSingleCellBuilding(entry.position, occupied, pathSet, 'Shop');
+    this.assertPathAdjacent(position, pathSet, 'Shop');
+    return { position, subType: entry.subType as ShopType, price: Math.round(entry.price) };
+  }
+
+  private validateServiceEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedServiceEntry {
+    const entry = raw as Partial<SavedServiceEntry>;
+    if (!Object.values(ServiceType).includes(entry.subType as ServiceType)) {
+      throw new Error('Save contains an unknown service.');
+    }
+    const position = this.validateSingleCellBuilding(entry.position, occupied, pathSet, 'Service');
+    this.assertPathAdjacent(position, pathSet, 'Service');
+    return { position, subType: entry.subType as ServiceType };
+  }
+
+  private validateDecorationEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedDecorationEntry {
+    const entry = raw as Partial<SavedDecorationEntry>;
+    if (!Object.values(DecorationType).includes(entry.subType as DecorationType)) {
+      throw new Error('Save contains an unknown decoration.');
+    }
+    const position = this.validateSingleCellBuilding(entry.position, occupied, pathSet, 'Decoration');
+    return { position, subType: entry.subType as DecorationType };
+  }
+
+  private validateSingleCellBuilding(raw: unknown, occupied: Set<string>, pathSet: Set<string>, label: string): GridPosition {
+    const position = this.validatePosition(raw, label);
+    const key = GridHelper.getGridKey(position);
+    if (occupied.has(key) || pathSet.has(key)) {
+      throw new Error('Save contains overlapping buildings.');
+    }
+    occupied.add(key);
+    return position;
+  }
+
+  private assertPathAdjacent(position: GridPosition, pathSet: Set<string>, label: string): void {
+    const hasAdjacentPath = GridHelper
+      .getAdjacentPositions(position)
+      .some(neighbor => pathSet.has(GridHelper.getGridKey(neighbor)));
+    if (!hasAdjacentPath) {
+      throw new Error(`Save contains a ${label.toLowerCase()} without path access.`);
+    }
   }
 
   private update(deltaTime: number): void {
