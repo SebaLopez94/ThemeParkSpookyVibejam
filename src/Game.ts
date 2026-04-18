@@ -64,6 +64,7 @@ export class Game {
   private readonly windTrack: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly ambience1Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly ambience2Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
+  private readonly thunderTrack: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly challengeTrack: { audio: THREE.Audio; baseVolume: number };
   private readonly buildTrack: { audio: THREE.Audio; baseVolume: number };
   private isMuted = false;
@@ -153,10 +154,12 @@ export class Game {
     this.loopTracks = [
       { audio: makeAudio(), baseVolume: 0.12, loop: true },  // background music
       { audio: makeAudio(), baseVolume: 0.04, loop: true },  // night ambience
+      { audio: makeAudio(), baseVolume: 0.06, loop: true }, // rain ambience
     ];
     this.windTrack    = { audio: makeAudio(), baseVolume: 0.06, nextTime: Math.random() * 15 + 10 };
     this.ambience1Track = { audio: makeAudio(), baseVolume: 0.09, nextTime: Math.random() * 10 + 12 };
     this.ambience2Track = { audio: makeAudio(), baseVolume: 0.08, nextTime: Math.random() * 14 + 20 };
+    this.thunderTrack = { audio: makeAudio(), baseVolume: 0.085, nextTime: Math.random() * 16 + 18 };
     this.challengeTrack = { audio: makeAudio(), baseVolume: 0.14 };
     this.buildTrack = { audio: makeAudio(), baseVolume: 0.16 };
     this.loadAudio();
@@ -183,7 +186,7 @@ export class Game {
 
   private loadAudio(): void {
     const loader = new THREE.AudioLoader();
-    const filePaths = ['/audio/main_song.mp3', '/audio/night.mp3'];
+    const filePaths = ['/audio/main_song.mp3', '/audio/night.mp3', '/audio/rain.mp3'];
 
     filePaths.forEach((path, i) => {
       const track = this.loopTracks[i];
@@ -208,6 +211,7 @@ export class Game {
     loadOneShot('/audio/wind.mp3', this.windTrack);
     loadOneShot('/audio/ambience1.mp3', this.ambience1Track);
     loadOneShot('/audio/ambience2.mp3', this.ambience2Track);
+    loadOneShot('/audio/thunder.mp3', this.thunderTrack);
     loadOneShot('/audio/challenges.mp3', this.challengeTrack);
     loadOneShot('/audio/build.mp3', this.buildTrack);
   }
@@ -218,7 +222,7 @@ export class Game {
     for (const track of this.loopTracks) {
       track.audio.setVolume(muted ? 0 : track.baseVolume);
     }
-    for (const oneShot of [this.windTrack, this.ambience1Track, this.ambience2Track]) {
+    for (const oneShot of [this.windTrack, this.ambience1Track, this.ambience2Track, this.thunderTrack]) {
       oneShot.audio.setVolume(muted ? 0 : oneShot.baseVolume);
     }
     for (const oneShot of [this.challengeTrack, this.buildTrack]) {
@@ -836,6 +840,7 @@ export class Game {
       this.selectionFillMat.opacity = pulse;
     }
 
+    this.scene.updateWeather(deltaTime);
     this.buildingSystem.update(deltaTime);
     this.visitorSystem.update(deltaTime, {
       rides: this.buildingSystem.getRides(),
@@ -854,6 +859,9 @@ export class Game {
     this.tickOneShotAudio(this.windTrack, deltaTime, [30, 30]);
     this.tickOneShotAudio(this.ambience1Track, deltaTime, [22, 18]);
     this.tickOneShotAudio(this.ambience2Track, deltaTime, [28, 22]);
+    if (this.scene.consumeLightningTrigger()) {
+      this.playInstantOneShot(this.thunderTrack);
+    }
 
     const counts = this.buildingSystem.getBuildingCounts();
     const maintenance =
@@ -960,7 +968,7 @@ export class Game {
     for (const track of this.loopTracks) {
       if (track.audio.isPlaying) track.audio.stop();
     }
-    for (const oneShot of [this.windTrack, this.ambience1Track, this.ambience2Track, this.challengeTrack, this.buildTrack]) {
+    for (const oneShot of [this.windTrack, this.ambience1Track, this.ambience2Track, this.thunderTrack, this.challengeTrack, this.buildTrack]) {
       if (oneShot.audio.isPlaying) oneShot.audio.stop();
     }
     this.events.clear();

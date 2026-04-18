@@ -3,7 +3,7 @@ import {
   ChevronDown,
   ChevronUp,
   Coins,
-  HeartPulse,
+  Laugh,
   Radio,
   Star,
   TrendingDown,
@@ -180,7 +180,7 @@ export function HUD({ economy }: HUDProps) {
 
             <div className="px-hud-ratings">
               <InlineRating
-                icon={<HeartPulse className="px-icon-sm" color="var(--px-green-hi)" />}
+                icon={<Laugh className="px-icon-sm" color="var(--px-green-hi)" />}
                 label="Guest Joy"
                 stars={joyStars}
                 mobile={isMobile}

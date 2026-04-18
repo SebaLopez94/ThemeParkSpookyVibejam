@@ -11,6 +11,23 @@ export class GameScene {
   public hemisphereLight: THREE.HemisphereLight;
   private textureLoader = new THREE.TextureLoader();
   private surroundingClones: THREE.Object3D[] = [];
+  private readonly baseAmbientIntensity: number;
+  private readonly baseHemisphereIntensity: number;
+  private readonly baseDirectionalIntensity: number;
+  private rainGeometry: THREE.BufferGeometry | null = null;
+  private rainMaterial: THREE.LineBasicMaterial | null = null;
+  private rainLines: THREE.LineSegments | null = null;
+  private rainPositions: Float32Array | null = null;
+  private rainSpeeds: Float32Array | null = null;
+  private rainDrift: Float32Array | null = null;
+  private rainCenter = new THREE.Vector3();
+  private lightningLight: THREE.PointLight | null = null;
+  private lightningGeometry: THREE.BufferGeometry | null = null;
+  private lightningMaterial: THREE.LineBasicMaterial | null = null;
+  private lightningBolt: THREE.LineSegments | null = null;
+  private lightningTimer = 0;
+  private lightningFlashTimer = 0;
+  private lightningTriggered = false;
 
 
   constructor() {
@@ -33,14 +50,17 @@ export class GameScene {
 
     // Dark global fill so the park stays readable without flattening all shadows.
     this.ambientLight = new THREE.AmbientLight(0x7c88a8, mobile ? 0.34 : 0.3);
+    this.baseAmbientIntensity = this.ambientLight.intensity;
     this.scene.add(this.ambientLight);
 
     // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
     this.hemisphereLight = new THREE.HemisphereLight(0x5d6f96, 0x241712, mobile ? 0.42 : 0.48);
+    this.baseHemisphereIntensity = this.hemisphereLight.intensity;
     this.scene.add(this.hemisphereLight);
 
     // Cool moon key light for silhouettes and shadow shape.
     this.directionalLight = new THREE.DirectionalLight(0xc6d7ff, mobile ? 0.82 : 0.95);
+    this.baseDirectionalIntensity = this.directionalLight.intensity;
     this.directionalLight.position.set(32, 88, 18);
     this.directionalLight.castShadow = true;
     this.directionalLight.shadow.camera.left = -100;
@@ -61,6 +81,8 @@ export class GameScene {
     this.createPerimeterFence();
     this.createSurroundings();
     this.createMoon();
+    this.createRain();
+    this.createLightning();
   }
 
   private createEntranceGate(): void {
@@ -450,12 +472,225 @@ export class GameScene {
     this.scene.add(moonGroup);
   }
 
+  private createRain(): void {
+    const mobile = isMobile();
+    const dropCount = mobile ? 180 : 520;
+    const areaRadius = mobile ? 54 : 72;
+    const topY = mobile ? 34 : 42;
+    const bottomY = 1.2;
+    const streakLength = mobile ? 0.9 : 1.35;
+    const positions = new Float32Array(dropCount * 6);
+    const speeds = new Float32Array(dropCount);
+    const drift = new Float32Array(dropCount);
+
+    this.rainCenter.set(this.camera.position.x, 0, this.camera.position.z);
+
+    for (let i = 0; i < dropCount; i++) {
+      const baseIndex = i * 6;
+      const x = this.rainCenter.x + (Math.random() - 0.5) * areaRadius * 2;
+      const y = bottomY + Math.random() * (topY - bottomY);
+      const z = this.rainCenter.z + (Math.random() - 0.5) * areaRadius * 2;
+      positions[baseIndex] = x;
+      positions[baseIndex + 1] = y;
+      positions[baseIndex + 2] = z;
+      positions[baseIndex + 3] = x + 0.03;
+      positions[baseIndex + 4] = y - streakLength;
+      positions[baseIndex + 5] = z + 0.08;
+      speeds[i] = mobile ? 15 + Math.random() * 7 : 18 + Math.random() * 9;
+      drift[i] = 0.12 + Math.random() * 0.1;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const material = new THREE.LineBasicMaterial({
+      color: 0x5d6b82,
+      transparent: true,
+      opacity: mobile ? 0.18 : 0.22,
+      depthWrite: false
+    });
+
+    const lines = new THREE.LineSegments(geometry, material);
+    lines.frustumCulled = false;
+    lines.renderOrder = 3;
+
+    this.rainGeometry = geometry;
+    this.rainMaterial = material;
+    this.rainLines = lines;
+    this.rainPositions = positions;
+    this.rainSpeeds = speeds;
+    this.rainDrift = drift;
+    this.scene.add(lines);
+  }
+
+  private createLightning(): void {
+    const mobile = isMobile();
+    this.lightningTimer = 8 + Math.random() * 12;
+
+    const light = new THREE.PointLight(0xdde9ff, mobile ? 0 : 0, 220);
+    light.position.set(0, 28, 0);
+    this.lightningLight = light;
+    this.scene.add(light);
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+
+    const material = new THREE.LineBasicMaterial({
+      color: 0xeaf2ff,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    });
+
+    const bolt = new THREE.LineSegments(geometry, material);
+    bolt.frustumCulled = false;
+    bolt.visible = false;
+
+    this.lightningGeometry = geometry;
+    this.lightningMaterial = material;
+    this.lightningBolt = bolt;
+    this.scene.add(bolt);
+  }
+
+  private triggerLightning(): void {
+    if (!this.lightningLight || !this.lightningGeometry || !this.lightningMaterial || !this.lightningBolt) return;
+
+    const mobile = isMobile();
+    const startX = this.camera.position.x + (Math.random() - 0.5) * 90;
+    const startZ = this.camera.position.z - 30 - Math.random() * 80;
+    const topY = 34 + Math.random() * 10;
+    const bottomY = 4 + Math.random() * 8;
+
+    const segments: number[] = [];
+    let x = startX;
+    let y = topY;
+    let z = startZ;
+    const branchCount = 6 + Math.floor(Math.random() * 4);
+
+    for (let i = 0; i < branchCount; i++) {
+      const nextX = x + (Math.random() - 0.5) * 5.5;
+      const nextY = i === branchCount - 1 ? bottomY : y - (3.8 + Math.random() * 3.4);
+      const nextZ = z + (Math.random() - 0.5) * 4.5;
+      segments.push(x, y, z, nextX, nextY, nextZ);
+      x = nextX;
+      y = nextY;
+      z = nextZ;
+    }
+
+    this.lightningGeometry.setAttribute('position', new THREE.Float32BufferAttribute(segments, 3));
+    this.lightningGeometry.computeBoundingSphere();
+
+    this.lightningBolt.visible = true;
+    this.lightningMaterial.opacity = mobile ? 0.55 : 0.72;
+    this.lightningLight.position.set(startX, topY - 4, startZ);
+    this.lightningLight.intensity = mobile ? 1.8 : 2.6;
+    this.lightningFlashTimer = 0.18 + Math.random() * 0.12;
+    this.lightningTimer = 14 + Math.random() * 22;
+    this.lightningTriggered = true;
+  }
+
+  public consumeLightningTrigger(): boolean {
+    if (!this.lightningTriggered) return false;
+    this.lightningTriggered = false;
+    return true;
+  }
+
+  public updateWeather(deltaTime: number): void {
+    if (!this.rainGeometry || !this.rainPositions || !this.rainSpeeds || !this.rainDrift) return;
+
+    const mobile = isMobile();
+    const areaRadius = mobile ? 54 : 72;
+    const topY = mobile ? 34 : 42;
+    const bottomY = 1.2;
+    const streakLength = mobile ? 0.9 : 1.35;
+
+    this.rainCenter.x = this.camera.position.x;
+    this.rainCenter.z = this.camera.position.z;
+
+    for (let i = 0; i < this.rainSpeeds.length; i++) {
+      const baseIndex = i * 6;
+      let x = this.rainPositions[baseIndex];
+      let y = this.rainPositions[baseIndex + 1];
+      let z = this.rainPositions[baseIndex + 2];
+
+      y -= this.rainSpeeds[i] * deltaTime;
+      x += this.rainDrift[i] * deltaTime;
+      z += this.rainDrift[i] * 0.35 * deltaTime;
+
+      const outOfBounds =
+        y < bottomY ||
+        Math.abs(x - this.rainCenter.x) > areaRadius ||
+        Math.abs(z - this.rainCenter.z) > areaRadius;
+
+      if (outOfBounds) {
+        x = this.rainCenter.x + (Math.random() - 0.5) * areaRadius * 2;
+        y = topY + Math.random() * 8;
+        z = this.rainCenter.z + (Math.random() - 0.5) * areaRadius * 2;
+      }
+
+      this.rainPositions[baseIndex] = x;
+      this.rainPositions[baseIndex + 1] = y;
+      this.rainPositions[baseIndex + 2] = z;
+      this.rainPositions[baseIndex + 3] = x + 0.03;
+      this.rainPositions[baseIndex + 4] = y - streakLength;
+      this.rainPositions[baseIndex + 5] = z + 0.08;
+    }
+
+    const positionAttr = this.rainGeometry.getAttribute('position') as THREE.BufferAttribute;
+    positionAttr.needsUpdate = true;
+
+    this.lightningTimer -= deltaTime;
+    if (this.lightningTimer <= 0 && this.lightningFlashTimer <= 0) {
+      this.triggerLightning();
+    }
+
+    if (this.lightningFlashTimer > 0 && this.lightningLight && this.lightningMaterial && this.lightningBolt) {
+      this.lightningFlashTimer -= deltaTime;
+      const t = Math.max(0, this.lightningFlashTimer);
+      const flash = Math.min(1, t / 0.12);
+      const flicker = 0.55 + Math.random() * 0.45;
+      this.lightningLight.intensity = (mobile ? 1.8 : 2.6) * flash * flicker;
+      this.ambientLight.intensity = this.baseAmbientIntensity + (mobile ? 0.07 : 0.11) * flash;
+      this.hemisphereLight.intensity = this.baseHemisphereIntensity + (mobile ? 0.08 : 0.14) * flash;
+      this.directionalLight.intensity = this.baseDirectionalIntensity + (mobile ? 0.18 : 0.28) * flash;
+      this.lightningMaterial.opacity = (mobile ? 0.5 : 0.68) * flash;
+      this.lightningBolt.visible = this.lightningMaterial.opacity > 0.03;
+
+      if (this.lightningFlashTimer <= 0) {
+        this.lightningLight.intensity = 0;
+        this.ambientLight.intensity = this.baseAmbientIntensity;
+        this.hemisphereLight.intensity = this.baseHemisphereIntensity;
+        this.directionalLight.intensity = this.baseDirectionalIntensity;
+        this.lightningMaterial.opacity = 0;
+        this.lightningBolt.visible = false;
+      }
+    }
+  }
+
   public onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
   }
 
   public dispose(): void {
+    if (this.rainLines) this.scene.remove(this.rainLines);
+    if (this.lightningBolt) this.scene.remove(this.lightningBolt);
+    if (this.lightningLight) this.scene.remove(this.lightningLight);
+    this.rainGeometry?.dispose();
+    this.rainMaterial?.dispose();
+    this.lightningGeometry?.dispose();
+    this.lightningMaterial?.dispose();
+    this.rainGeometry = null;
+    this.rainMaterial = null;
+    this.rainLines = null;
+    this.rainPositions = null;
+    this.rainSpeeds = null;
+    this.rainDrift = null;
+    this.lightningGeometry = null;
+    this.lightningMaterial = null;
+    this.lightningBolt = null;
+    this.lightningLight = null;
+
     for (const clone of this.surroundingClones) {
       this.scene.remove(clone);
       clone.traverse(c => {
