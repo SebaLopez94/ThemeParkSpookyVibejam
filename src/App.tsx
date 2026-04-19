@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { useIsMobile } from './hooks/useIsMobile';
 import { FlaskConical, Gem, Hammer, HelpCircle, Landmark, MousePointer2, Route, RotateCw, Trash2, Trophy, Volume2, VolumeX, X } from 'lucide-react';
@@ -49,7 +49,7 @@ function App() {
   const [buildRotation, setBuildRotation] = useState(0);
   const [isPlacing, setIsPlacing] = useState(false);
   // Pre-populate with initial unlocked buildings so they show in the build
-  // menu immediately — the ResearchSystem fires its first notify() before
+  // menu immediately â€” the ResearchSystem fires its first notify() before
   const [researchState, setResearchState] = useState<ResearchState>(() => ({
     unlocked: [...INITIAL_UNLOCKED_BUILDINGS],
     completed: [],
@@ -106,12 +106,12 @@ function App() {
     events.on('challengesUpdate', state => setChallenges(state));
     events.on('challengeCompleted', challenge => {
       const celebrationIds: Record<string, { title: string; sub: string }> = {
-        challenge_first_ride:   { title: '🎡 FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
-        challenge_three_rides:  { title: '🎢 THRILL PARK UNLOCKED!',  sub: 'Three rides — fear is your product.' },
-        challenge_rating:       { title: '⭐ FIVE-STAR NIGHTMARE!',   sub: 'The park is legendary.' },
-        challenge_visitors_150: { title: '💀 THOUSAND SCREAMS!',     sub: 'Your park is a phenomenon.' },
+        challenge_first_ride:   { title: 'ðŸŽ¡ FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
+        challenge_three_rides:  { title: 'ðŸŽ¢ THRILL PARK UNLOCKED!',  sub: 'Three rides â€” fear is your product.' },
+        challenge_rating:       { title: 'â­ FIVE-STAR NIGHTMARE!',   sub: 'The park is legendary.' },
+        challenge_visitors_150: { title: 'ðŸ’€ THOUSAND SCREAMS!',     sub: 'Your park is a phenomenon.' },
       };
-      const cel = celebrationIds[challenge.id] || { title: `🎯 ${challenge.title.toUpperCase()}`, sub: challenge.description };
+      const cel = celebrationIds[challenge.id] || { title: `ðŸŽ¯ ${challenge.title.toUpperCase()}`, sub: challenge.description };
       setCelebration({ ...cel, reward: challenge.reward.money });
 
       confetti({
@@ -349,7 +349,7 @@ function App() {
 
       <HUD economy={economy} />
 
-      {/* ── Desktop side tabs ───────────────────────────────────────── */}
+      {/* â”€â”€ Desktop side tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="px-side-tabs">
         <div className="px-side-tab-column">
           <button
@@ -421,10 +421,10 @@ function App() {
         </div>
       </div>
 
-      {/* ── Mobile bottom nav ───────────────────────────────────────── */}
+      {/* â”€â”€ Mobile bottom nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45 }}>
-          {/* Active panel — full width, scrollable, above nav bar */}
+          {/* Active panel â€” full width, scrollable, above nav bar */}
           {(showParkPanel || showChallenges || showResearch) && (
             <div className="px-anim-enter-up" style={{ padding: '0 8px 8px', maxHeight: 'calc(100dvh - 160px - var(--safe-bottom))', overflowY: 'auto' }}>
               {showParkPanel && (
@@ -566,7 +566,7 @@ function App() {
 
       {isPlacing && activeBuildDefinition && (
         isMobile ? (
-          /* Mobile: minimal bar — building name + cancel */
+          /* Mobile: minimal bar â€” building name + cancel */
           <div style={{ position: 'fixed', bottom: 90, left: 8, right: 8, zIndex: 46 }}>
             <div className="px-panel px-panel--controls px-anim-enter-up" style={{ padding: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px' }}>
@@ -577,13 +577,13 @@ function App() {
                   </span>
                   {activeBuildDefinition.type !== BuildingType.PATH && activeBuildDefinition.type !== BuildingType.DELETE && (
                     <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-muted)' }}>
-                      ← SWIPE TO ROTATE →
+                      â† SWIPE TO ROTATE â†’
                     </span>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {activeBuildDefinition.type === BuildingType.PATH && (
-                    <button className="px-btn px-btn--danger" style={{ padding: '6px 10px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
+                    <button className="px-btn px-btn--danger" style={{ padding: '6px 10px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: 'ðŸ—‘ï¸' })}>
                       <Trash2 size={13} />
                     </button>
                   )}
@@ -609,7 +609,7 @@ function App() {
                 </span>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {activeBuildDefinition.type === BuildingType.PATH && (
-                    <button className="px-btn px-btn--danger" style={{ padding: '8px 14px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}>
+                    <button className="px-btn px-btn--danger" style={{ padding: '8px 14px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: 'ðŸ—‘ï¸' })}>
                       <Trash2 size={16} />
                     </button>
                   )}
@@ -621,7 +621,7 @@ function App() {
               <div style={{ padding: '12px 16px 16px' }}>
                 <div className="px-chip-row">
                   <div className="px-chip">Cost ${activeBuildDefinition.cost}</div>
-                  <div className="px-chip"><RotateCw size={12} /> R to rotate — {buildRotation}°</div>
+                  <div className="px-chip"><RotateCw size={12} /> R to rotate â€” {buildRotation}Â°</div>
                 </div>
               </div>
             </div>
@@ -640,17 +640,16 @@ function App() {
             <div className="px-titlebar" style={{ fontSize: isMobile ? 10 : undefined }}>HOW TO PLAY</div>
             <div style={{ padding: isMobile ? '12px 14px' : '18px 22px' }}>
 
-              {/* Controls */}
               <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>CONTROLS</div>
               {isMobile ? (
                 <div style={{ display: 'grid', gap: 4 }}>
                   {[
-                    ['1 FINGER DRAG', 'Pan camera'],
-                    ['PINCH', 'Zoom in / out'],
-                    ['TAP', 'Place or select'],
+                    ['1 FINGER DRAG', 'Move camera'],
+                    ['PINCH', 'Zoom in or out'],
+                    ['TAP', 'Build or select'],
                     ['TAP + DRAG', 'Draw paths'],
-                    ['TAP BUILDING', 'Manage / delete'],
-                    ['SWIPE on build bar', 'Rotate building'],
+                    ['TAP BUILDING', 'Manage it'],
+                    ['SWIPE BUILD BAR', 'Rotate building'],
                   ].map(([key, desc]) => (
                     <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 6px', background: 'rgba(0,0,0,0.25)' }}>
                       <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)', flexShrink: 0 }}>{key}</span>
@@ -666,13 +665,13 @@ function App() {
                   </colgroup>
                   <tbody>
                     {[
-                      ['RMB DRAG / 1 FINGER', 'Pan camera'],
-                      ['SCROLL / PINCH',       'Zoom in / out'],
-                      ['LMB / TAP',            'Place or select'],
-                      ['LMB DRAG',             'Draw paths'],
-                      ['R',                    'Rotate building'],
-                      ['RMB / ESC',            'Cancel build mode'],
-                      ['CLICK BUILDING',       'Manage / move / delete'],
+                      ['RMB DRAG / 1 FINGER', 'Move camera'],
+                      ['SCROLL / PINCH', 'Zoom in or out'],
+                      ['LMB / TAP', 'Build or select'],
+                      ['LMB DRAG', 'Draw paths'],
+                      ['R', 'Rotate building'],
+                      ['RMB / ESC', 'Cancel build mode'],
+                      ['CLICK BUILDING', 'Manage, move, or delete'],
                     ].map(([key, desc]) => (
                       <tr key={key}>
                         <td style={{ padding: '6px 8px', color: 'var(--px-green-hi)', textShadow: '1px 1px 0 #000', wordBreak: 'break-word' }}>{key}</td>
@@ -685,25 +684,28 @@ function App() {
 
               <hr className="px-divider" />
 
-              {/* Goal */}
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>GOAL</div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Build a thriving haunted theme park. Connect rides and shops to the entrance with paths, keep visitors happy, and grow your park rating to 5 stars.
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>START HERE</div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {[
+                  'Build paths from the entrance so guests can reach your park.',
+                  'Place one ride first, then add food, drinks, and toilets nearby.',
+                  'Open the park and expand only when income feels stable.',
+                ].map(step => (
+                  <div key={step} className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.75 : undefined, padding: '7px 9px', background: 'rgba(0,0,0,0.22)' }}>
+                    {step}
+                  </div>
+                ))}
               </div>
 
               <hr className="px-divider" />
 
-              {/* Visitors */}
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>VISITORS</div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined, marginBottom: 8 }}>
-                Visitors enter through the gate and wander paths looking for rides, food, and drinks. They have four needs that decay over time:
-              </div>
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>KEEP GUESTS HAPPY</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 8 }}>
                 {[
-                  ['🎢 FUN',      'Satisfied by rides'],
-                  ['🍔 HUNGER',   'Satisfied by food stalls'],
-                  ['🥤 THIRST',   'Satisfied by drink stands'],
-                  ['🚽 HYGIENE',  'Satisfied by restrooms'],
+                  ['FUN', 'Build more rides'],
+                  ['HUNGER', 'Add burger stalls'],
+                  ['THIRST', 'Add drink stands'],
+                  ['HYGIENE', 'Add toilets'],
                 ].map(([need, desc]) => (
                   <div key={need} style={{ padding: '5px 7px', background: 'rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 3 }}>
                     <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-green-hi)' }}>{need}</span>
@@ -712,56 +714,42 @@ function App() {
                 ))}
               </div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Visitors won't re-enter the same ride for <b style={{ color: 'var(--px-gold)' }}>2 minutes</b>, and won't buy food or drinks right after having them. Unhappy visitors leave and drag down your Joy and Rating stars.
+                Guests spend money when they find what they need. If their needs stay low for too long, they leave and your rating drops.
               </div>
 
               <hr className="px-divider" />
 
-              {/* Rides */}
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>RIDES & DECORATIONS</div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined, marginBottom: 8 }}>
-                <b style={{ color: 'var(--px-gold)' }}>Pricier rides give more fun.</b> A cheap carousel barely satisfies — a roller coaster thrills. Fun is calculated from the ride's ticket price and its quality.
-              </div>
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>BUILD SMART</div>
               <div style={{ display: 'grid', gap: 4, marginBottom: 8 }}>
                 {[
-                  ['🎠 CAROUSEL',       '$4', '★★☆☆☆  low fun'],
-                  ['🎡 FERRIS WHEEL',   '$6', '★★★☆☆  moderate'],
-                  ['👻 HAUNTED HOUSE',  '$8', '★★★★☆  great fun'],
-                  ['🎢 ROLLER COASTER', '$10','★★★★★  max fun'],
-                ].map(([ride, price, stars]) => (
-                  <div key={ride} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '5px 7px', background: 'rgba(0,0,0,0.25)' }}>
-                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-text)', flexShrink: 0 }}>{ride}</span>
-                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-gold)', flexShrink: 0 }}>{price}</span>
-                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(251,191,36,0.7)', textAlign: 'right' }}>{stars}</span>
+                  'Rides need path access or guests will ignore them.',
+                  'Stronger rides support higher prices and satisfy fun faster.',
+                  'Decorations near rides improve guest mood and park appeal.',
+                ].map(item => (
+                  <div key={item} style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.25)' }}>
+                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-text)', lineHeight: 1.7 }}>
+                      {item}
+                    </span>
                   </div>
                 ))}
               </div>
+
+              <hr className="px-divider" />
+
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>MONEY</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Place <b style={{ color: 'var(--px-green-hi)' }}>decorations</b> near attractions for a bonus fun boost — the more decoration around a ride, the happier visitors leave it.
+                Money comes from entry tickets, rides, and shops. Expenses come from maintenance, so avoid building too much too early.
               </div>
 
               <hr className="px-divider" />
 
-              {/* Economy */}
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>ECONOMY</div>
+              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>PROGRESSION</div>
               <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                <b style={{ color: 'var(--px-gold)' }}>Income</b> from tickets & attractions. <b style={{ color: 'var(--px-red)' }}>Expenses</b> are maintenance — rides $6/20s, shops $3/20s, services $2/20s. Entry ticket is cheap ($2 default) — real money comes from rides and shops.
+                Use Research to unlock stronger buildings. Use Challenges for direction and bonus money.
               </div>
 
-              <hr className="px-divider" />
-
-              {/* Research */}
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>RESEARCH</div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Spend money to unlock new buildings. Research takes time — plan ahead.
-              </div>
-
-              <hr className="px-divider" />
-
-              {/* Challenges */}
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>CHALLENGES</div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Complete challenges to earn bonus money. Check them often for guidance on what to build next.
+              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined, marginTop: 14, color: 'var(--px-green-hi)' }}>
+                Goal: keep guests happy, grow your park, and reach 5 stars.
               </div>
 
               <button className="px-btn" style={{ marginTop: 16, width: '100%', justifyContent: 'center', fontSize: isMobile ? 10 : undefined }} onClick={() => setShowHelp(false)}>

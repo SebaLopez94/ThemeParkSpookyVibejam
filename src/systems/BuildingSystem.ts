@@ -33,6 +33,7 @@ export class BuildingSystem {
   private shopsCache: Shop[] | null = null;
   private servicesCache: Service[] | null = null;
   private decorationsCache: Decoration[] | null = null;
+  private decorationBonusCache: Map<string, number> = new Map();
 
   constructor(scene: THREE.Scene, pathfinding: PathfindingSystem) {
     this.scene = scene;
@@ -184,6 +185,7 @@ export class BuildingSystem {
     this.occupiedCells.set(key, key);
     this.scene.add(decoration.mesh);
     this.decorationsCache = null;
+    this.decorationBonusCache.clear();
 
     return decoration;
   }
@@ -244,6 +246,7 @@ export class BuildingSystem {
       decoration.dispose();
       this.decorations.delete(anchorKey);
       this.decorationsCache = null;
+      this.decorationBonusCache.clear();
       return true;
     }
 
@@ -355,6 +358,10 @@ export class BuildingSystem {
   }
 
   public getLocalDecorationBonus(position: GridPosition): number {
+    const key = GridHelper.getGridKey(position);
+    const cached = this.decorationBonusCache.get(key);
+    if (cached !== undefined) return cached;
+
     let total = 0;
     this.getDecorations().forEach(decoration => {
       const distance = GridHelper.getDistance(position, decoration.data.position);
@@ -362,6 +369,23 @@ export class BuildingSystem {
         total += Math.max(0, decoration.data.appealBonus - distance);
       }
     });
+    this.decorationBonusCache.set(key, total);
+    return total;
+  }
+
+  public getLocalHygieneBonus(position: GridPosition): number {
+    let total = 0;
+    this.getDecorations().forEach(decoration => {
+      const radius = decoration.data.hygieneRadius ?? 0;
+      const bonus = decoration.data.hygieneBonus ?? 0;
+      if (radius <= 0 || bonus <= 0) return;
+
+      const distance = Math.abs(decoration.data.position.x - position.x) + Math.abs(decoration.data.position.z - position.z);
+      if (distance <= radius) {
+        total += Math.max(0, bonus - distance * 3);
+      }
+    });
+
     return total;
   }
 
@@ -400,6 +424,7 @@ export class BuildingSystem {
     });
     this.decorations.clear();
     this.decorationsCache = null;
+    this.decorationBonusCache.clear();
 
     this.occupiedCells.clear();
     this.buildingIdCounter = 0;

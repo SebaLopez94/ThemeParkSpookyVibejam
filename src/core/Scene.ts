@@ -20,6 +20,7 @@ export class GameScene {
   private rainSpeeds: Float32Array | null = null;
   private rainDrift: Float32Array | null = null;
   private rainCenter = new THREE.Vector3();
+  private rainUpdateAccumulator = 0;
   private lightningLight: THREE.PointLight | null = null;
   private lightningGeometry: THREE.BufferGeometry | null = null;
   private lightningMaterial: THREE.LineBasicMaterial | null = null;
@@ -66,8 +67,8 @@ export class GameScene {
     this.directionalLight.shadow.camera.right = 100;
     this.directionalLight.shadow.camera.top = 100;
     this.directionalLight.shadow.camera.bottom = -100;
-    this.directionalLight.shadow.mapSize.width = 1024;
-    this.directionalLight.shadow.mapSize.height = 1024;
+    this.directionalLight.shadow.mapSize.width = mobile ? 512 : 768;
+    this.directionalLight.shadow.mapSize.height = mobile ? 512 : 768;
     this.directionalLight.shadow.bias = -0.00015;
     this.directionalLight.shadow.normalBias = 0.03;
     this.scene.add(this.directionalLight);
@@ -617,48 +618,55 @@ export class GameScene {
   }
 
   public updateWeather(deltaTime: number): void {
-    if (!this.rainGeometry || !this.rainPositions || !this.rainSpeeds || !this.rainDrift) return;
-
     const mobile = isMobile();
-    const areaRadius = mobile ? 54 : 72;
-    const topY = mobile ? 34 : 42;
-    const bottomY = 1.2;
-    const streakLength = mobile ? 0.9 : 1.35;
+    if (this.rainGeometry && this.rainPositions && this.rainSpeeds && this.rainDrift) {
+      const areaRadius = mobile ? 54 : 72;
+      const topY = mobile ? 34 : 42;
+      const bottomY = 1.2;
+      const streakLength = mobile ? 0.9 : 1.35;
+      const rainStep = mobile ? 1 / 24 : 1 / 36;
 
-    this.rainCenter.x = this.camera.position.x;
-    this.rainCenter.z = this.camera.position.z;
+      this.rainUpdateAccumulator += deltaTime;
+      if (this.rainUpdateAccumulator >= rainStep) {
+        const stepDelta = this.rainUpdateAccumulator;
+        this.rainUpdateAccumulator = 0;
 
-    for (let i = 0; i < this.rainSpeeds.length; i++) {
-      const baseIndex = i * 6;
-      let x = this.rainPositions[baseIndex];
-      let y = this.rainPositions[baseIndex + 1];
-      let z = this.rainPositions[baseIndex + 2];
+        this.rainCenter.x = this.camera.position.x;
+        this.rainCenter.z = this.camera.position.z;
 
-      y -= this.rainSpeeds[i] * deltaTime;
-      x += this.rainDrift[i] * deltaTime;
-      z += this.rainDrift[i] * 0.35 * deltaTime;
+        for (let i = 0; i < this.rainSpeeds.length; i++) {
+          const baseIndex = i * 6;
+          let x = this.rainPositions[baseIndex];
+          let y = this.rainPositions[baseIndex + 1];
+          let z = this.rainPositions[baseIndex + 2];
 
-      const outOfBounds =
-        y < bottomY ||
-        Math.abs(x - this.rainCenter.x) > areaRadius ||
-        Math.abs(z - this.rainCenter.z) > areaRadius;
+          y -= this.rainSpeeds[i] * stepDelta;
+          x += this.rainDrift[i] * stepDelta;
+          z += this.rainDrift[i] * 0.35 * stepDelta;
 
-      if (outOfBounds) {
-        x = this.rainCenter.x + (Math.random() - 0.5) * areaRadius * 2;
-        y = topY + Math.random() * 8;
-        z = this.rainCenter.z + (Math.random() - 0.5) * areaRadius * 2;
+          const outOfBounds =
+            y < bottomY ||
+            Math.abs(x - this.rainCenter.x) > areaRadius ||
+            Math.abs(z - this.rainCenter.z) > areaRadius;
+
+          if (outOfBounds) {
+            x = this.rainCenter.x + (Math.random() - 0.5) * areaRadius * 2;
+            y = topY + Math.random() * 8;
+            z = this.rainCenter.z + (Math.random() - 0.5) * areaRadius * 2;
+          }
+
+          this.rainPositions[baseIndex] = x;
+          this.rainPositions[baseIndex + 1] = y;
+          this.rainPositions[baseIndex + 2] = z;
+          this.rainPositions[baseIndex + 3] = x + 0.03;
+          this.rainPositions[baseIndex + 4] = y - streakLength;
+          this.rainPositions[baseIndex + 5] = z + 0.08;
+        }
+
+        const positionAttr = this.rainGeometry.getAttribute('position') as THREE.BufferAttribute;
+        positionAttr.needsUpdate = true;
       }
-
-      this.rainPositions[baseIndex] = x;
-      this.rainPositions[baseIndex + 1] = y;
-      this.rainPositions[baseIndex + 2] = z;
-      this.rainPositions[baseIndex + 3] = x + 0.03;
-      this.rainPositions[baseIndex + 4] = y - streakLength;
-      this.rainPositions[baseIndex + 5] = z + 0.08;
     }
-
-    const positionAttr = this.rainGeometry.getAttribute('position') as THREE.BufferAttribute;
-    positionAttr.needsUpdate = true;
 
     this.lightningTimer -= deltaTime;
     if (this.lightningTimer <= 0 && this.lightningFlashTimer <= 0) {

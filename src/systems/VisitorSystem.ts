@@ -21,6 +21,7 @@ interface SimulationEntities {
   services: Service[];
   decorations: Decoration[];
   getLocalDecorationBonus: (position: GridPosition) => number;
+  getLocalHygieneBonus: (position: GridPosition) => number;
   isOpen: boolean;
 }
 
@@ -34,6 +35,7 @@ interface TargetChoice {
 export class VisitorSystem {
   private visitors: Map<string, Visitor> = new Map();
   private visitorTargets: Map<string, VisitorTarget> = new Map();
+  private visitorDecisionCooldowns: Map<string, number> = new Map();
   private scene: THREE.Scene;
   private pathfinding: PathfindingSystem;
   private spawnTimer = 0;
@@ -44,6 +46,9 @@ export class VisitorSystem {
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
   private readonly maxVisitors = 200;
+  private densityMapCache: Map<string, number> = new Map();
+  private densityRefreshTimer = 0;
+  private readonly densityRefreshInterval = 0.25;
 
   public onVisitorSpawn: (() => void) | null = null;
   public onVisitorRestoreSpawn: (() => void) | null = null;
@@ -79,11 +84,20 @@ export class VisitorSystem {
       this.spawnInterval = 15 + Math.random() * 8;
     }
 
-    const densityMap = this.buildDensityMap();
+    this.densityRefreshTimer += deltaTime;
+    if (this.densityRefreshTimer >= this.densityRefreshInterval) {
+      this.densityRefreshTimer = 0;
+      this.densityMapCache = this.buildDensityMap();
+    }
+    const densityMap = this.densityMapCache;
     const toRemove: string[] = [];
+    const now = performance.now() / 1000;
 
     this.visitors.forEach((visitor, id) => {
-      visitor.update(deltaTime);
+      const visitorGridPos = GridHelper.worldToGrid(visitor.data.position);
+      const localHygieneSupport = entities.getLocalHygieneBonus(visitorGridPos);
+      const hygieneDecayMultiplier = THREE.MathUtils.clamp(1 - localHygieneSupport / 100, 0.35, 1);
+      visitor.update(deltaTime, hygieneDecayMultiplier);
       this.tryShowAmbientMood(visitor);
 
       if (visitor.data.needs.money <= 0) {
@@ -115,9 +129,14 @@ export class VisitorSystem {
           this.handleArrival(visitor, target, entities, densityMap);
           if (!visitor.data.currentActivity) {
             this.assignNewActivity(visitor, entities, densityMap);
+            this.visitorDecisionCooldowns.set(id, now + 0.45);
           }
         } else {
-          this.assignNewActivity(visitor, entities, densityMap);
+          const nextDecisionAt = this.visitorDecisionCooldowns.get(id) ?? 0;
+          if (now >= nextDecisionAt) {
+            this.assignNewActivity(visitor, entities, densityMap);
+            this.visitorDecisionCooldowns.set(id, now + 0.6 + Math.random() * 0.4);
+          }
         }
       }
     });
@@ -233,6 +252,7 @@ export class VisitorSystem {
     const id = `visitor_${this.visitorIdCounter++}`;
     const visitor = new Visitor(id, this.entrancePosition);
     this.visitors.set(id, visitor);
+    this.visitorDecisionCooldowns.set(id, 0);
     this.scene.add(visitor.mesh);
     if (isRestoreSpawn) {
       this.restoreSpawnRemaining = Math.max(0, this.restoreSpawnRemaining - 1);
@@ -574,6 +594,7 @@ export class VisitorSystem {
     visitor.dispose();
     this.visitors.delete(id);
     this.visitorTargets.delete(id);
+    this.visitorDecisionCooldowns.delete(id);
   }
 
   public getVisitorCount(): number {
@@ -596,9 +617,12 @@ export class VisitorSystem {
     });
     this.visitors.clear();
     this.visitorTargets.clear();
+    this.visitorDecisionCooldowns.clear();
     this.spawnTimer = 0;
     this.spawnInterval = 15 + Math.random() * 8;
     this.restoreSpawnRemaining = 0;
     this.restoreSpawnTimer = 0;
+    this.densityMapCache.clear();
+    this.densityRefreshTimer = 0;
   }
 }

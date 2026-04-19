@@ -1,4 +1,4 @@
-export interface GridPosition {
+﻿export interface GridPosition {
   x: number;
   z: number;
 }
@@ -22,14 +22,20 @@ export enum RideType {
   CAROUSEL = 'carousel',
   FERRIS_WHEEL = 'ferrisWheel',
   ROLLER_COASTER = 'rollerCoaster',
-  HAUNTED_HOUSE = 'hauntedHouse'
+  HAUNTED_HOUSE = 'hauntedHouse',
+  PIRATE_SHIP = 'pirateShip',
+  KRAKEN_RIDE = 'krakenRide',
+  INFERNAL_TOWER = 'infernalTower'
 }
 
 export const RIDE_SIZES: Record<RideType, { width: number; height: number }> = {
   [RideType.CAROUSEL]: { width: 2, height: 2 },
   [RideType.FERRIS_WHEEL]: { width: 3, height: 3 },
   [RideType.ROLLER_COASTER]: { width: 4, height: 4 },
-  [RideType.HAUNTED_HOUSE]: { width: 3, height: 3 }
+  [RideType.HAUNTED_HOUSE]: { width: 3, height: 3 },
+  [RideType.PIRATE_SHIP]: { width: 3, height: 3 },
+  [RideType.KRAKEN_RIDE]: { width: 3, height: 3 },
+  [RideType.INFERNAL_TOWER]: { width: 3, height: 3 }
 };
 
 export enum ShopType {
@@ -46,7 +52,11 @@ export enum DecorationType {
   SPOOKY_TREE = 'spookyTree',
   JACK_O_LANTERN = 'jackOLantern',
   STONE = 'stone',
-  PUMPKIN = 'pumpkin'
+  PUMPKIN = 'pumpkin',
+  SKELETON_DECORATION = 'skeletonDecoration',
+  FRANKENSTEIN_DECORATION = 'frankensteinDecoration',
+  LANTERN = 'lantern',
+  TRASH_CUBE = 'trashCube'
 }
 
 export type PlaceableBuildingKind = RideType | ShopType | ServiceType | DecorationType;
@@ -58,18 +68,25 @@ export interface BuildingDisplay {
 }
 
 export const BUILDING_DISPLAY: Record<PlaceableBuildingKind, BuildingDisplay> = {
-  [RideType.CAROUSEL]: { name: 'Cursed Carousel', icon: '🎠', description: 'Spins visitors into gleeful dread' },
-  [RideType.FERRIS_WHEEL]: { name: 'Eye of Doom', icon: '👁️', description: 'A towering view over the haunted grounds' },
-  [RideType.ROLLER_COASTER]: { name: 'Terror Coaster', icon: '🎢', description: 'High thrill route through the underworld' },
-  [RideType.HAUNTED_HOUSE]: { name: 'Haunted House', icon: '👻', description: 'A walk-through horror experience that leaves guests screaming' },
-  [ShopType.FOOD_STALL]: { name: 'Witch Cauldron', icon: '🍲', description: 'Warm stew that fights off hunger' },
-  [ShopType.DRINK_STAND]: { name: 'Poison Stand', icon: '🧪', description: 'Toxic-looking drinks for thirsty guests' },
-  [ShopType.GIFT_SHOP]: { name: 'Voodoo Shop', icon: '🔮', description: 'Souvenirs for guests who still have cash' },
-  [ServiceType.RESTROOM]: { name: 'Haunted WC', icon: '🚻', description: 'Essential hygiene relief for brave souls' },
-  [DecorationType.SPOOKY_TREE]: { name: 'Spooky Tree', icon: '🌲', description: 'Boosts appeal around nearby paths' },
-  [DecorationType.JACK_O_LANTERN]: { name: 'Jack-o-Lantern', icon: '🎃', description: 'Cheap ambience with a tiny local charm bonus' },
-  [DecorationType.STONE]: { name: 'Gravestone', icon: '🪦', description: 'A weathered gravestone that adds dark atmosphere' },
-  [DecorationType.PUMPKIN]: { name: 'Pumpkin', icon: '🎃', description: 'A carved pumpkin that glows with spooky charm' }
+  [RideType.CAROUSEL]: { name: 'Cursed Carousel', icon: 'ðŸŽ ', description: 'Spins visitors into gleeful dread' },
+  [RideType.FERRIS_WHEEL]: { name: 'Eye of Doom', icon: 'ðŸ‘ï¸', description: 'A towering view over the haunted grounds' },
+  [RideType.ROLLER_COASTER]: { name: 'Terror Coaster', icon: 'ðŸŽ¢', description: 'High thrill route through the underworld' },
+  [RideType.HAUNTED_HOUSE]: { name: 'Haunted House', icon: 'ðŸ‘»', description: 'A walk-through horror experience that leaves guests screaming' },
+  [RideType.PIRATE_SHIP]: { name: 'Pirate', icon: 'â›µ', description: 'A swinging deck ride that mixes thrills with spooky pirate chaos' },
+  [RideType.KRAKEN_RIDE]: { name: 'Kraken Ride', icon: 'ðŸ™', description: 'A massive sea-monster ride built for top-tier terror' },
+  [RideType.INFERNAL_TOWER]: { name: 'Infernal Tower', icon: 'ðŸ”¥', description: 'A fiery drop tower for guests chasing pure panic' },
+  [ShopType.FOOD_STALL]: { name: 'Witch Cauldron', icon: 'ðŸ²', description: 'Warm stew that fights off hunger' },
+  [ShopType.DRINK_STAND]: { name: 'Poison Stand', icon: 'ðŸ§ª', description: 'Toxic-looking drinks for thirsty guests' },
+  [ShopType.GIFT_SHOP]: { name: 'Voodoo Shop', icon: 'ðŸ”®', description: 'Souvenirs for guests who still have cash' },
+  [ServiceType.RESTROOM]: { name: 'Haunted WC', icon: 'ðŸš»', description: 'Essential hygiene relief for brave souls' },
+  [DecorationType.SPOOKY_TREE]: { name: 'Spooky Tree', icon: 'ðŸŒ²', description: 'Boosts appeal around nearby paths' },
+  [DecorationType.JACK_O_LANTERN]: { name: 'Jack-o-Lantern', icon: 'ðŸŽƒ', description: 'Cheap ambience with a tiny local charm bonus' },
+  [DecorationType.STONE]: { name: 'Gravestone', icon: 'ðŸª¦', description: 'A weathered gravestone that adds dark atmosphere' },
+  [DecorationType.PUMPKIN]: { name: 'Pumpkin', icon: 'ðŸŽƒ', description: 'A carved pumpkin that glows with spooky charm' },
+  [DecorationType.SKELETON_DECORATION]: { name: 'Skeleton', icon: 'ðŸ’€', description: 'A creepy skeleton prop that boosts spooky appeal' },
+  [DecorationType.FRANKENSTEIN_DECORATION]: { name: 'Frankenstein', icon: 'ðŸ§ ', description: 'A stitched-up horror prop that deepens the park mood' },
+  [DecorationType.LANTERN]: { name: 'Lantern', icon: 'ðŸ®', description: 'A warm lantern that lights up dark paths and props' },
+  [DecorationType.TRASH_CUBE]: { name: 'Trash Cube', icon: 'ðŸ—‘ï¸', description: 'A spooky bin that helps keep the nearby area cleaner' }
 };
 
 export interface SelectedBuildingInfo {
@@ -124,6 +141,8 @@ export interface DecorationData extends BuildingData {
   decorationType: DecorationType;
   appealRadius: number;
   appealBonus: number;
+  hygieneRadius?: number;
+  hygieneBonus?: number;
 }
 
 export interface PathData extends BuildingData {
@@ -180,7 +199,7 @@ export interface VisitorData {
   timeInPark: number;
 
   /**
-   * Randomised visit budget in seconds (180–300 s).
+   * Randomised visit budget in seconds (180â€“300 s).
    * After this, the visitor gradually raises their own leave threshold.
    */
   naturalLeaveDuration: number;
@@ -338,3 +357,5 @@ export interface SimulationSnapshot {
   serviceCount: number;
   decorationCount: number;
 }
+
+

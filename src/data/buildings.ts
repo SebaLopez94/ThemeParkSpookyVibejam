@@ -56,6 +56,30 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     valueScore: 10,
     unlockRequirement: 'research_haunted_house'
   },
+  [RideType.PIRATE_SHIP]: {
+    type: BuildingType.RIDE,
+    subType: RideType.PIRATE_SHIP,
+    ...BUILDING_DISPLAY[RideType.PIRATE_SHIP],
+    cost: 950,
+    quality: 72,
+    valueScore: 9
+  },
+  [RideType.KRAKEN_RIDE]: {
+    type: BuildingType.RIDE,
+    subType: RideType.KRAKEN_RIDE,
+    ...BUILDING_DISPLAY[RideType.KRAKEN_RIDE],
+    cost: 1350,
+    quality: 79,
+    valueScore: 11
+  },
+  [RideType.INFERNAL_TOWER]: {
+    type: BuildingType.RIDE,
+    subType: RideType.INFERNAL_TOWER,
+    ...BUILDING_DISPLAY[RideType.INFERNAL_TOWER],
+    cost: 1150,
+    quality: 76,
+    valueScore: 10
+  },
   [ShopType.FOOD_STALL]: {
     type: BuildingType.SHOP,
     subType: ShopType.FOOD_STALL,
@@ -112,17 +136,56 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     quality: 52,
     valueScore: 0,
     unlockRequirement: 'research_pumpkin_lights'
+  },
+  [DecorationType.SKELETON_DECORATION]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.SKELETON_DECORATION,
+    ...BUILDING_DISPLAY[DecorationType.SKELETON_DECORATION],
+    cost: 45,
+    quality: 54,
+    valueScore: 0
+  },
+  [DecorationType.FRANKENSTEIN_DECORATION]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.FRANKENSTEIN_DECORATION,
+    ...BUILDING_DISPLAY[DecorationType.FRANKENSTEIN_DECORATION],
+    cost: 55,
+    quality: 56,
+    valueScore: 0
+  },
+  [DecorationType.LANTERN]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.LANTERN,
+    ...BUILDING_DISPLAY[DecorationType.LANTERN],
+    cost: 35,
+    quality: 58,
+    valueScore: 0
+  },
+  [DecorationType.TRASH_CUBE]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.TRASH_CUBE,
+    ...BUILDING_DISPLAY[DecorationType.TRASH_CUBE],
+    cost: 40,
+    quality: 57,
+    valueScore: 0
   }
 };
 
 export const INITIAL_UNLOCKED_BUILDINGS: PlaceableBuildingKind[] = [
   RideType.CAROUSEL,
+  RideType.PIRATE_SHIP,
+  RideType.KRAKEN_RIDE,
+  RideType.INFERNAL_TOWER,
   ShopType.FOOD_STALL,
   ShopType.DRINK_STAND,
   ShopType.GIFT_SHOP,
   ServiceType.RESTROOM,
   DecorationType.SPOOKY_TREE,
-  DecorationType.STONE
+  DecorationType.STONE,
+  DecorationType.SKELETON_DECORATION,
+  DecorationType.FRANKENSTEIN_DECORATION,
+  DecorationType.LANTERN,
+  DecorationType.TRASH_CUBE
 ];
 
 export function getPathDefinition(): BuildingDefinition {

@@ -5,6 +5,7 @@ import { sharedGLTFLoader } from '../core/AssetLoader';
 import { isMobile } from '../utils/platform';
 
 const PERSONALITIES: VisitorPersonality[] = ['thrill_seeker', 'foodie', 'relaxer'];
+const VISITOR_MODEL_PATHS = ['/models/kid1.glb', '/models/kid2.glb', '/models/kid3.glb'] as const;
 
 function pickRandomPersonality(): VisitorPersonality {
   return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
@@ -120,7 +121,7 @@ export class Visitor {
   }
 
   private loadModel(): void {
-    const modelPath = Math.random() < 0.5 ? '/models/kid1.glb' : '/models/kid2.glb';
+    const modelPath = VISITOR_MODEL_PATHS[Math.floor(Math.random() * VISITOR_MODEL_PATHS.length)];
     sharedGLTFLoader.load(modelPath, (gltf) => {
       const model = gltf.scene;
       model.updateMatrixWorld(true);
@@ -128,30 +129,42 @@ export class Visitor {
       const height = box.getSize(new THREE.Vector3()).y;
       const scale = height > 0.01 ? 0.9 / height : 0.5;
 
-      const yNudge = modelPath.includes('kid2') ? 0.12 : 0.05;
+      const yNudge = modelPath.includes('kid2') ? 0.12 : modelPath.includes('kid3') ? 0.08 : 0.05;
+      const isKid3 = modelPath.includes('kid3');
       model.scale.setScalar(scale);
       model.position.y = -box.min.y * scale + yNudge;
 
       model.traverse(child => {
         if (child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh) {
-          child.castShadow = true;
-          child.frustumCulled = false;
+          child.castShadow = !isMobile();
           const mats = Array.isArray(child.material) ? child.material : [child.material];
           mats.forEach(mat => {
             if (!mat) return;
-            if (mat.alphaTest > 0 || mat.transparent) {
+            if (mat.alphaTest > 0) {
+              // Keep cutout materials in alpha-test mode so faces/hair cards
+              // don't sort like translucent glass and appear sliced.
+              mat.transparent = false;
+              mat.depthWrite = true;
+            } else if (mat.transparent) {
               mat.transparent = true;
               mat.depthWrite = false;
-              mat.alphaTest = 0;
             }
-            mat.polygonOffset = true;
-            mat.polygonOffsetFactor = -1;
-            mat.polygonOffsetUnits = -1;
+            // kid3 appears to use facial cards/material layering that breaks
+            // when polygon offset is forced globally, so keep its original depth
+            // behavior while preserving the offset workaround for the other kids.
+            if (isKid3) {
+              mat.polygonOffset = false;
+              mat.polygonOffsetFactor = 0;
+              mat.polygonOffsetUnits = 0;
+            } else {
+              mat.polygonOffset = true;
+              mat.polygonOffsetFactor = -1;
+              mat.polygonOffsetUnits = -1;
+            }
           });
         }
       });
 
-      this.mesh.frustumCulled = false;
       this.mesh.add(model);
 
       // Show brief excitement burst on spawn
@@ -189,7 +202,7 @@ export class Visitor {
     }
   }
 
-  public update(deltaTime: number): void {
+  public update(deltaTime: number, hygieneDecayMultiplier: number = 1): void {
     this.mixer?.update(deltaTime);
 
     // Entry animation: shrink + rise as visitor "boards" the ride
@@ -221,7 +234,7 @@ export class Visitor {
           this.mesh.visible = true;
         }
       }
-      this.updateNeeds(deltaTime);
+      this.updateNeeds(deltaTime, hygieneDecayMultiplier);
       this.updateMoodSprite();
       return;
     }
@@ -255,7 +268,7 @@ export class Visitor {
       this.setMoving(false);
     }
 
-    this.updateNeeds(deltaTime);
+    this.updateNeeds(deltaTime, hygieneDecayMultiplier);
     this.updateMoodSprite();
   }
 
@@ -289,7 +302,7 @@ export class Visitor {
     this.mesh.rotation.y = Math.atan2(dx, dz);
   }
 
-  private updateNeeds(deltaTime: number): void {
+  private updateNeeds(deltaTime: number, hygieneDecayMultiplier: number = 1): void {
     const p = this.data.personality;
     // Personality modifies individual decay rates
     const funMult    = p === 'thrill_seeker' ? 1.25 : p === 'relaxer' ? 0.80 : 1.0;
@@ -299,7 +312,8 @@ export class Visitor {
     this.data.needs.fun     = Math.max(0, this.data.needs.fun     - deltaTime * 0.45 * funMult);
     this.data.needs.hunger  = Math.max(0, this.data.needs.hunger  - deltaTime * 0.50 * hungerMult);
     this.data.needs.thirst  = Math.max(0, this.data.needs.thirst  - deltaTime * 0.60 * thirstMult);
-    this.data.needs.hygiene = Math.max(0, this.data.needs.hygiene - deltaTime * 0.30);
+    const clampedHygieneDecay = THREE.MathUtils.clamp(hygieneDecayMultiplier, 0.2, 1.1);
+    this.data.needs.hygiene = Math.max(0, this.data.needs.hygiene - deltaTime * 0.30 * clampedHygieneDecay);
     this.data.needs.happiness = this.calculateHappiness();
 
     this.data.timeInPark += deltaTime;

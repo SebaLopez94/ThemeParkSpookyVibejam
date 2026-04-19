@@ -110,10 +110,27 @@ export class Game {
     [RideType.FERRIS_WHEEL]:     '/models/noria.glb',
     [RideType.ROLLER_COASTER]:   '/models/rusa.glb',
     [RideType.HAUNTED_HOUSE]:    '/models/house.glb',
+    [RideType.PIRATE_SHIP]:      '/models/pirate_ship.glb',
+    [RideType.KRAKEN_RIDE]:      '/models/kraken.glb',
+    [RideType.INFERNAL_TOWER]:   '/models/infernal_tower.glb',
     [ShopType.FOOD_STALL]:       '/models/food.glb',
     [ShopType.DRINK_STAND]:      '/models/drinks.glb',
     [ShopType.GIFT_SHOP]:        '/models/gift.glb',
     [ServiceType.RESTROOM]:      '/models/wc.glb',
+    [DecorationType.SKELETON_DECORATION]: '/models/skeleton_decoration.glb',
+    [DecorationType.FRANKENSTEIN_DECORATION]: '/models/frankenstein_decoration.glb',
+    [DecorationType.LANTERN]: '/models/lantern.glb',
+    [DecorationType.TRASH_CUBE]: '/models/trash_cube.glb',
+  };
+
+  private static readonly PREVIEW_TARGET_SIZES: Partial<Record<string, number>> = {
+    [DecorationType.SPOOKY_TREE]: GRID_SIZE * 1.35,
+    [DecorationType.STONE]: GRID_SIZE * 0.9,
+    [DecorationType.PUMPKIN]: GRID_SIZE * 0.7,
+    [DecorationType.SKELETON_DECORATION]: GRID_SIZE * 0.95,
+    [DecorationType.FRANKENSTEIN_DECORATION]: GRID_SIZE * 1.0,
+    [DecorationType.LANTERN]: GRID_SIZE * 1.0,
+    [DecorationType.TRASH_CUBE]: GRID_SIZE * 0.82,
   };
 
   private hoveredGridPosition: GridPosition | null = null;
@@ -703,8 +720,9 @@ export class Game {
       // Scale to fit footprint
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.z);
-      const targetSize = Math.max(footprintW, footprintH) * GRID_SIZE * 0.88;
+      const previewTargetSize = subType ? Game.PREVIEW_TARGET_SIZES[subType] : undefined;
+      const maxDim = previewTargetSize ? Math.max(size.x, size.y, size.z) : Math.max(size.x, size.z);
+      const targetSize = previewTargetSize ?? Math.max(footprintW, footprintH) * GRID_SIZE * 0.88;
       const scale = maxDim > 0.01 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -1235,6 +1253,7 @@ export class Game {
       services: this.buildingSystem.getServices(),
       decorations: this.buildingSystem.getDecorations(),
       getLocalDecorationBonus: position => this.buildingSystem.getLocalDecorationBonus(position),
+      getLocalHygieneBonus: position => this.buildingSystem.getLocalHygieneBonus(position),
       isOpen: this.economySystem.getState().isOpen
     });
 

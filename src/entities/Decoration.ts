@@ -19,6 +19,14 @@ const APPEAL: Record<DecorationType, [number, number]> = {
   [DecorationType.JACK_O_LANTERN]:[3, 7],
   [DecorationType.STONE]:         [3, 4],
   [DecorationType.PUMPKIN]:       [3, 6],
+  [DecorationType.SKELETON_DECORATION]: [3, 5],
+  [DecorationType.FRANKENSTEIN_DECORATION]: [3, 6],
+  [DecorationType.LANTERN]: [3, 5],
+  [DecorationType.TRASH_CUBE]: [2, 2],
+};
+
+const HYGIENE_SUPPORT: Partial<Record<DecorationType, [number, number]>> = {
+  [DecorationType.TRASH_CUBE]: [4, 16],
 };
 
 export class Decoration {
@@ -28,6 +36,7 @@ export class Decoration {
   constructor(position: GridPosition, decorationType: DecorationType, id: string) {
     const config = getBuildingCatalogItem(decorationType);
     const [appealRadius, appealBonus] = APPEAL[decorationType];
+    const hygieneSupport = HYGIENE_SUPPORT[decorationType];
 
     this.data = {
       id,
@@ -39,6 +48,8 @@ export class Decoration {
       valueScore: config.valueScore,
       appealRadius,
       appealBonus,
+      hygieneRadius: hygieneSupport?.[0],
+      hygieneBonus: hygieneSupport?.[1],
       unlockRequirement: config.unlockRequirement
     };
 
@@ -49,7 +60,17 @@ export class Decoration {
     this.mesh.position.set(worldPos.x, 0, worldPos.z);
   }
 
-  private loadGlb(path: string, targetSize: number): void {
+  private loadGlb(
+    path: string,
+    targetSize: number,
+    options?: {
+      colorLift?: number;
+      emissiveColor?: number;
+      emissiveIntensity?: number;
+      roughness?: number;
+      metalness?: number;
+    }
+  ): void {
     sharedGLTFLoader.load(path, (gltf) => {
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
@@ -68,11 +89,48 @@ export class Decoration {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
           child.receiveShadow = true;
+
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach(material => {
+            if (!(material instanceof THREE.MeshStandardMaterial) && !(material instanceof THREE.MeshPhysicalMaterial)) return;
+
+            if (options?.colorLift) {
+              material.color.multiplyScalar(options.colorLift);
+            }
+            if (options?.emissiveColor !== undefined) {
+              material.emissive.setHex(options.emissiveColor);
+            }
+            if (options?.emissiveIntensity !== undefined) {
+              material.emissiveIntensity = options.emissiveIntensity;
+            }
+            if (options?.roughness !== undefined) {
+              material.roughness = options.roughness;
+            }
+            if (options?.metalness !== undefined) {
+              material.metalness = options.metalness;
+            }
+            material.needsUpdate = true;
+          });
         }
       });
 
       this.mesh.add(model);
     });
+  }
+
+  private createLantern(): void {
+    this.loadGlb('/models/lantern.glb', GRID_SIZE * 1.0, {
+      colorLift: 1.18,
+      emissiveColor: 0xffd38a,
+      emissiveIntensity: 0.42,
+      roughness: 0.6,
+      metalness: 0.04,
+    });
+
+    const glow = new THREE.PointLight(0xffd38a, 6.8, GRID_SIZE * 6.6, 1.6);
+    glow.position.set(0.42, 1.40, 0.50);
+    glow.castShadow = false;
+    this.mesh.add(glow);
   }
 
   private createMesh(type: DecorationType): void {
@@ -88,6 +146,22 @@ export class Decoration {
 
       case DecorationType.PUMPKIN:
         this.loadGlb('/models/pumpkin.glb', GRID_SIZE * 0.7);
+        break;
+
+      case DecorationType.SKELETON_DECORATION:
+        this.loadGlb('/models/skeleton_decoration.glb', GRID_SIZE * 0.95);
+        break;
+
+      case DecorationType.FRANKENSTEIN_DECORATION:
+        this.loadGlb('/models/frankenstein_decoration.glb', GRID_SIZE * 1.0);
+        break;
+
+      case DecorationType.LANTERN:
+        this.createLantern();
+        break;
+
+      case DecorationType.TRASH_CUBE:
+        this.loadGlb('/models/trash_cube.glb', GRID_SIZE * 0.82);
         break;
 
       case DecorationType.JACK_O_LANTERN: {
