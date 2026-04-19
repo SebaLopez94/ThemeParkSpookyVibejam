@@ -3,14 +3,29 @@ import { useEffect, useRef, useState } from 'react';
 interface LoadingScreenProps {
   onDone: () => void;
   mode?: 'boot' | 'transition';
+  progress?: number | null;
 }
 
-export function LoadingScreen({ onDone, mode = 'boot' }: LoadingScreenProps) {
-  const [progress, setProgress] = useState(0);
+export function LoadingScreen({ onDone, mode = 'boot', progress: externalProgress = null }: LoadingScreenProps) {
+  const [progress, setProgress] = useState(externalProgress ?? 0);
   const [done, setDone] = useState(false);
   const timeoutsRef = useRef<number[]>([]);
 
   useEffect(() => {
+    if (externalProgress === null) return;
+    const clamped = Math.max(0, Math.min(100, externalProgress));
+    setProgress(prev => (clamped > prev ? clamped : prev));
+    if (clamped >= 100) {
+      setDone(true);
+      const id = window.setTimeout(onDone, 420);
+      return () => window.clearTimeout(id);
+    }
+    return;
+  }, [externalProgress, onDone]);
+
+  useEffect(() => {
+    if (externalProgress !== null) return;
+
     let raf = 0;
     let target = 0;
 
@@ -60,7 +75,7 @@ export function LoadingScreen({ onDone, mode = 'boot' }: LoadingScreenProps) {
       timeoutsRef.current = [];
       window.removeEventListener('load', finish);
     };
-  }, [mode, onDone]);
+  }, [externalProgress, mode, onDone]);
 
   return (
     <div

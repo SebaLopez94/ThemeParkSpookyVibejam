@@ -12,6 +12,7 @@ import { ParkPanel } from './ui/ParkPanel';
 import { ResearchPanel } from './ui/ResearchPanel';
 import { BuildingIcon } from './ui/BuildingIcon';
 import { LoadingScreen } from './ui/LoadingScreen';
+import { MainMenu } from './ui/MainMenu';
 import { ToastItem, ToastStack } from './ui/ToastStack';
 import {
   BuildingType,
@@ -66,6 +67,10 @@ function App() {
   const [celebration, setCelebration] = useState<{ title: string; sub: string; reward: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isLoadingSave, setIsLoadingSave] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [gameCanvasReady, setGameCanvasReady] = useState(false);
+  const [gameLoadProgress, setGameLoadProgress] = useState(0);
+  const [pendingSaveData, setPendingSaveData] = useState<unknown | null>(null);
 
   const pushToast = (tone: ToastItem['tone'], message: string) => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -76,13 +81,16 @@ function App() {
   };
 
   useEffect(() => {
+    if (!gameStarted) return;
     if (!containerRef.current) return;
+    setGameCanvasReady(false);
 
     const game = new Game(containerRef.current);
     gameRef.current = game;
 
     const { events } = game;
     events.on('economyUpdate', state => setEconomy(state));
+    events.on('assetsProgress', progress => setGameLoadProgress(Math.round(progress * 100)));
     events.on('buildingSelected', info => {
       setSelectedBuilding(info);
       if (info !== null) setShowBuildMenu(false);
@@ -119,10 +127,27 @@ function App() {
     setResearchNodes(game.getResearchNodes());
 
     game.start();
+
+    // If a save file was provided from the main menu, restore it now.
+    if (pendingSaveData !== null) {
+      try {
+        game.importSaveData(pendingSaveData);
+        const restored = game.exportSaveData();
+        if (restored) setLocalTicketPrice(restored.economy.ticketPrice);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not load save file.';
+        pushToast('warning', message);
+      } finally {
+        setPendingSaveData(null);
+      }
+    }
+
     return () => {
+      gameRef.current = null;
       game.dispose();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameStarted]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -282,6 +307,26 @@ function App() {
 
   const controlsRight = 16;
 
+  if (!gameStarted) {
+    return (
+      <MainMenu
+        onNewGame={() => {
+          setPendingSaveData(null);
+          setGameCanvasReady(false);
+          setGameLoadProgress(0);
+          setGameStarted(true);
+        }}
+        onLoadGame={saveData => {
+          setPendingSaveData(saveData);
+          setGameCanvasReady(false);
+          setGameLoadProgress(0);
+          setGameStarted(true);
+        }}
+        onError={msg => pushToast('warning', msg)}
+      />
+    );
+  }
+
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       <div ref={containerRef} className="w-full h-full" />
@@ -292,6 +337,13 @@ function App() {
         style={{ display: 'none' }}
         onChange={handleLoadFile}
       />
+      {!gameCanvasReady && (
+        <LoadingScreen
+          mode="boot"
+          progress={gameLoadProgress}
+          onDone={() => setGameCanvasReady(true)}
+        />
+      )}
       {isLoadingSave && <LoadingScreen mode="transition" onDone={() => setIsLoadingSave(false)} />}
       <ToastStack items={toasts} />
 

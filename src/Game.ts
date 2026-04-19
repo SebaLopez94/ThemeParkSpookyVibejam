@@ -12,7 +12,7 @@ import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { EventBus } from './utils/EventBus';
-import { sharedGLTFLoader } from './core/AssetLoader';
+import { sharedGLTFLoader, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
 import {
   BUILDING_DISPLAY,
   BuildingDefinition,
@@ -53,6 +53,9 @@ export interface GameEvents {
   researchUpdate: ResearchState;
   challengesUpdate: ChallengeState[];
   challengeCompleted: ChallengeState;
+  assetsProgress: number;
+  /** Fires once when all queued startup assets complete. */
+  assetsLoaded: void;
 }
 
 export class Game {
@@ -133,6 +136,9 @@ export class Game {
 
   public readonly events = new EventBus<GameEvents>();
 
+  /** True once the first assetsLoaded has fired, to suppress repeated fires. */
+  private assetsReadyFired = false;
+
   private resizeHandler = (): void => {
     this.scene.onWindowResize();
     this.renderer.onWindowResize();
@@ -184,6 +190,23 @@ export class Game {
     this.economySystem.subscribe(state => this.events.emit('economyUpdate', state));
     this.researchSystem.subscribe(state => this.events.emit('researchUpdate', state));
     this.challengeSystem.subscribe(state => this.events.emit('challengesUpdate', state));
+
+    gameLoadingManager.onStart = () => {
+      this.events.emit('assetsProgress', 0);
+    };
+    gameLoadingManager.onProgress = (_url, itemsLoaded, itemsTotal) => {
+      const progress = itemsTotal > 0 ? Math.min(1, itemsLoaded / itemsTotal) : 0;
+      this.events.emit('assetsProgress', progress);
+    };
+
+    // Fire assetsLoaded once when all queued startup assets drain.
+    // Subsequent fires (e.g. late visitor loads) are suppressed via the flag.
+    gameLoadingManager.onLoad = () => {
+      if (this.assetsReadyFired) return;
+      this.assetsReadyFired = true;
+      this.events.emit('assetsProgress', 1);
+      this.events.emit('assetsLoaded', undefined as void);
+    };
   }
 
   private initializeEntrance(): void {
@@ -196,12 +219,11 @@ export class Game {
   }
 
   private loadAudio(): void {
-    const loader = new THREE.AudioLoader();
     const filePaths = ['/audio/main_song.mp3', '/audio/night.mp3', '/audio/rain.mp3'];
 
     filePaths.forEach((path, i) => {
       const track = this.loopTracks[i];
-      loader.load(path, buffer => {
+      sharedAudioLoader.load(path, buffer => {
         track.audio.setBuffer(buffer);
         track.audio.setLoop(true);
         track.audio.setVolume(this.isMuted ? 0 : track.baseVolume);
@@ -212,7 +234,7 @@ export class Game {
     });
 
     const loadOneShot = (path: string, track: { audio: THREE.Audio; baseVolume: number }) => {
-      loader.load(path, buffer => {
+      sharedAudioLoader.load(path, buffer => {
         track.audio.setBuffer(buffer);
         track.audio.setLoop(false);
         track.audio.setVolume(this.isMuted ? 0 : track.baseVolume);
@@ -1314,6 +1336,9 @@ export class Game {
 
   public dispose(): void {
     this.gameLoop.stop();
+    gameLoadingManager.onStart = () => {};
+    gameLoadingManager.onProgress = () => {};
+    gameLoadingManager.onLoad = () => {};
     window.removeEventListener('resize', this.resizeHandler);
     window.removeEventListener('keydown', this.keyHandler);
     this.teardownAudioResume();

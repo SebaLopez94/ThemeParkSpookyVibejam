@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GRID_WIDTH, GRID_HEIGHT, GRID_SIZE } from '../utils/GridHelper';
-import { sharedGLTFLoader } from './AssetLoader';
+import { sharedGLTFLoader, sharedTextureLoader } from './AssetLoader';
 import { isMobile } from '../utils/platform';
 
 export class GameScene {
@@ -9,7 +9,6 @@ export class GameScene {
   public ambientLight: THREE.AmbientLight;
   public directionalLight: THREE.DirectionalLight;
   public hemisphereLight: THREE.HemisphereLight;
-  private textureLoader = new THREE.TextureLoader();
   private surroundingClones: THREE.Object3D[] = [];
   private readonly baseAmbientIntensity: number;
   private readonly baseHemisphereIntensity: number;
@@ -261,7 +260,7 @@ export class GameScene {
     const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 
     // Two mountain materials — far peaks slightly lighter so they read against the sky
-    const montainTex = this.textureLoader.load('/models/montain.png');
+    const montainTex = sharedTextureLoader.load('/models/montain.png');
     montainTex.wrapS = THREE.RepeatWrapping;
     montainTex.wrapT = THREE.RepeatWrapping;
     montainTex.repeat.set(2, 2);
@@ -313,7 +312,7 @@ export class GameScene {
     // Park interior terrain — sits above forest floor but below paths (y=0.05)
     const parkSize = GRID_WIDTH * GRID_SIZE;
     const parkGeo  = new THREE.PlaneGeometry(parkSize, parkSize, 1, 1);
-    const terrainTexture = this.textureLoader.load('/models/terrain.png');
+    const terrainTexture = sharedTextureLoader.load('/models/terrain.png');
     terrainTexture.wrapS = THREE.RepeatWrapping;
     terrainTexture.wrapT = THREE.RepeatWrapping;
     const parkMat = new THREE.ShaderMaterial({
@@ -417,7 +416,7 @@ export class GameScene {
     // Forest floor — covers everything outside the park
     const size = 600;
     const geo  = new THREE.PlaneGeometry(size, size);
-    const outsideTex = this.textureLoader.load('/models/terrain-outside.png');
+    const outsideTex = sharedTextureLoader.load('/models/terrain-outside.png');
     outsideTex.wrapS = THREE.RepeatWrapping;
     outsideTex.wrapT = THREE.RepeatWrapping;
     outsideTex.repeat.set(30, 30);
@@ -547,7 +546,7 @@ export class GameScene {
 
   private createLightning(): void {
     const mobile = isMobile();
-    this.lightningTimer = 8 + Math.random() * 12;
+    this.lightningTimer = 6 + Math.random() * 9;
 
     const light = new THREE.PointLight(0xdde9ff, mobile ? 0 : 0, 220);
     light.position.set(0, 28, 0);
@@ -607,7 +606,7 @@ export class GameScene {
     this.lightningLight.position.set(startX, topY - 4, startZ);
     this.lightningLight.intensity = mobile ? 1.8 : 2.6;
     this.lightningFlashTimer = 0.18 + Math.random() * 0.12;
-    this.lightningTimer = 14 + Math.random() * 22;
+    this.lightningTimer = 10 + Math.random() * 16;
     this.lightningTriggered = true;
   }
 
