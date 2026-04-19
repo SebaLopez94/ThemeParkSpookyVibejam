@@ -25,27 +25,58 @@ const sharedPathMaterial = new THREE.MeshStandardMaterial({
 // the left edge of tile B share the exact same UV value, producing seamless
 // texture continuity across any path layout.
 //
-// PlaneGeometry(2,2) after rotateX(-PI/2) places 4 vertices at:
-//   Vtx 0 (TL): (-1, 0, -1)   Vtx 1 (TR): (+1, 0, -1)
-//   Vtx 2 (BL): (-1, 0, +1)   Vtx 3 (BR): (+1, 0, +1)
-//
-// World position = group.position.xz + local vertex xz.
+// We only inset corners that are truly exposed on the outside of the path
+// network. Connected edges remain perfectly square so adjacent tiles keep
+// their continuity.
 // --------------------------------------------------------------------------
-function buildWorldUVPlane(worldCenterX: number, worldCenterZ: number): THREE.BufferGeometry {
-  const geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE);
+function buildWorldUVPlane(
+  worldCenterX: number,
+  worldCenterZ: number,
+  exposedCorners?: {
+    topLeft: boolean;
+    topRight: boolean;
+    bottomLeft: boolean;
+    bottomRight: boolean;
+  }
+): THREE.BufferGeometry {
+  const geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE, 3, 3);
+  const posAttr = geo.attributes.position as THREE.BufferAttribute;
   const uvAttr = geo.attributes.uv as THREE.BufferAttribute;
 
   const h  = GRID_SIZE / 2;
-  const uL = (worldCenterX - h) / GRID_SIZE; // left  edge
-  const uR = (worldCenterX + h) / GRID_SIZE; // right edge
-  const vN = (worldCenterZ - h) / GRID_SIZE; // north edge (-Z)
-  const vS = (worldCenterZ + h) / GRID_SIZE; // south edge (+Z)
+  const cornerInset = GRID_SIZE * 0.1;
 
-  uvAttr.setXY(0, uL, vN); // TL
-  uvAttr.setXY(1, uR, vN); // TR
-  uvAttr.setXY(2, uL, vS); // BL
-  uvAttr.setXY(3, uR, vS); // BR
+  for (let i = 0; i < posAttr.count; i++) {
+    let x = posAttr.getX(i);
+    let y = posAttr.getY(i);
+
+    const isCornerX = Math.abs(Math.abs(x) - h) < 0.001;
+    const isCornerY = Math.abs(Math.abs(y) - h) < 0.001;
+
+    if (isCornerX && isCornerY) {
+      const top = y > 0;
+      const left = x < 0;
+      const shouldInset =
+        (top && left && exposedCorners?.topLeft) ||
+        (top && !left && exposedCorners?.topRight) ||
+        (!top && left && exposedCorners?.bottomLeft) ||
+        (!top && !left && exposedCorners?.bottomRight);
+
+      if (shouldInset) {
+        x -= Math.sign(x) * cornerInset;
+        y -= Math.sign(y) * cornerInset;
+        posAttr.setXY(i, x, y);
+      }
+    }
+
+    const worldX = worldCenterX + x;
+    const worldZ = worldCenterZ + y;
+    uvAttr.setXY(i, worldX / GRID_SIZE, worldZ / GRID_SIZE);
+  }
+
+  posAttr.needsUpdate = true;
   uvAttr.needsUpdate = true;
+  geo.computeVertexNormals();
 
   return geo;
 }
@@ -56,6 +87,7 @@ function buildWorldUVPlane(worldCenterX: number, worldCenterZ: number): THREE.Bu
 export class Path {
   public mesh: THREE.Group;
   public data: PathData;
+  private planeMesh: THREE.Mesh;
 
   constructor(position: GridPosition, id: string) {
     this.data = {
@@ -72,12 +104,12 @@ export class Path {
 
     // Full-size plane (100 % of GRID_SIZE) — no gap, no connector meshes needed.
     const geo = buildWorldUVPlane(worldPos.x, worldPos.z);
-    const planeMesh = new THREE.Mesh(geo, sharedPathMaterial);
-    planeMesh.rotation.x = -Math.PI / 2;
-    planeMesh.receiveShadow = true;
+    this.planeMesh = new THREE.Mesh(geo, sharedPathMaterial);
+    this.planeMesh.rotation.x = -Math.PI / 2;
+    this.planeMesh.receiveShadow = true;
 
     this.mesh = new THREE.Group();
-    this.mesh.add(planeMesh);
+    this.mesh.add(this.planeMesh);
     // Raise slightly so path sits above the base ground plane.
     this.mesh.position.set(worldPos.x, 0.09, worldPos.z);
   }
@@ -85,11 +117,30 @@ export class Path {
   /** Connections tracked for pathfinding data; no visual connectors needed. */
   public updateConnections(connections: GridPosition[]): void {
     this.data.connections = connections;
+    this.rebuildGeometry();
+  }
+
+  private rebuildGeometry(): void {
+    const worldPos = GridHelper.gridToWorld(this.data.position);
+    const { x, z } = this.data.position;
+    const hasNorth = this.data.connections.some(c => c.x === x && c.z === z - 1);
+    const hasSouth = this.data.connections.some(c => c.x === x && c.z === z + 1);
+    const hasWest = this.data.connections.some(c => c.x === x - 1 && c.z === z);
+    const hasEast = this.data.connections.some(c => c.x === x + 1 && c.z === z);
+
+    const nextGeometry = buildWorldUVPlane(worldPos.x, worldPos.z, {
+      topLeft: !hasNorth && !hasWest,
+      topRight: !hasNorth && !hasEast,
+      bottomLeft: !hasSouth && !hasWest,
+      bottomRight: !hasSouth && !hasEast,
+    });
+
+    this.planeMesh.geometry.dispose();
+    this.planeMesh.geometry = nextGeometry;
   }
 
   public dispose(): void {
-    const mesh = this.mesh.children[0] as THREE.Mesh | undefined;
-    if (mesh) mesh.geometry.dispose();
+    this.planeMesh.geometry.dispose();
     // sharedPathMaterial is a module singleton — never dispose it here.
   }
 }
