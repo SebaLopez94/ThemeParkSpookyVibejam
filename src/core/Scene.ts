@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GRID_WIDTH, GRID_HEIGHT, GRID_SIZE } from '../utils/GridHelper';
 import { sharedGLTFLoader, sharedTextureLoader } from './AssetLoader';
 import { isMobile } from '../utils/platform';
+import { RetroOverlay } from './RetroOverlay';
 
 export class GameScene {
   public scene: THREE.Scene;
@@ -10,6 +11,7 @@ export class GameScene {
   public directionalLight: THREE.DirectionalLight;
   public hemisphereLight: THREE.HemisphereLight;
   private fillLight: THREE.DirectionalLight;
+  private retroOverlay: RetroOverlay;
   private surroundingClones: THREE.Object3D[] = [];
   private readonly baseAmbientIntensity: number;
   private readonly baseHemisphereIntensity: number;
@@ -94,6 +96,8 @@ export class GameScene {
     this.createMoon();
     this.createRain();
     this.createLightning();
+
+    this.retroOverlay = new RetroOverlay(this.scene);
   }
 
   private createEntranceGate(): void {
@@ -135,6 +139,17 @@ export class GameScene {
       });
 
       this.scene.add(model);
+
+      // Warm torch glow — one light per pillar of the entrance arch
+      const leftLight  = new THREE.PointLight(0xff7020, 6.0, 28);
+      leftLight.position.set(-3.5, 5.0, 27);
+      leftLight.castShadow = false;
+      this.scene.add(leftLight);
+
+      const rightLight = new THREE.PointLight(0xff7020, 6.0, 28);
+      rightLight.position.set(3.5, 5.0, 27);
+      rightLight.castShadow = false;
+      this.scene.add(rightLight);
     });
   }
 
@@ -473,11 +488,11 @@ export class GameScene {
     const gridHelper = new THREE.GridHelper(
       GRID_WIDTH * GRID_SIZE,
       GRID_WIDTH,
-      0x9060cc,  // center lines — visible purple
-      0x5a3090   // cell lines — medium purple
+      0x4c3852,  // center lines — barely visible violet-gray
+      0x322836   // cell lines — subtle shadow tint
     );
     gridHelper.position.y = 0.03;
-    (gridHelper.material as THREE.Material).opacity = 0.55;
+    (gridHelper.material as THREE.Material).opacity = 0.12;
     (gridHelper.material as THREE.Material).transparent = true;
     this.scene.add(gridHelper);
   }
@@ -719,6 +734,10 @@ export class GameScene {
     }
   }
 
+  public updateRetroOverlay(deltaTime: number): void {
+    this.retroOverlay.update(deltaTime);
+  }
+
   public updateShadowFrustum(targetX: number, targetZ: number): void {
     this.directionalLight.target.position.set(targetX, 0, targetZ);
     this.directionalLight.target.updateMatrixWorld();
@@ -728,9 +747,11 @@ export class GameScene {
   public onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+    this.retroOverlay.onWindowResize();
   }
 
   public dispose(): void {
+    this.retroOverlay.dispose();
     if (this.rainLines) this.scene.remove(this.rainLines);
     if (this.lightningBolt) this.scene.remove(this.lightningBolt);
     if (this.lightningLight) this.scene.remove(this.lightningLight);

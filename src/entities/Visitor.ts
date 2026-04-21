@@ -124,8 +124,8 @@ export class Visitor {
 
   private createFallbackModel(): void {
     const group = new THREE.Group();
-    const bodyColor = new THREE.Color().setHSL(Math.random(), 0.58, 0.58);
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf3c29a, roughness: 0.75 });
+    const bodyColor = new THREE.Color().setHSL(Math.random(), 0.45, 0.25);
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0x6b5242, roughness: 0.75 });
     const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.82 });
 
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.36, 4, 8), bodyMat);
@@ -181,6 +181,10 @@ export class Visitor {
           const mats = Array.isArray(child.material) ? child.material : [child.material];
           mats.forEach(mat => {
             if (!mat) return;
+            if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
+              mat.color.multiplyScalar(0.38);
+              mat.needsUpdate = true;
+            }
             if (mat.alphaTest > 0) {
               // Keep cutout materials in alpha-test mode so faces/hair cards
               // don't sort like translucent glass and appear sliced.

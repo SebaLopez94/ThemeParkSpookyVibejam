@@ -112,6 +112,22 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     quality: 52,
     valueScore: 4
   },
+  [DecorationType.LANTERN]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.LANTERN,
+    ...BUILDING_DISPLAY[DecorationType.LANTERN],
+    cost: 35,
+    quality: 58,
+    valueScore: 0
+  },
+  [DecorationType.TRASH_CUBE]: {
+    type: BuildingType.DECORATION,
+    subType: DecorationType.TRASH_CUBE,
+    ...BUILDING_DISPLAY[DecorationType.TRASH_CUBE],
+    cost: 40,
+    quality: 57,
+    valueScore: 0
+  },
   [DecorationType.SPOOKY_TREE]: {
     type: BuildingType.DECORATION,
     subType: DecorationType.SPOOKY_TREE,
@@ -151,22 +167,6 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[DecorationType.FRANKENSTEIN_DECORATION],
     cost: 55,
     quality: 56,
-    valueScore: 0
-  },
-  [DecorationType.LANTERN]: {
-    type: BuildingType.DECORATION,
-    subType: DecorationType.LANTERN,
-    ...BUILDING_DISPLAY[DecorationType.LANTERN],
-    cost: 35,
-    quality: 58,
-    valueScore: 0
-  },
-  [DecorationType.TRASH_CUBE]: {
-    type: BuildingType.DECORATION,
-    subType: DecorationType.TRASH_CUBE,
-    ...BUILDING_DISPLAY[DecorationType.TRASH_CUBE],
-    cost: 40,
-    quality: 57,
     valueScore: 0
   }
 };

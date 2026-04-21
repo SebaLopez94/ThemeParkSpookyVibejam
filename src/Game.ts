@@ -1285,6 +1285,7 @@ export class Game {
 
     const camTarget = this.cameraController.getTarget();
     this.scene.updateShadowFrustum(camTarget.x, camTarget.z);
+    this.scene.updateRetroOverlay(deltaTime);
 
     this.scene.updateWeather(deltaTime);
     this.buildingSystem.update(deltaTime);

@@ -127,6 +127,9 @@ export function HUD({ economy }: HUDProps) {
           </div>
 
           <div className="px-hud-bar__actions">
+            <span className={`px-hud-status ${economy.isOpen ? 'px-hud-status--open' : 'px-hud-status--closed'}`}>
+              {economy.isOpen ? 'OPEN' : 'CLOSED'}
+            </span>
             {collapsed && (
               <span className="px-hud-inline-money">
                 <Coins className="px-icon-sm" color="var(--px-gold)" />
@@ -147,7 +150,7 @@ export function HUD({ economy }: HUDProps) {
           <div className="px-panel-body px-panel-body--sm px-hud-body px-hud-body--compact">
             <div className="px-hud-money-row">
               <div className="px-hud-money-row__main">
-                <span className="px-label">Money</span>
+                <span className="px-label">Cash Vault</span>
                 <span
                   className={
                     moneyFlash === 'green'
@@ -168,12 +171,12 @@ export function HUD({ economy }: HUDProps) {
             <div className="px-hud-inline-stats">
               <InlineStat
                 icon={<Users className="px-icon-sm" color="var(--px-cyan)" />}
-                label="Guests"
+                label="Inside"
                 value={economy.activeVisitors.toLocaleString()}
               />
               <InlineStat
                 icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}
-                label="Expenses / Min"
+                label="Burn / Min"
                 value={`$${economy.maintenancePerMinute.toLocaleString()}`}
               />
             </div>
