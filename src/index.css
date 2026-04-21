@@ -1546,7 +1546,47 @@ button {
 
 .px-side-tab--challenges {
   color: var(--px-orange);
-  background: linear-gradient(180deg, #3b1d16 0%, #1c1010 100%);
+  background:
+    linear-gradient(180deg, rgba(251, 191, 36, 0.12) 0%, rgba(251, 113, 133, 0.04) 42%, transparent 43%),
+    linear-gradient(180deg, #3b1d16 0%, #1c1010 100%);
+  border-top-color: #fdba74;
+  border-left-color: #fb923c;
+  border-right-color: #7c2d12;
+  border-bottom-color: #431407;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.12),
+    inset 0 -5px 0 rgba(0, 0, 0, 0.24),
+    3px 3px 0 #000,
+    0 0 14px rgba(251, 146, 60, 0.08);
+}
+
+.px-side-tab--challenges:hover {
+  color: #fed7aa;
+  background:
+    linear-gradient(180deg, rgba(251, 191, 36, 0.18) 0%, rgba(251, 113, 133, 0.08) 42%, transparent 43%),
+    linear-gradient(180deg, #542313 0%, #2a110c 100%);
+  border-top-color: #fed7aa;
+  border-left-color: #fdba74;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.18),
+    inset 0 -5px 0 rgba(0, 0, 0, 0.22),
+    3px 3px 0 #000,
+    0 0 16px rgba(251, 146, 60, 0.18);
+}
+
+.px-side-tab--challenges.px-btn--active {
+  color: #fff7ed;
+  background:
+    linear-gradient(180deg, rgba(255, 237, 213, 0.22) 0%, rgba(251, 146, 60, 0.09) 42%, transparent 43%),
+    linear-gradient(180deg, #9a3412 0%, #7c2d12 58%, #431407 100%);
+  border-top-color: #ffedd5;
+  border-left-color: #fed7aa;
+  border-right-color: #fb923c;
+  border-bottom-color: #c2410c;
+  box-shadow:
+    inset 0 4px 0 rgba(0, 0, 0, 0.24),
+    3px 3px 0 #000,
+    0 0 16px rgba(251, 146, 60, 0.2);
 }
 
 .px-side-tab--park {
@@ -1566,6 +1606,8 @@ button {
 }
 
 .px-overlay-panel {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.09);
   border-top-color: rgba(255,255,255,0.16);
@@ -1609,6 +1651,7 @@ button {
 .px-overlay-panel__top {
   position: sticky;
   top: 0;
+  flex: 0 0 auto;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -1644,8 +1687,11 @@ button {
 }
 
 .px-overlay-panel__body {
-  overflow: auto;
-  max-height: inherit;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: none;
 }
 
 .px-soft-section {
