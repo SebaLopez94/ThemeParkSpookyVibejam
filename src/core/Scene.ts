@@ -498,8 +498,8 @@ export class GameScene {
 
   private createRain(): void {
     const mobile = isMobile();
-    const dropCount = mobile ? 180 : 520;
-    const areaRadius = mobile ? 54 : 72;
+    const dropCount = mobile ? 90 : 520;
+    const areaRadius = mobile ? 46 : 72;
     const topY = mobile ? 34 : 42;
     const bottomY = 1.2;
     const streakLength = mobile ? 0.9 : 1.35;
@@ -549,7 +549,7 @@ export class GameScene {
 
   private createLightning(): void {
     const mobile = isMobile();
-    this.lightningTimer = 6 + Math.random() * 9;
+    this.lightningTimer = 4 + Math.random() * 6;
 
     const light = new THREE.PointLight(0xdde9ff, mobile ? 0 : 0, 220);
     light.position.set(0, 28, 0);
@@ -609,7 +609,7 @@ export class GameScene {
     this.lightningLight.position.set(startX, topY - 4, startZ);
     this.lightningLight.intensity = mobile ? 1.8 : 2.6;
     this.lightningFlashTimer = 0.18 + Math.random() * 0.12;
-    this.lightningTimer = 10 + Math.random() * 16;
+    this.lightningTimer = 6 + Math.random() * 10;
     this.lightningTriggered = true;
   }
 
@@ -622,11 +622,11 @@ export class GameScene {
   public updateWeather(deltaTime: number): void {
     const mobile = isMobile();
     if (this.rainGeometry && this.rainPositions && this.rainSpeeds && this.rainDrift) {
-      const areaRadius = mobile ? 54 : 72;
+      const areaRadius = mobile ? 46 : 72;
       const topY = mobile ? 34 : 42;
       const bottomY = 1.2;
       const streakLength = mobile ? 0.9 : 1.35;
-      const rainStep = mobile ? 1 / 24 : 1 / 36;
+      const rainStep = mobile ? 1 / 12 : 1 / 36;
 
       this.rainUpdateAccumulator += deltaTime;
       if (this.rainUpdateAccumulator >= rainStep) {
