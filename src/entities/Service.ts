@@ -57,12 +57,12 @@ export class Service {
         mats.forEach(mat => {
           if (!(mat instanceof THREE.MeshStandardMaterial) && !(mat instanceof THREE.MeshPhysicalMaterial)) return;
           mat.color.getHSL(_hsl);
-          mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.45, 1.0), _hsl.l);
-          mat.color.multiplyScalar(1.18);
+          mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.12, 1.0), Math.min(_hsl.l, 0.72));
           mat.roughness = Math.min((mat.roughness ?? 0.5) + 0.08, 1.0);
           mat.emissiveMap = null;
-          mat.emissive.copy(mat.color).multiplyScalar(0.10);
-          mat.emissiveIntensity = 1.0;
+          mat.emissive.setHex(0x000000);
+          mat.emissiveIntensity = 0;
+          mat.envMapIntensity = 0.25;
           mat.needsUpdate = true;
         });
       });

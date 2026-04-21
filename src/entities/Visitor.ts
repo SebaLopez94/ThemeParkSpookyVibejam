@@ -58,6 +58,7 @@ export class Visitor {
   private mixer: THREE.AnimationMixer | null = null;
   private walkAction: THREE.AnimationAction | null = null;
   private isMoving = false;
+  private fallbackModel: THREE.Group | null = null;
 
   private emojiSprite: THREE.Sprite;
   private emojiMaterial: THREE.SpriteMaterial;
@@ -117,13 +118,53 @@ export class Visitor {
     this.emojiSprite.scale.setScalar(emojiScale);
     this.mesh.add(this.emojiSprite);
 
+    this.createFallbackModel();
     this.loadModel();
+  }
+
+  private createFallbackModel(): void {
+    const group = new THREE.Group();
+    const bodyColor = new THREE.Color().setHSL(Math.random(), 0.58, 0.58);
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf3c29a, roughness: 0.75 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.82 });
+
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.36, 4, 8), bodyMat);
+    body.position.y = 0.45;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), skinMat);
+    head.position.y = 0.86;
+
+    group.add(body, head);
+    group.traverse(child => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = !isMobile();
+      }
+    });
+
+    this.fallbackModel = group;
+    this.mesh.add(group);
+  }
+
+  private removeFallbackModel(): void {
+    if (!this.fallbackModel) return;
+    this.mesh.remove(this.fallbackModel);
+    this.fallbackModel.traverse(child => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        if (Array.isArray(child.material)) {
+          child.material.forEach(material => material.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
+    });
+    this.fallbackModel = null;
   }
 
   private loadModel(): void {
     const modelPath = VISITOR_MODEL_PATHS[Math.floor(Math.random() * VISITOR_MODEL_PATHS.length)];
     sharedGLTFLoader.load(modelPath, (gltf) => {
       const model = gltf.scene;
+      this.removeFallbackModel();
       model.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(model);
       const height = box.getSize(new THREE.Vector3()).y;
@@ -180,6 +221,8 @@ export class Visitor {
         this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
         if (this.isMoving) this.walkAction.play();
       }
+    }, undefined, () => {
+      // Keep the lightweight fallback visible if a kid model cannot be loaded.
     });
   }
 
@@ -452,6 +495,7 @@ export class Visitor {
       this.mixer.uncacheRoot(this.mixer.getRoot());
       this.mixer = null;
     }
+    this.removeFallbackModel();
     this.emojiMaterial.dispose();
     this.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
