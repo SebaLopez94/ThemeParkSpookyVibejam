@@ -35,7 +35,7 @@ export class GameScene {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x130b1d);
-    this.scene.fog = new THREE.Fog(0x171020, mobile ? 68 : 56, mobile ? 172 : 192);
+    this.scene.fog = new THREE.Fog(0x120b19, mobile ? 62 : 50, mobile ? 165 : 185);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -47,19 +47,19 @@ export class GameScene {
     this.camera.lookAt(0, 0, 0);
 
     // Dark global fill so the park stays readable without flattening all shadows.
-    this.ambientLight = new THREE.AmbientLight(0x8390ad, mobile ? 0.38 : 0.34);
+    this.ambientLight = new THREE.AmbientLight(0x66738f, mobile ? 0.31 : 0.27);
     this.baseAmbientIntensity = this.ambientLight.intensity;
     this.scene.add(this.ambientLight);
 
     // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
-    this.hemisphereLight = new THREE.HemisphereLight(0x68799e, 0x302017, mobile ? 0.46 : 0.52);
+    this.hemisphereLight = new THREE.HemisphereLight(0x52658d, 0x1d120d, mobile ? 0.38 : 0.43);
     this.baseHemisphereIntensity = this.hemisphereLight.intensity;
     this.scene.add(this.hemisphereLight);
 
     // Cool moon key light for silhouettes and shadow shape.
-    this.directionalLight = new THREE.DirectionalLight(0xd2ddff, mobile ? 0.9 : 1.04);
+    this.directionalLight = new THREE.DirectionalLight(0xbfd2ff, mobile ? 0.78 : 0.88);
     this.baseDirectionalIntensity = this.directionalLight.intensity;
-    this.directionalLight.position.set(32, 88, 18);
+    this.directionalLight.position.set(38, 92, 14);
     this.directionalLight.castShadow = true;
     this.directionalLight.shadow.camera.left = -100;
     this.directionalLight.shadow.camera.right = 100;
@@ -488,7 +488,7 @@ export class GameScene {
     });
 
     // Extremely diffuse and subtle light source
-    const moonLight = new THREE.PointLight(0xc8d8ff, 0.18, 900);
+    const moonLight = new THREE.PointLight(0xb9ccff, 0.14, 900);
     moonLight.position.set(0, 0, 0); 
     moonGroup.add(moonLight);
 
