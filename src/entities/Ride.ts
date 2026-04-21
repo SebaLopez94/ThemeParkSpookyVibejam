@@ -213,8 +213,8 @@ export class Ride {
       emissiveIntensity: options?.emissiveIntensity ?? 0.55,
       roughness: options?.roughness ?? 0.52,
       metalness: options?.metalness ?? 0.05,
-      castShadow: false,
-      receiveShadow: false,
+      castShadow: true,
+      receiveShadow: true,
     });
   }
 
@@ -238,9 +238,9 @@ export class Ride {
       model.position.y -= scaledBox.min.y;
 
       this.applyRidePresentation(model, {
-        colorLift: 1.42,
-        whiteMix: 0.08,
-        emissiveIntensity: 0.18,
+        colorLift: 1.1,
+        whiteMix: 0.04,
+        emissiveIntensity: 0.08,
         roughness: 0.66,
       });
 

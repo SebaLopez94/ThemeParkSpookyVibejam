@@ -9,6 +9,7 @@ export class GameScene {
   public ambientLight: THREE.AmbientLight;
   public directionalLight: THREE.DirectionalLight;
   public hemisphereLight: THREE.HemisphereLight;
+  private fillLight: THREE.DirectionalLight;
   private surroundingClones: THREE.Object3D[] = [];
   private readonly baseAmbientIntensity: number;
   private readonly baseHemisphereIntensity: number;
@@ -47,29 +48,41 @@ export class GameScene {
     this.camera.lookAt(0, 0, 0);
 
     // Dark global fill so the park stays readable without flattening all shadows.
-    this.ambientLight = new THREE.AmbientLight(0x66738f, mobile ? 0.31 : 0.27);
+    // Intensities boosted ~30% to compensate for ACESFilmicToneMapping mid-range compression.
+    this.ambientLight = new THREE.AmbientLight(0x66738f, mobile ? 0.50 : 0.44);
     this.baseAmbientIntensity = this.ambientLight.intensity;
     this.scene.add(this.ambientLight);
 
     // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
-    this.hemisphereLight = new THREE.HemisphereLight(0x52658d, 0x1d120d, mobile ? 0.38 : 0.43);
+    this.hemisphereLight = new THREE.HemisphereLight(0x52658d, 0x1d120d, mobile ? 0.55 : 0.62);
     this.baseHemisphereIntensity = this.hemisphereLight.intensity;
     this.scene.add(this.hemisphereLight);
 
     // Cool moon key light for silhouettes and shadow shape.
-    this.directionalLight = new THREE.DirectionalLight(0xbfd2ff, mobile ? 0.78 : 0.88);
+    this.directionalLight = new THREE.DirectionalLight(0xbfd2ff, mobile ? 1.00 : 1.15);
     this.baseDirectionalIntensity = this.directionalLight.intensity;
     this.directionalLight.position.set(38, 92, 14);
     this.directionalLight.castShadow = true;
-    this.directionalLight.shadow.camera.left = -100;
-    this.directionalLight.shadow.camera.right = 100;
-    this.directionalLight.shadow.camera.top = 100;
-    this.directionalLight.shadow.camera.bottom = -100;
-    this.directionalLight.shadow.mapSize.width = mobile ? 512 : 768;
-    this.directionalLight.shadow.mapSize.height = mobile ? 512 : 768;
+    // Tight frustum (±32 world units) centred on shadow target — 3× better texel density
+    // than the old ±100. Target is updated each frame via updateShadowFrustum().
+    this.directionalLight.shadow.camera.left = -32;
+    this.directionalLight.shadow.camera.right = 32;
+    this.directionalLight.shadow.camera.top = 32;
+    this.directionalLight.shadow.camera.bottom = -32;
+    this.directionalLight.shadow.mapSize.width = mobile ? 256 : 1024;
+    this.directionalLight.shadow.mapSize.height = mobile ? 256 : 1024;
     this.directionalLight.shadow.bias = -0.00015;
     this.directionalLight.shadow.normalBias = 0.03;
+    // Target must be in the scene for position updates to take effect.
     this.scene.add(this.directionalLight);
+    this.scene.add(this.directionalLight.target);
+
+    // Soft purple fill from the opposite side — reduces harsh unlit faces without
+    // flattening the scene. No shadow casting: zero cost.
+    this.fillLight = new THREE.DirectionalLight(0x4a2255, mobile ? 0.14 : 0.18);
+    this.fillLight.position.set(-38, 30, -14);
+    this.fillLight.castShadow = false;
+    this.scene.add(this.fillLight);
 
     this.createGround();
     this.createForestFloor();
@@ -107,10 +120,18 @@ export class GameScene {
       model.position.y -= scaledBox.min.y;
 
       model.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = false;
-          child.receiveShadow = false;
-        }
+        if (!(child instanceof THREE.Mesh)) return;
+        child.castShadow = true;
+        child.receiveShadow = true;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(mat => {
+          if (!(mat instanceof THREE.MeshStandardMaterial)) return;
+          mat.color.multiplyScalar(1.3);
+          mat.emissive.setRGB(1, 1, 1);
+          if (mat.map) mat.emissiveMap = mat.map;
+          mat.emissiveIntensity = 0.06;
+          mat.needsUpdate = true;
+        });
       });
 
       this.scene.add(model);
@@ -696,6 +717,12 @@ export class GameScene {
         this.lightningBolt.visible = false;
       }
     }
+  }
+
+  public updateShadowFrustum(targetX: number, targetZ: number): void {
+    this.directionalLight.target.position.set(targetX, 0, targetZ);
+    this.directionalLight.target.updateMatrixWorld();
+    this.directionalLight.shadow.camera.updateProjectionMatrix();
   }
 
   public onWindowResize(): void {

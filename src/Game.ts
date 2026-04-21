@@ -1283,6 +1283,9 @@ export class Game {
       this.selectionFillMat.opacity = pulse;
     }
 
+    const camTarget = this.cameraController.getTarget();
+    this.scene.updateShadowFrustum(camTarget.x, camTarget.z);
+
     this.scene.updateWeather(deltaTime);
     this.buildingSystem.update(deltaTime);
     this.visitorSystem.update(deltaTime, {
