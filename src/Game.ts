@@ -141,8 +141,11 @@ export class Game {
   private buildRotation = 0;
   private ratingUpdateTimer = 0;
   private maintenanceUpdateTimer = 0;
+  private challengeRewardTimer = 0;
+  private readonly challengeRewardQueue: string[] = [];
   private readonly RATING_UPDATE_INTERVAL = 1;
   private readonly MAINTENANCE_UPDATE_INTERVAL = 20;
+  private readonly CHALLENGE_REWARD_SPACING = 4.25;
 
   // Selection highlight (shown when BuildingPanel is open)
   private selectionHighlight: THREE.Group | null = null;
@@ -667,6 +670,8 @@ export class Game {
 
     this.ratingUpdateTimer = 0;
     this.maintenanceUpdateTimer = 0;
+    this.challengeRewardTimer = 0;
+    this.challengeRewardQueue.length = 0;
 
     this.visitorSystem.clear();
     this.buildingSystem.clear();
@@ -680,11 +685,7 @@ export class Game {
     this.economySystem.restoreSaveData(save.economy);
     this.visitorSystem.scheduleRestoreVisitors(save.economy.activeVisitors);
 
-    const counts = this.buildingSystem.getBuildingCounts();
-    const maintenance =
-      counts[BuildingType.RIDE] * 6 +
-      counts[BuildingType.SHOP] * 3 +
-      counts[BuildingType.SERVICE] * 2;
+    const maintenance = this.buildingSystem.getMaintenanceChargePerInterval();
     this.economySystem.setMaintenancePerMinute(maintenance * (60 / this.MAINTENANCE_UPDATE_INTERVAL));
     this.economySystem.notify();
   }
@@ -1296,7 +1297,9 @@ export class Game {
       decorations: this.buildingSystem.getDecorations(),
       getLocalDecorationBonus: position => this.buildingSystem.getLocalDecorationBonus(position),
       getLocalHygieneBonus: position => this.buildingSystem.getLocalHygieneBonus(position),
-      isOpen: this.economySystem.getState().isOpen
+      isOpen: this.economySystem.getState().isOpen,
+      ticketPrice: this.economySystem.getState().ticketPrice,
+      parkRating: this.economySystem.getState().parkRating
     });
 
     const unlocked = this.researchSystem.update(deltaTime);
@@ -1311,11 +1314,9 @@ export class Game {
       this.playInstantOneShot(this.thunderTrack);
     }
 
-    const counts = this.buildingSystem.getBuildingCounts();
-    const maintenance =
-      counts[BuildingType.RIDE]    * 6 +
-      counts[BuildingType.SHOP]    * 3 +
-      counts[BuildingType.SERVICE] * 2;
+    this.processChallengeRewardQueue(deltaTime);
+
+    const maintenance = this.buildingSystem.getMaintenanceChargePerInterval();
     this.economySystem.setMaintenancePerMinute(maintenance * (60 / this.MAINTENANCE_UPDATE_INTERVAL));
 
     this.maintenanceUpdateTimer += deltaTime;
@@ -1357,30 +1358,47 @@ export class Game {
 
       this.economySystem.notify();
 
-      completed.forEach(challenge => {
-        const claimed = this.challengeSystem.claimReward(challenge.id);
-        if (!claimed) return;
-        if (claimed.reward.money > 0) {
-          this.economySystem.addMoney(claimed.reward.money);
-        }
-        if (claimed.reward.rating > 0) {
-          const state = this.economySystem.getState();
-          const _rc = this.buildingSystem.getBuildingCounts();
-          this.economySystem.updateParkRating(
-            Math.min(100, state.averageHappiness + claimed.reward.rating),
-            this.buildingSystem.getFacilityScore(),
-            this.buildingSystem.getDecorationAppeal() + claimed.reward.rating,
-            this.visitorSystem.getVisitorCount(),
-            _rc[BuildingType.RIDE],
-            _rc[BuildingType.SHOP],
-            _rc[BuildingType.SERVICE]
-          );
-        }
-        this.showFloatingText(`Challenge +$${claimed.reward.money}`, { x: 24, z: 46 }, '#bef264');
-        this.playInstantOneShot(this.challengeTrack);
-        this.events.emit('challengeCompleted', claimed);
-      });
+      completed.forEach(challenge => this.queueChallengeReward(challenge.id));
     }
+  }
+
+  private queueChallengeReward(id: string): void {
+    if (this.challengeRewardQueue.includes(id)) return;
+    this.challengeRewardQueue.push(id);
+  }
+
+  private processChallengeRewardQueue(deltaTime: number): void {
+    if (this.challengeRewardTimer > 0) {
+      this.challengeRewardTimer = Math.max(0, this.challengeRewardTimer - deltaTime);
+      return;
+    }
+
+    const nextId = this.challengeRewardQueue.shift();
+    if (!nextId) return;
+
+    const claimed = this.challengeSystem.claimReward(nextId);
+    if (!claimed) return;
+
+    if (claimed.reward.money > 0) {
+      this.economySystem.addMoney(claimed.reward.money);
+    }
+    if (claimed.reward.rating > 0) {
+      const state = this.economySystem.getState();
+      const counts = this.buildingSystem.getBuildingCounts();
+      this.economySystem.updateParkRating(
+        Math.min(100, state.averageHappiness + claimed.reward.rating),
+        this.buildingSystem.getFacilityScore(),
+        this.buildingSystem.getDecorationAppeal() + claimed.reward.rating,
+        this.visitorSystem.getVisitorCount(),
+        counts[BuildingType.RIDE],
+        counts[BuildingType.SHOP],
+        counts[BuildingType.SERVICE]
+      );
+    }
+    this.showFloatingText(`Challenge +$${claimed.reward.money}`, { x: 24, z: 46 }, '#bef264');
+    this.playInstantOneShot(this.challengeTrack);
+    this.events.emit('challengeCompleted', claimed);
+    this.challengeRewardTimer = this.CHALLENGE_REWARD_SPACING;
   }
 
   private render(): void {

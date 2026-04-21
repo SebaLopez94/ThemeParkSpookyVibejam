@@ -24,6 +24,8 @@ interface SimulationEntities {
   getLocalDecorationBonus: (position: GridPosition) => number;
   getLocalHygieneBonus: (position: GridPosition) => number;
   isOpen: boolean;
+  ticketPrice: number;
+  parkRating: number;
 }
 
 interface TargetChoice {
@@ -83,13 +85,13 @@ export class VisitorSystem {
     if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < this.maxVisitors) {
       this.spawnVisitor(false);
       this.spawnTimer = 0;
-      this.spawnInterval = 15 + Math.random() * 8;
+      this.spawnInterval = this.getNextSpawnInterval(entities);
     }
 
     this.densityRefreshTimer += deltaTime;
     if (this.densityRefreshTimer >= this.densityRefreshInterval) {
       this.densityRefreshTimer = 0;
-      this.densityMapCache = this.buildDensityMap();
+      this.buildDensityMap();
     }
     const densityMap = this.densityMapCache;
     const toRemove: string[] = [];
@@ -264,6 +266,19 @@ export class VisitorSystem {
     }
   }
 
+  private getNextSpawnInterval(entities: SimulationEntities): number {
+    const ratingFactor = THREE.MathUtils.clamp(entities.parkRating / 100, 0.1, 1);
+    const fairTicket = 4 + ratingFactor * 12;
+    const priceDemand = entities.ticketPrice <= fairTicket
+      ? 1.08
+      : THREE.MathUtils.clamp(fairTicket / Math.max(entities.ticketPrice, 1), 0.38, 1);
+    const parkDemand = THREE.MathUtils.clamp(0.55 + ratingFactor * 0.9, 0.55, 1.35);
+    const demand = parkDemand * priceDemand;
+    const baseInterval = 10 + Math.random() * 8;
+
+    return THREE.MathUtils.clamp(baseInterval / demand, 5.5, 24);
+  }
+
   private assignNewActivity(
     visitor: Visitor,
     entities: SimulationEntities,
@@ -322,26 +337,23 @@ export class VisitorSystem {
     const p = visitor.data.personality;
     const personalityMult = p === 'thrill_seeker' ? 1.4 : p === 'foodie' ? 0.85 : 1.0;
 
-    return this.pickBestTarget(
-      rides.filter(ride => visitor.canUseRide(ride.data.id)).map(ride => {
-        // Variety penalty: repeated rides feel less exciting
-        const useCount = visitor.data.rideUseCounts[ride.data.id] ?? 0;
-        const varietyPenalty = Math.min(useCount * 0.12, 0.4);
-        return {
-          id: ride.data.id,
-          type: 'ride' as const,
-          accessCell: ride.data.accessCell,
-          baseNeedScore: funNeed * (ride.data.funFactor / 40) * personalityMult * (1 - varietyPenalty),
-          price: ride.data.price,
-          valueScore: ride.data.valueScore,
-          quality: ride.data.quality,
-          decorationBonus: getLocalDecorationBonus(ride.data.accessCell)
-        };
-      }),
-      current,
-      visitor,
-      densityMap
-    );
+    const rideCandidates: Parameters<typeof this.pickBestTarget>[0] = [];
+    for (const ride of rides) {
+      if (!visitor.canUseRide(ride.data.id)) continue;
+      const useCount = visitor.data.rideUseCounts[ride.data.id] ?? 0;
+      const varietyPenalty = Math.min(useCount * 0.12, 0.4);
+      rideCandidates.push({
+        id: ride.data.id,
+        type: 'ride' as const,
+        accessCell: ride.data.accessCell,
+        baseNeedScore: funNeed * (ride.data.funFactor / 40) * personalityMult * (1 - varietyPenalty),
+        price: ride.data.price,
+        valueScore: ride.data.valueScore,
+        quality: ride.data.quality,
+        decorationBonus: getLocalDecorationBonus(ride.data.accessCell)
+      });
+    }
+    return this.pickBestTarget(rideCandidates, current, visitor, densityMap);
   }
 
   private selectBestShop(
@@ -473,14 +485,15 @@ export class VisitorSystem {
   }
 
   private getPriceFairness(price: number, valueScore: number, quality: number): number {
-    const expectedPrice = valueScore * 0.8 + quality * 0.08;
+    const expectedPrice = 1.5 + valueScore * 0.75 + quality * 0.045;
     return Math.max(0.1, Math.min(1, expectedPrice / Math.max(price, 1)));
   }
 
   private acceptPrice(visitor: Visitor, fairness: number, thoughtType: 'price'): boolean {
     // moodMomentum [-1,+1] shifts tolerance: happy streak = more willing to spend
-    const momentumBonus = visitor.data.moodMomentum * 0.08;
-    const priceTolerance = Math.max(0.1, Math.min(0.95, fairness + visitor.data.needs.happiness / 200 + momentumBonus));
+    const momentumBonus = visitor.data.moodMomentum * 0.07;
+    const happinessBonus = visitor.data.needs.happiness / 625;
+    const priceTolerance = Math.max(0.08, Math.min(0.94, 0.18 + fairness * 0.62 + happinessBonus + momentumBonus));
     if (Math.random() <= priceTolerance) {
       visitor.clearMood('price');
       return true;
@@ -578,14 +591,12 @@ export class VisitorSystem {
     }
   }
 
-  private buildDensityMap(): Map<string, number> {
-    const map = new Map<string, number>();
+  private buildDensityMap(): void {
+    this.densityMapCache.clear();
     this.visitors.forEach(visitor => {
-      const current = GridHelper.worldToGrid(visitor.data.position);
-      const key = GridHelper.getGridKey(current);
-      map.set(key, (map.get(key) ?? 0) + 1);
+      const key = GridHelper.getGridKey(GridHelper.worldToGrid(visitor.data.position));
+      this.densityMapCache.set(key, (this.densityMapCache.get(key) ?? 0) + 1);
     });
-    return map;
   }
 
   public removeVisitor(id: string): void {

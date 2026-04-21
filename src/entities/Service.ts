@@ -17,7 +17,7 @@ export class Service {
       position,
       serviceType,
       cost: config.cost,
-      price: 2,
+      price: 0,
       quality: config.quality,
       valueScore: config.valueScore,
       satisfactionEffects: { hygiene: 40 },

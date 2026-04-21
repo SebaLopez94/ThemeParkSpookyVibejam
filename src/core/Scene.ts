@@ -461,7 +461,7 @@ export class GameScene {
     outsideTex.repeat.set(30, 30);
     const mat  = new THREE.MeshStandardMaterial({
       map: outsideTex,
-      color: 0x72543b,
+      color: 0x806044,
       roughness: 1.0,
       metalness: 0.0,
     });
@@ -499,7 +499,7 @@ export class GameScene {
 
   private createMoon(): void {
     const moonGroup = new THREE.Group();
-    const moonPos = new THREE.Vector3(-108, 28, -38);
+    const moonPos = new THREE.Vector3(-88, 30, -32);
 
     // Main moon body
     const moonGeo = new THREE.SphereGeometry(7, 32, 32);

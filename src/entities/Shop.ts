@@ -54,9 +54,9 @@ export class Shop {
 
   private getShopPrice(type: ShopType): number {
     const prices: Record<ShopType, number> = {
-      [ShopType.FOOD_STALL]: 8,
+      [ShopType.FOOD_STALL]: 7,
       [ShopType.DRINK_STAND]: 5,
-      [ShopType.GIFT_SHOP]: 12
+      [ShopType.GIFT_SHOP]: 11
     };
     return prices[type];
   }

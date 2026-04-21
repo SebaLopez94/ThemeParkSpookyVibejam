@@ -35,6 +35,7 @@ export class BuildingSystem {
   private servicesCache: Service[] | null = null;
   private decorationsCache: Decoration[] | null = null;
   private decorationBonusCache: Map<string, number> = new Map();
+  private hygienesBonusCache:   Map<string, number> = new Map();
 
   constructor(scene: THREE.Scene, pathfinding: PathfindingSystem) {
     this.scene = scene;
@@ -187,6 +188,7 @@ export class BuildingSystem {
     this.scene.add(decoration.mesh);
     this.decorationsCache = null;
     this.decorationBonusCache.clear();
+    this.hygienesBonusCache.clear();
 
     return decoration;
   }
@@ -248,6 +250,7 @@ export class BuildingSystem {
       this.decorations.delete(anchorKey);
       this.decorationsCache = null;
       this.decorationBonusCache.clear();
+      this.hygienesBonusCache.clear();
       return true;
     }
 
@@ -324,6 +327,39 @@ export class BuildingSystem {
     };
   }
 
+  public getMaintenanceChargePerInterval(): number {
+    const rideMaintenance: Record<RideType, number> = {
+      [RideType.CAROUSEL]: 4,
+      [RideType.FERRIS_WHEEL]: 6,
+      [RideType.ROLLER_COASTER]: 10,
+      [RideType.HAUNTED_HOUSE]: 7,
+      [RideType.PIRATE_SHIP]: 7,
+      [RideType.KRAKEN_RIDE]: 9,
+      [RideType.INFERNAL_TOWER]: 8
+    };
+
+    const shopMaintenance: Record<ShopType, number> = {
+      [ShopType.FOOD_STALL]: 3,
+      [ShopType.DRINK_STAND]: 2,
+      [ShopType.GIFT_SHOP]: 3
+    };
+
+    const serviceMaintenance: Record<ServiceType, number> = {
+      [ServiceType.RESTROOM]: 3
+    };
+
+    const rideCost = this.getRides().reduce((total, ride) => total + rideMaintenance[ride.data.rideType], 0);
+    const shopCost = this.getShops().reduce((total, shop) => total + shopMaintenance[shop.data.shopType], 0);
+    const serviceCost = this.getServices().reduce((total, service) => total + serviceMaintenance[service.data.serviceType], 0);
+    const decorationCost = this.getDecorations().reduce((total, decoration) => {
+      if (decoration.data.decorationType === DecorationType.LANTERN) return total + 1;
+      if (decoration.data.decorationType === DecorationType.TRASH_CUBE) return total + 1;
+      return total;
+    }, 0);
+
+    return rideCost + shopCost + serviceCost + decorationCost;
+  }
+
   public exportSaveData(): SavedBuildingsData {
     return {
       paths: Array.from(this.paths.values()).map(path => ({
@@ -375,18 +411,20 @@ export class BuildingSystem {
   }
 
   public getLocalHygieneBonus(position: GridPosition): number {
+    const key = GridHelper.getGridKey(position);
+    const cached = this.hygienesBonusCache.get(key);
+    if (cached !== undefined) return cached;
+
     let total = 0;
     this.getDecorations().forEach(decoration => {
       const radius = decoration.data.hygieneRadius ?? 0;
-      const bonus = decoration.data.hygieneBonus ?? 0;
+      const bonus  = decoration.data.hygieneBonus  ?? 0;
       if (radius <= 0 || bonus <= 0) return;
-
       const distance = Math.abs(decoration.data.position.x - position.x) + Math.abs(decoration.data.position.z - position.z);
-      if (distance <= radius) {
-        total += Math.max(0, bonus - distance * 3);
-      }
+      if (distance <= radius) total += Math.max(0, bonus - distance * 3);
     });
 
+    this.hygienesBonusCache.set(key, total);
     return total;
   }
 
@@ -426,6 +464,7 @@ export class BuildingSystem {
     this.decorations.clear();
     this.decorationsCache = null;
     this.decorationBonusCache.clear();
+    this.hygienesBonusCache.clear();
 
     this.occupiedCells.clear();
     this.buildingIdCounter = 0;
