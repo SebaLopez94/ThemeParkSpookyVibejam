@@ -3,6 +3,7 @@ import { BuildingType, DecorationData, DecorationType, GridPosition } from '../t
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
 import { sharedGLTFLoader } from '../core/AssetLoader';
+import { lanternPool } from '../utils/LanternPool';
 
 // Shared fallback geometry for jack-o-lantern (procedural, still used)
 const sharedPumpkinGeo = {
@@ -32,6 +33,7 @@ const HYGIENE_SUPPORT: Partial<Record<DecorationType, [number, number]>> = {
 export class Decoration {
   public mesh: THREE.Group;
   public data: DecorationData;
+  private pooledLight: THREE.PointLight | null = null;
 
   constructor(position: GridPosition, decorationType: DecorationType, id: string) {
     const config = getBuildingCatalogItem(decorationType);
@@ -58,6 +60,11 @@ export class Decoration {
 
     const worldPos = GridHelper.gridToWorld(position);
     this.mesh.position.set(worldPos.x, 0, worldPos.z);
+
+    // Claim a pooled lantern light (world coords, no scene add = no shader recompile)
+    if (decorationType === DecorationType.LANTERN) {
+      this.pooledLight = lanternPool.claim(worldPos.x + 0.42, 1.40, worldPos.z + 0.50);
+    }
   }
 
   private loadGlb(
@@ -126,11 +133,8 @@ export class Decoration {
       roughness: 0.6,
       metalness: 0.04,
     });
-
-    const glow = new THREE.PointLight(0xffd38a, 6.8, GRID_SIZE * 6.6, 1.6);
-    glow.position.set(0.42, 1.40, 0.50);
-    glow.castShadow = false;
-    this.mesh.add(glow);
+    // PointLight is claimed from the pool in the constructor after world position
+    // is known — avoids adding lights to the scene at placement time (no shader recompile).
   }
 
   private createMesh(type: DecorationType): void {
@@ -181,6 +185,12 @@ export class Decoration {
   }
 
   public dispose(): void {
+    // Return pooled lantern light before disposing mesh resources
+    if (this.pooledLight) {
+      lanternPool.release(this.pooledLight);
+      this.pooledLight = null;
+    }
+
     // GLB-loaded children have unique resources — dispose them.
     // Procedural shared resources (jack-o-lantern) must NOT be disposed.
     this.mesh.traverse((child) => {

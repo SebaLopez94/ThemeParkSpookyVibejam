@@ -1,11 +1,8 @@
 import * as THREE from 'three';
-import { PostProcessing } from './PostProcessing';
 import { isMobile } from '../utils/platform';
 
 export class GameRenderer {
   public renderer: THREE.WebGLRenderer;
-  private postProcessing: PostProcessing | null = null;
-  private startTime = performance.now();
 
   constructor(container: HTMLElement) {
     const mobile = isMobile();
@@ -19,44 +16,31 @@ export class GameRenderer {
     });
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    // Mobile: no PostProcessing, so we can afford 1.5× DPR for crisp output.
-    // Desktop: cap at 1.5× to avoid excessive fill-rate with the EffectComposer.
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 1.5));
     this.renderer.shadowMap.enabled = !mobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.sortObjects = false;
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.toneMappingExposure = 1.0;
-    this.renderer.sortObjects = false;
-
-    // EffectComposer renders to a linear render target — disable automatic sRGB
-    // conversion so values aren't gamma-corrected twice (or not at all).
-    // The final shader pass applies gamma manually via pow(color, 1/2.2).
-    this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     container.appendChild(this.renderer.domElement);
   }
 
   /** Call once after scene + camera are ready */
-  public initPostProcessing(scene: THREE.Scene, camera: THREE.Camera): void {
-    this.postProcessing = new PostProcessing(this.renderer, scene, camera);
+  public initPostProcessing(_scene: THREE.Scene, _camera: THREE.Camera): void {
+    // Post-processing is intentionally disabled: keep the game render direct.
   }
 
   public render(scene: THREE.Scene, camera: THREE.Camera): void {
-    if (this.postProcessing) {
-      const elapsed = (performance.now() - this.startTime) / 1000;
-      this.postProcessing.render(elapsed);
-    } else {
-      this.renderer.render(scene, camera);
-    }
+    this.renderer.render(scene, camera);
   }
 
   public onWindowResize(): void {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.postProcessing?.onWindowResize();
   }
 
   public dispose(): void {
-    this.postProcessing?.dispose();
     this.renderer.dispose();
   }
 }

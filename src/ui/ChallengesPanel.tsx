@@ -10,11 +10,11 @@ interface ChallengesPanelProps {
 }
 
 const TIER_META: Record<ChallengeTier, { roman: string; title: string; subtitle: string }> = {
-  1: { roman: 'I', title: 'Open the Gates', subtitle: 'Prove the park can function.' },
-  2: { roman: 'II', title: 'Raise the Haunting', subtitle: 'Add comfort, decor and early flow.' },
-  3: { roman: 'III', title: 'Fear Becomes Business', subtitle: 'Scale shops, rides and reputation.' },
-  4: { roman: 'IV', title: 'Empire of Screams', subtitle: 'Maintain crowds, profit and ratings.' },
-  5: { roman: 'V', title: 'Legend Status', subtitle: 'Complete the nightmare park.' },
+  1: { roman: 'I', title: 'Open the Gates', subtitle: 'Start with the basics: rides, shops and your first guests.' },
+  2: { roman: 'II', title: 'Build a Real Park', subtitle: 'Add comfort, decoration and stable guest happiness.' },
+  3: { roman: 'III', title: 'Grow the Business', subtitle: 'Expand variety so visitors have more reasons to stay.' },
+  4: { roman: 'IV', title: 'Run at Scale', subtitle: 'Handle bigger crowds while keeping ratings and profit healthy.' },
+  5: { roman: 'V', title: 'Master the Park', subtitle: 'Reach late-game goals and prove the park can thrive.' },
 };
 
 function getChallengeLabel(challenge: ChallengeState): string {

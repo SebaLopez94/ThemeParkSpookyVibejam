@@ -1694,30 +1694,34 @@ button {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
   gap: 10px;
+  position: relative;
+  padding: 0 0 10px;
+}
+
+.px-challenge-tier::before {
+  content: '';
+  position: absolute;
+  left: 21px;
+  top: 0;
+  bottom: 10px;
+  width: 3px;
+  background: linear-gradient(180deg, rgba(251,146,60,0.42), rgba(127,29,29,0.1));
 }
 
 .px-challenge-tier__rail {
   position: relative;
   display: flex;
   justify-content: center;
+  z-index: 1;
 }
 
 .px-challenge-tier__rail::before {
-  content: '';
-  position: absolute;
-  top: 42px;
-  bottom: -14px;
-  width: 3px;
-  background: linear-gradient(180deg, rgba(251,146,60,0.55), rgba(127,29,29,0.14));
-}
-
-.px-challenge-tier:last-child .px-challenge-tier__rail::before {
   display: none;
 }
 
 .px-challenge-tier__rail span {
   position: sticky;
-  top: 70px;
+  top: 74px;
   z-index: 1;
   display: grid;
   place-items: center;
@@ -1744,18 +1748,51 @@ button {
 
 .px-challenge-tier__content {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
 .px-challenge-tier__head {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 74px;
   gap: 12px;
   align-items: center;
-  padding: 10px 11px;
-  background: rgba(0,0,0,0.24);
-  border-left: 3px solid rgba(251,146,60,0.65);
+  padding: 13px 13px 12px;
+  background:
+    linear-gradient(90deg, rgba(251,146,60,0.2), transparent 46%),
+    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(0,0,0,0.2)),
+    rgba(43, 16, 10, 0.72);
+  border: 1px solid rgba(251,146,60,0.3);
+  border-left: 5px solid rgba(251,146,60,0.9);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 3px 3px 0 rgba(0,0,0,0.42);
+}
+
+.px-challenge-tier__head::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -5px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(251,146,60,0.55), transparent);
+}
+
+.px-challenge-tier--ready .px-challenge-tier__head {
+  background:
+    linear-gradient(90deg, rgba(190,242,100,0.18), transparent 46%),
+    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(0,0,0,0.18)),
+    rgba(26, 40, 12, 0.74);
+  border-color: rgba(190,242,100,0.34);
+  border-left-color: rgba(190,242,100,0.9);
+}
+
+.px-challenge-tier--claimed .px-challenge-tier__head {
+  background:
+    linear-gradient(90deg, rgba(134,239,172,0.08), transparent 45%),
+    rgba(0,0,0,0.22);
+  border-color: rgba(190,242,100,0.16);
+  border-left-color: rgba(134,239,172,0.4);
 }
 
 .px-challenge-tier__label {
@@ -1785,20 +1822,29 @@ button {
 
 .px-challenge-tier__progress {
   display: grid;
-  align-content: end;
-  height: 34px;
-  border: 1px solid rgba(251,146,60,0.16);
+  align-content: center;
+  justify-items: center;
+  height: 30px;
+  min-width: 76px;
+  padding: 0 8px;
+  border: 1px solid rgba(251,146,60,0.24);
+  background: rgba(0,0,0,0.34);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
 }
 
 .px-challenge-tier__progress strong {
   position: relative;
-  z-index: 1;
-  align-self: center;
-  justify-self: center;
+  z-index: 2;
   font-family: 'Press Start 2P', monospace;
   font-size: 8px;
   color: #fff7ed;
   text-shadow: 1px 1px 0 #000;
+}
+
+.px-challenge-tier__progress span {
+  top: auto;
+  bottom: 0;
+  height: 4px;
 }
 
 .px-challenge-list {
@@ -1966,6 +2012,13 @@ button {
   .px-challenge-tier {
     grid-template-columns: 34px minmax(0, 1fr);
     gap: 8px;
+    padding: 0 0 8px;
+  }
+
+  .px-challenge-tier::before {
+    left: 15px;
+    top: 0;
+    bottom: 8px;
   }
 
   .px-challenge-tier__rail span {
@@ -1983,7 +2036,8 @@ button {
 
   .px-challenge-tier__progress {
     width: 100%;
-    height: 24px;
+    height: 26px;
+    min-width: 0;
   }
 
   .px-challenge-card {

@@ -12,8 +12,8 @@ import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { EventBus } from './utils/EventBus';
-import { isMobile } from './utils/platform';
 import { sharedGLTFLoader, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
+import { lanternPool } from './utils/LanternPool';
 import {
   BUILDING_DISPLAY,
   BuildingDefinition,
@@ -164,6 +164,9 @@ export class Game {
 
   constructor(container: HTMLElement) {
     this.scene = new GameScene();
+    // Init lantern pool immediately after scene so all 20 PointLights are added
+    // before the first render — shader compiles once at startup, never again.
+    lanternPool.init(this.scene.scene);
     this.renderer = new GameRenderer(container);
     this.gameLoop = new GameLoop(deltaTime => this.update(deltaTime), () => this.render());
 
@@ -199,12 +202,6 @@ export class Game {
     this.buildTrack = { audio: makeAudio(), baseVolume: 0.16 };
     this.loadAudio();
 
-    // PostProcessing (CRT shader + EffectComposer) is too expensive on mobile:
-    // it doubles render-target memory and adds per-pixel noise that looks bad
-    // at mobile DPR. Skip it entirely — the raw renderer is fast and clear.
-    if (!isMobile()) {
-      this.renderer.initPostProcessing(this.scene.scene, this.scene.camera);
-    }
     this.setupMouseControls();
     this.setupWindowResize();
     this.setupAudioResume();
@@ -1369,6 +1366,7 @@ export class Game {
     gameLoadingManager.onStart = () => {};
     gameLoadingManager.onProgress = () => {};
     gameLoadingManager.onLoad = () => {};
+    lanternPool.dispose();
     window.removeEventListener('resize', this.resizeHandler);
     window.removeEventListener('keydown', this.keyHandler);
     this.teardownAudioResume();

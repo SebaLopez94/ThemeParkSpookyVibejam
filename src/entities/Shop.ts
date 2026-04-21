@@ -89,11 +89,23 @@ export class Shop {
       model.position.z -= center.z;
       model.position.y -= scaledBox.min.y;
 
+      const _hsl = { h: 0, s: 0, l: 0 };
       model.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
+        if (!(child instanceof THREE.Mesh)) return;
+        child.castShadow = true;
+        child.receiveShadow = true;
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(mat => {
+          if (!(mat instanceof THREE.MeshStandardMaterial) && !(mat instanceof THREE.MeshPhysicalMaterial)) return;
+          mat.color.getHSL(_hsl);
+          mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.45, 1.0), _hsl.l);
+          mat.color.multiplyScalar(1.20);
+          mat.roughness = Math.min((mat.roughness ?? 0.5) + 0.08, 1.0);
+          mat.emissiveMap = null;
+          mat.emissive.copy(mat.color).multiplyScalar(0.10);
+          mat.emissiveIntensity = 1.0;
+          mat.needsUpdate = true;
+        });
       });
 
       this.mesh.add(model);

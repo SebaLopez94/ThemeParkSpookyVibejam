@@ -35,9 +35,7 @@ export class GameScene {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x130b1d);
-    if (!mobile) {
-      this.scene.fog = new THREE.Fog(0x130b1d, 70, 210);
-    }
+    this.scene.fog = new THREE.Fog(0x171020, mobile ? 75 : 64, mobile ? 185 : 205);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -49,17 +47,17 @@ export class GameScene {
     this.camera.lookAt(0, 0, 0);
 
     // Dark global fill so the park stays readable without flattening all shadows.
-    this.ambientLight = new THREE.AmbientLight(0x7c88a8, mobile ? 0.34 : 0.3);
+    this.ambientLight = new THREE.AmbientLight(0x8390ad, mobile ? 0.38 : 0.34);
     this.baseAmbientIntensity = this.ambientLight.intensity;
     this.scene.add(this.ambientLight);
 
     // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
-    this.hemisphereLight = new THREE.HemisphereLight(0x5d6f96, 0x241712, mobile ? 0.42 : 0.48);
+    this.hemisphereLight = new THREE.HemisphereLight(0x68799e, 0x302017, mobile ? 0.46 : 0.52);
     this.baseHemisphereIntensity = this.hemisphereLight.intensity;
     this.scene.add(this.hemisphereLight);
 
     // Cool moon key light for silhouettes and shadow shape.
-    this.directionalLight = new THREE.DirectionalLight(0xc6d7ff, mobile ? 0.82 : 0.95);
+    this.directionalLight = new THREE.DirectionalLight(0xd2ddff, mobile ? 0.9 : 1.04);
     this.baseDirectionalIntensity = this.directionalLight.intensity;
     this.directionalLight.position.set(32, 88, 18);
     this.directionalLight.castShadow = true;
@@ -220,7 +218,7 @@ export class GameScene {
       (Math.abs(x) >= fence || Math.abs(z) >= fence) && // outside fence
       !(Math.abs(x) < 4 && z > fence);                  // only clear the path gap
 
-    const placeClones = (path: string, count: number, maxDist: number, targetH: number, scaleVar: number) => {
+    const placeClones = (path: string, count: number, maxDist: number, targetH: number, scaleVar: number, sink = 0) => {
       sharedGLTFLoader.load(path, (gltf) => {
         const tmpl = gltf.scene;
         const box  = new THREE.Box3().setFromObject(tmpl);
@@ -240,7 +238,7 @@ export class GameScene {
           const clone = tmpl.clone(true);
           const sv = 1 + (rng() - 0.5) * scaleVar;
           clone.scale.setScalar(s * sv);
-          clone.position.set(x, gy * sv, z);
+          clone.position.set(x, gy * sv - sink, z);
           clone.rotation.y = rng() * Math.PI * 2;
           clone.traverse(c => {
             if (c instanceof THREE.Mesh) { c.castShadow = false; c.receiveShadow = false; }
@@ -255,8 +253,8 @@ export class GameScene {
     // Mobile uses far fewer to keep draw calls and memory manageable.
     const treeCount = mobile ? 30 : 120;
     const pumpkinCount = mobile ? 6 : 20;
-    placeClones('/models/tree.glb',    treeCount,    fence + 14, 6.0, 0.45);
-    placeClones('/models/tree2.glb',   treeCount,    fence + 14, 6.5, 0.45);
+    placeClones('/models/tree.glb',    treeCount,    fence + 14, 6.0, 0.45, 0.04);
+    placeClones('/models/tree2.glb',   treeCount,    fence + 14, 6.5, 0.45, 0.04);
     placeClones('/models/pumpkin.glb', pumpkinCount, fence + 10, 0.5, 0.4);
   }
 
@@ -325,10 +323,10 @@ export class GameScene {
         map:    { value: terrainTexture },
         repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
         fade:   { value: 0.03 },
-        moonTint: { value: new THREE.Color(0x3d4a3d) },
-        shadowTint: { value: new THREE.Color(0x21161c) },
+        moonTint: { value: new THREE.Color(0x4f5c47) },
+        shadowTint: { value: new THREE.Color(0x2c2023) },
         sickTint: { value: new THREE.Color(0x4b5532) },
-        earthTint: { value: new THREE.Color(0x564735) },
+        earthTint: { value: new THREE.Color(0x705d45) },
         wetTint: { value: new THREE.Color(0x252b2d) }
       },
       vertexShader: /* glsl */`
@@ -400,7 +398,7 @@ export class GameScene {
           color -= hoofMarks * vec3(0.032, 0.022, 0.015);
 
           float centerFalloff = distance(vUv, vec2(0.5));
-          color *= 0.82;
+          color *= 0.92;
           color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.14;
           color = clamp(color, vec3(0.0), vec3(1.0));
 
@@ -427,7 +425,7 @@ export class GameScene {
     outsideTex.repeat.set(30, 30);
     const mat  = new THREE.MeshStandardMaterial({
       map: outsideTex,
-      color: 0xb7a898,
+      color: 0x72543b,
       roughness: 1.0,
       metalness: 0.0,
     });

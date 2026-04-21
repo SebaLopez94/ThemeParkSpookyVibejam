@@ -29,6 +29,7 @@ export class BuildingSystem {
   private occupiedCells: Map<string, string> = new Map();
   private buildingIdCounter = 0;
 
+
   private ridesCache: Ride[] | null = null;
   private shopsCache: Shop[] | null = null;
   private servicesCache: Service[] | null = null;
