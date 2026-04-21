@@ -101,6 +101,14 @@ function App() {
       setIsPlacing(false);
       setActiveBuildDefinition(null);
     });
+    events.on('buildingPlaced', () => {
+      if (!isMobile) return;
+      game.cancelBuildMode();
+      setSelectedBuilding(null);
+      setShowBuildMenu(false);
+      setIsPlacing(false);
+      setActiveBuildDefinition(null);
+    });
     events.on('rotationChange', degree => setBuildRotation(degree));
     events.on('researchUpdate', state => setResearchState(state));
     events.on('challengesUpdate', state => setChallenges(state));
