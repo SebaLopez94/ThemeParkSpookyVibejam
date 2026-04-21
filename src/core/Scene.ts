@@ -210,6 +210,7 @@ export class GameScene {
   }
 
   private createSurroundings(): void {
+    const mobile = isMobile();
     let seed = 42;
     const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 
@@ -250,10 +251,13 @@ export class GameScene {
       });
     };
 
-    // Trees packed tight in a narrow band just outside the fence
-    placeClones('/models/tree.glb',    120, fence + 14, 6.0, 0.45);
-    placeClones('/models/tree2.glb',   120, fence + 14, 6.5, 0.45);
-    placeClones('/models/pumpkin.glb',  20, fence + 10, 0.5, 0.4);
+    // Trees packed tight in a narrow band just outside the fence.
+    // Mobile uses far fewer to keep draw calls and memory manageable.
+    const treeCount = mobile ? 30 : 120;
+    const pumpkinCount = mobile ? 6 : 20;
+    placeClones('/models/tree.glb',    treeCount,    fence + 14, 6.0, 0.45);
+    placeClones('/models/tree2.glb',   treeCount,    fence + 14, 6.5, 0.45);
+    placeClones('/models/pumpkin.glb', pumpkinCount, fence + 10, 0.5, 0.4);
   }
 
   private createMountains(): void {

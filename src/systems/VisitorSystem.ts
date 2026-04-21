@@ -7,6 +7,7 @@ import { Visitor } from '../entities/Visitor';
 import { PathfindingSystem } from './PathfindingSystem';
 import { GridHelper } from '../utils/GridHelper';
 import { GridPosition, ShopType, VisitorNeedType, VisitorThought } from '../types';
+import { isMobile } from '../utils/platform';
 
 type VisitorTargetType = 'ride' | 'shop' | 'service' | 'wander';
 
@@ -45,7 +46,8 @@ export class VisitorSystem {
   private restoreSpawnInterval = 0.22;
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
-  private readonly maxVisitors = 200;
+  // Mobile keeps far fewer visitors to avoid GPU/memory pressure.
+  private readonly maxVisitors = isMobile() ? 35 : 200;
   private densityMapCache: Map<string, number> = new Map();
   private densityRefreshTimer = 0;
   private readonly densityRefreshInterval = 0.25;

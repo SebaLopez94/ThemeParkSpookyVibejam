@@ -461,7 +461,7 @@ function App() {
               className={`px-btn px-mobile-tab px-side-tab--park${showParkPanel ? ' px-btn--active' : ''}`}
               aria-label="Manage Park"
               aria-pressed={showParkPanel}
-              onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); }}
+              onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); setShowBuildMenu(false); }}
             >
               <Landmark size={16} />
               PARK
@@ -471,7 +471,7 @@ function App() {
               style={{ position: 'relative' }}
               aria-label="View Challenges"
               aria-pressed={showChallenges}
-              onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
+              onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); setShowBuildMenu(false); }}
             >
               <Trophy size={16} />
               GOALS
@@ -483,7 +483,7 @@ function App() {
               className={`px-btn px-mobile-tab px-side-tab--research${showResearch ? ' px-btn--active' : ''}`}
               aria-label="Research Buildings"
               aria-pressed={showResearch}
-              onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
+              onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); setShowBuildMenu(false); }}
             >
               <FlaskConical size={16} />
               RESEARCH
@@ -492,56 +492,67 @@ function App() {
         </div>
       )}
 
-      {!(isMobile && (showParkPanel || showChallenges || showResearch || isPlacing)) && (
+      {!(isMobile && (showParkPanel || showChallenges || showResearch || showBuildMenu || isPlacing)) && (
         <div style={{ position: 'fixed', bottom: isMobile ? 'calc(72px + var(--safe-bottom))' : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
+          {!isBuildMenuVisible && (
+            <>
+              <button
+                className="px-btn px-btn--lg"
+                aria-label="Place path (free)"
+                onClick={() => {
+                  handleSelectBuilding(getPathDefinition());
+                  setShowBuildMenu(false);
+                }}
+              >
+                <Route />
+                PATH
+              </button>
+              <button
+                className="px-btn px-btn--lg"
+                aria-label="Open build menu"
+                aria-expanded={showBuildMenu}
+                onClick={() => {
+                  const opening = !showBuildMenu;
+                  setShowBuildMenu(opening);
+                  setSelectedBuilding(null);
+                  setShowHelp(false);
+                  setActiveBuildDefinition(null);
+                  if (opening) {
+                    setShowParkPanel(false);
+                    setShowChallenges(false);
+                    setShowResearch(false);
+                  } else {
+                    gameRef.current?.cancelBuildMode();
+                  }
+                }}
+              >
+                <Hammer />
+                BUILD
+              </button>
+            </>
+          )}
           <button
-          className="px-btn px-btn--lg"
-          aria-label="Place path (free)"
-          onClick={() => {
-            handleSelectBuilding(getPathDefinition());
-            setShowBuildMenu(false);
-          }}
-        >
-          <Route />
-          PATH
-        </button>
-        <button
-          className="px-btn px-btn--lg"
-          aria-label="Open build menu"
-          aria-expanded={showBuildMenu}
-          onClick={() => {
-            setShowBuildMenu(value => !value);
-            setSelectedBuilding(null);
-            setShowHelp(false);
-            setActiveBuildDefinition(null);
-            if (!showBuildMenu) gameRef.current?.cancelBuildMode();
-          }}
-        >
-          <Hammer />
-          BUILD
-        </button>
-        <button
-          className="px-btn"
-          style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, fontSize: 22, justifyContent: 'center', flexShrink: 0 }}
-          aria-label="How to play"
-          aria-expanded={showHelp}
-          onClick={() => {
-            setShowHelp(value => !value);
-            setShowBuildMenu(false);
-          }}
-        >
-          <HelpCircle />
-        </button>
-        <button
-          className="px-btn"
-          style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, justifyContent: 'center', flexShrink: 0 }}
-          onClick={handleToggleMute}
-          aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
-          aria-pressed={isMuted}
-        >
-          {isMuted ? <VolumeX /> : <Volume2 />}
-        </button>
-      </div>
+            className="px-btn"
+            style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, fontSize: 22, justifyContent: 'center', flexShrink: 0 }}
+            aria-label="How to play"
+            aria-expanded={showHelp}
+            onClick={() => {
+              setShowHelp(value => !value);
+              setShowBuildMenu(false);
+            }}
+          >
+            <HelpCircle />
+          </button>
+          <button
+            className="px-btn"
+            style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, justifyContent: 'center', flexShrink: 0 }}
+            onClick={handleToggleMute}
+            aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
+            aria-pressed={isMuted}
+          >
+            {isMuted ? <VolumeX /> : <Volume2 />}
+          </button>
+        </div>
       )}
 
       {isBuildMenuVisible && (
@@ -550,7 +561,7 @@ function App() {
           onCancel={handleCancelBuildMode}
           canAfford={canAfford}
           unlockedBuildings={researchState.unlocked}
-          bottom={isMobile ? 150 : 16}
+          bottom={isMobile ? 'calc(68px + var(--safe-bottom))' : 16}
         />
       )}
 
@@ -566,29 +577,51 @@ function App() {
 
       {isPlacing && activeBuildDefinition && (
         isMobile ? (
-          /* Mobile: minimal bar â€” building name + cancel */
+          /* Mobile: build bar with tap-to-rotate button */
           <div style={{ position: 'fixed', bottom: 90, left: 8, right: 8, zIndex: 46 }}>
             <div className="px-panel px-panel--controls px-anim-enter-up" style={{ padding: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <BuildingIcon type={activeBuildDefinition.type} subType={activeBuildDefinition.subType} size={14} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px' }}>
+                {/* Building name */}
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', display: 'flex', alignItems: 'center', gap: 5, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                  <BuildingIcon type={activeBuildDefinition.type} subType={activeBuildDefinition.subType} size={14} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {activeBuildDefinition.name.toUpperCase()}
                   </span>
-                  {activeBuildDefinition.type !== BuildingType.PATH && activeBuildDefinition.type !== BuildingType.DELETE && (
-                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-muted)' }}>
-                      â† SWIPE TO ROTATE â†’
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {activeBuildDefinition.type === BuildingType.PATH && (
-                    <button className="px-btn px-btn--danger" style={{ padding: '6px 10px' }} onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: 'ðŸ—‘ï¸' })}>
-                      <Trash2 size={13} />
+                </span>
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  {activeBuildDefinition.type === BuildingType.PATH ? (
+                    <button
+                      className="px-btn px-btn--danger"
+                      style={{ padding: '8px 12px' }}
+                      aria-label="Delete path tile"
+                      onClick={() => handleSelectBuilding({ type: BuildingType.DELETE, name: 'Banish', description: 'Remove a path', cost: 0, icon: '🗑️' })}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  ) : (
+                    /* Tap to rotate 90 degrees CW - shows current angle */
+                    <button
+                      className="px-btn"
+                      style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 52 }}
+                      aria-label={`Rotate building, currently ${buildRotation} degrees`}
+                      onClick={() => gameRef.current?.rotateBuilding()}
+                    >
+                      <RotateCw size={14} />
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-muted)', lineHeight: 1 }}>
+                        {buildRotation}&deg;
+                      </span>
                     </button>
                   )}
-                  <button className="px-btn" style={{ padding: '6px 10px' }} onClick={handleCancelBuildMode}>
-                    <X size={13} />
+
+                  <button
+                    className="px-btn"
+                    style={{ padding: '8px 12px' }}
+                    aria-label="Cancel build mode"
+                    onClick={handleCancelBuildMode}
+                  >
+                    <X size={14} />
                   </button>
                 </div>
               </div>

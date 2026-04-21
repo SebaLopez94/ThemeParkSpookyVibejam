@@ -10,7 +10,7 @@ interface BuildMenuProps {
   onCancel: () => void;
   canAfford: (cost: number) => boolean;
   unlockedBuildings: PlaceableBuildingKind[];
-  bottom?: number;
+  bottom?: number | string;
 }
 
 type Tab = 'rides' | 'shops' | 'services' | 'decor';
@@ -121,7 +121,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
           maxWidth: isMobile ? undefined : '96vw',
           margin: isMobile ? '0 8px' : undefined,
           padding: 0,
-          maxHeight: isMobile ? 'calc(100vh - 330px)' : 'min(78vh, 760px)',
+          maxHeight: isMobile ? 'calc(100dvh - 76px - var(--safe-bottom))' : 'min(78vh, 760px)',
           display: 'flex',
           flexDirection: 'column',
         }}

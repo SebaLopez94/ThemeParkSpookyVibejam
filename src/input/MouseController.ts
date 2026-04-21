@@ -28,7 +28,7 @@ export class MouseController {
   /** When true, single-finger horizontal drag in build mode rotates the preview instead of drawing tiles. */
   public touchRotateMode = false;
   private touchRotateAccum = 0;
-  private static readonly TOUCH_ROTATE_THRESHOLD = 50;
+  private static readonly TOUCH_ROTATE_THRESHOLD = 28;
 
   public onCameraMove: ((delta: THREE.Vector2) => void) | null = null;
   public onCameraZoom: ((delta: number) => void) | null = null;

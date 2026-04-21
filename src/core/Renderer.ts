@@ -19,7 +19,9 @@ export class GameRenderer {
     });
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1 : 1.5));
+    // Mobile: no PostProcessing, so we can afford 1.5× DPR for crisp output.
+    // Desktop: cap at 1.5× to avoid excessive fill-rate with the EffectComposer.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 1.5));
     this.renderer.shadowMap.enabled = !mobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.NoToneMapping;

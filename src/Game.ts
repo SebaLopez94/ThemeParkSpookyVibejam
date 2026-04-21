@@ -12,6 +12,7 @@ import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { EventBus } from './utils/EventBus';
+import { isMobile } from './utils/platform';
 import { sharedGLTFLoader, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
 import {
   BUILDING_DISPLAY,
@@ -198,7 +199,12 @@ export class Game {
     this.buildTrack = { audio: makeAudio(), baseVolume: 0.16 };
     this.loadAudio();
 
-    this.renderer.initPostProcessing(this.scene.scene, this.scene.camera);
+    // PostProcessing (CRT shader + EffectComposer) is too expensive on mobile:
+    // it doubles render-target memory and adds per-pixel noise that looks bad
+    // at mobile DPR. Skip it entirely — the raw renderer is fast and clear.
+    if (!isMobile()) {
+      this.renderer.initPostProcessing(this.scene.scene, this.scene.camera);
+    }
     this.setupMouseControls();
     this.setupWindowResize();
     this.setupAudioResume();
@@ -369,6 +375,11 @@ export class Game {
     this.buildRotation = (this.buildRotation + direction * Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
     this.events.emit('rotationChange', Math.round(this.buildRotation * 180 / Math.PI));
     this.updatePreview();
+  }
+
+  /** Rotate the active placement preview by 90° clockwise. Safe to call from UI. */
+  public rotateBuilding(): void {
+    if (this.selectedBuilding) this.rotateBuild(1);
   }
 
   private setupWindowResize(): void {
