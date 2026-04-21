@@ -360,6 +360,7 @@ export class Game {
         this.handleGridClick(position);
       }
     };
+    this.mouseController.onBuildTouchRelease = position => this.handleMobileBuildTouchRelease(position);
   }
 
   private keyHandler = (event: KeyboardEvent): void => {
@@ -511,6 +512,27 @@ export class Game {
       }
       this.economySystem.spendMoney(this.selectedBuilding.cost);
     }
+  }
+
+  private canPlaceSelectedBuildingAt(position: GridPosition): boolean {
+    if (!this.selectedBuilding || this.selectedBuilding.type === BuildingType.DELETE) return false;
+
+    return this.buildingSystem.canPlaceBuilding(
+      position,
+      this.selectedBuilding.type,
+      this.selectedBuilding.subType as PlaceableBuildingKind | undefined
+    ) && this.economySystem.canAfford(this.selectedBuilding.cost);
+  }
+
+  private handleMobileBuildTouchRelease(position: GridPosition): void {
+    if (!this.selectedBuilding || this.selectedBuilding.type === BuildingType.PATH) return;
+
+    this.hoveredGridPosition = position;
+    this.updatePreview();
+    if (!this.canPlaceSelectedBuildingAt(position)) return;
+
+    this.placeBuilding(position);
+    this.updatePreview();
   }
 
   private placeTypedBuilding<T extends PlaceableBuildingKind>(

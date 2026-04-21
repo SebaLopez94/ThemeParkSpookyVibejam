@@ -603,10 +603,15 @@ function App() {
                   ) : (
                     /* Tap to rotate 90 degrees CW - shows current angle */
                     <button
+                      type="button"
                       className="px-btn"
                       style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 52 }}
                       aria-label={`Rotate building, currently ${buildRotation} degrees`}
-                      onClick={() => gameRef.current?.rotateBuilding()}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        gameRef.current?.rotateBuilding();
+                      }}
                     >
                       <RotateCw size={14} />
                       <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-muted)', lineHeight: 1 }}>
@@ -682,7 +687,7 @@ function App() {
                     ['TAP', 'Build or select'],
                     ['TAP + DRAG', 'Draw paths'],
                     ['TAP BUILDING', 'Manage it'],
-                    ['SWIPE BUILD BAR', 'Rotate building'],
+                    ['ROTATE BUTTON', 'Turn placement'],
                   ].map(([key, desc]) => (
                     <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 6px', background: 'rgba(0,0,0,0.25)' }}>
                       <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)', flexShrink: 0 }}>{key}</span>

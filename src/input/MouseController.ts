@@ -25,16 +25,15 @@ export class MouseController {
   private lastPinchDistance = 0;
   private lastPinchCenter: THREE.Vector2 = new THREE.Vector2();
 
-  /** When true, single-finger horizontal drag in build mode rotates the preview instead of drawing tiles. */
+  /** When true, single-finger drag in build mode moves the placement preview. */
   public touchRotateMode = false;
-  private touchRotateAccum = 0;
-  private static readonly TOUCH_ROTATE_THRESHOLD = 28;
 
   public onCameraMove: ((delta: THREE.Vector2) => void) | null = null;
   public onCameraZoom: ((delta: number) => void) | null = null;
   public onGridHover: ((position: GridPosition | null) => void) | null = null;
   public onGridClick: ((position: GridPosition) => void) | null = null;
   public onGridDrag: ((position: GridPosition) => void) | null = null;
+  public onBuildTouchRelease: ((position: GridPosition) => void) | null = null;
   public onRightClick: (() => boolean) | null = null;
   /** When set, scroll rotates the placement preview instead of zooming the camera. */
   public onBuildRotate: ((direction: number) => void) | null = null;
@@ -171,7 +170,6 @@ export class MouseController {
       if (this.onBuildRotate !== null) {
         if (this.touchRotateMode) {
           // Building placement — hold+drag will rotate
-          this.touchRotateAccum = 0;
           this.updateMouseCoordsFromTouch(event.touches[0]);
           const worldPos = this.getWorldPosition();
           if (worldPos) this.onGridHover?.(GridHelper.worldToGrid(worldPos));
@@ -211,11 +209,6 @@ export class MouseController {
 
       if (this.onBuildRotate !== null && this.touchRotateMode) {
         // Building rotate mode — horizontal swipe rotates the preview
-        this.touchRotateAccum += this._delta.x;
-        if (Math.abs(this.touchRotateAccum) >= MouseController.TOUCH_ROTATE_THRESHOLD) {
-          this.onBuildRotate(this.touchRotateAccum > 0 ? 1 : -1);
-          this.touchRotateAccum = 0;
-        }
         // Still update hover position so the preview follows the finger
         const worldPos = this.getWorldPosition();
         if (worldPos) this.onGridHover?.(GridHelper.worldToGrid(worldPos));
@@ -268,6 +261,19 @@ export class MouseController {
       const dy = t.clientY - this.touchStartPos.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const elapsed = Date.now() - this.touchStartTime;
+
+      if (this.onBuildRotate !== null && this.touchRotateMode) {
+        this.updateMouseCoordsFromTouch(t);
+        const worldPos = this.getWorldPosition();
+        if (worldPos) {
+          const gridPos = GridHelper.worldToGrid(worldPos);
+          this.onGridHover?.(gridPos);
+          this.onBuildTouchRelease?.(gridPos);
+        }
+
+        this.lastDragGridPosition = null;
+        return;
+      }
 
       // Tap = small movement + quick lift
       if (dist < 14 && elapsed < 400) {

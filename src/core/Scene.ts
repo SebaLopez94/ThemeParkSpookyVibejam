@@ -323,10 +323,10 @@ export class GameScene {
         map:    { value: terrainTexture },
         repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
         fade:   { value: 0.03 },
-        moonTint: { value: new THREE.Color(0x4f5c47) },
-        shadowTint: { value: new THREE.Color(0x2c2023) },
+        moonTint: { value: new THREE.Color(0x58664f) },
+        shadowTint: { value: new THREE.Color(0x33272a) },
         sickTint: { value: new THREE.Color(0x4b5532) },
-        earthTint: { value: new THREE.Color(0x705d45) },
+        earthTint: { value: new THREE.Color(0x7b684e) },
         wetTint: { value: new THREE.Color(0x252b2d) }
       },
       vertexShader: /* glsl */`
@@ -398,7 +398,7 @@ export class GameScene {
           color -= hoofMarks * vec3(0.032, 0.022, 0.015);
 
           float centerFalloff = distance(vUv, vec2(0.5));
-          color *= 0.92;
+          color *= 0.97;
           color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.14;
           color = clamp(color, vec3(0.0), vec3(1.0));
 
