@@ -16,6 +16,27 @@ export class GridHelper {
     };
   }
 
+  /**
+   * Zero-allocation variant — writes result into an existing GridPosition.
+   * Use this in hot loops (e.g. per-visitor per-frame) to avoid heap churn.
+   * Safe for single-threaded synchronous use; callers must not hold `out` across async boundaries.
+   */
+  static worldToGridInto(worldPos: WorldPosition, out: GridPosition): GridPosition {
+    out.x = Math.floor((worldPos.x - GRID_OFFSET_X) / GRID_SIZE);
+    out.z = Math.floor((worldPos.z - GRID_OFFSET_Z) / GRID_SIZE);
+    return out;
+  }
+
+  /**
+   * Converts a world position directly to a numeric grid key — no intermediate GridPosition object.
+   * Use when only the key is needed (e.g. density map lookups).
+   */
+  static worldToGridKey(worldPos: WorldPosition): number {
+    const x = Math.floor((worldPos.x - GRID_OFFSET_X) / GRID_SIZE);
+    const z = Math.floor((worldPos.z - GRID_OFFSET_Z) / GRID_SIZE);
+    return x * GRID_HEIGHT + z;
+  }
+
   static gridToWorld(gridPos: GridPosition): WorldPosition {
     return {
       x: gridPos.x * GRID_SIZE + GRID_SIZE / 2 + GRID_OFFSET_X,

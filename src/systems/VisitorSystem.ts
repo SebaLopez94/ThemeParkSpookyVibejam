@@ -67,12 +67,28 @@ export class VisitorSystem {
   /** Reused each frame — avoids allocating a new string[] on every update tick. */
   private readonly toRemoveBuffer: string[] = [];
   /**
+   * Scratch GridPosition reused every visitor-loop tick — eliminates one {x,z} allocation
+   * per visitor per frame (200 visitors × 60fps = 12 000 objects/sec saved).
+   * Never store a reference to this outside the synchronous forEach body.
+   */
+  private readonly _visitorGridPosScratch: GridPosition = { x: 0, z: 0 };
+
+  /**
    * Pre-allocated candidate scratch arrays — reused across every visitor decision.
    * Reset with .length = 0 before each use; never held beyond the decision call.
    */
   private readonly _rideCandidates:    TargetCandidate[] = [];
   private readonly _shopCandidates:    TargetCandidate[] = [];
   private readonly _serviceCandidates: TargetCandidate[] = [];
+
+  /**
+   * Object pools for TargetCandidate — properties are overwritten before each use.
+   * Eliminates ~4 000+ short-lived 8-property objects per second at 200 visitors.
+   * Each pool grows lazily (push) if ever more buildings than the initial size exist.
+   */
+  private readonly _rideCandidatePool:    TargetCandidate[] = [];
+  private readonly _shopCandidatePool:    TargetCandidate[] = [];
+  private readonly _serviceCandidatePool: TargetCandidate[] = [];
 
   /**
    * Id → entity maps rebuilt only when the array references change.
@@ -146,8 +162,10 @@ export class VisitorSystem {
     const toRemove = this.toRemoveBuffer;
     const now = performance.now() / 1000;
 
+    const gridScratch = this._visitorGridPosScratch;
     this.visitors.forEach((visitor, id) => {
-      const visitorGridPos = GridHelper.worldToGrid(visitor.data.position);
+      // worldToGridInto reuses gridScratch — no {x,z} allocation per visitor per frame.
+      const visitorGridPos = GridHelper.worldToGridInto(visitor.data.position, gridScratch);
       const localHygieneSupport = entities.getLocalHygieneBonus(visitorGridPos);
       const hygieneDecayMultiplier = THREE.MathUtils.clamp(1 - localHygieneSupport / 100, 0.35, 1);
       visitor.update(deltaTime, hygieneDecayMultiplier);
@@ -180,13 +198,14 @@ export class VisitorSystem {
         if (target) {
           this.handleArrival(visitor, target, entities, densityMap);
           if (!visitor.data.currentActivity) {
-            this.assignNewActivity(visitor, entities, densityMap);
+            // Pass the already-computed grid pos — avoids a duplicate worldToGrid call inside.
+            this.assignNewActivity(visitor, visitorGridPos, entities, densityMap);
             this.visitorDecisionCooldowns.set(id, now + 0.45);
           }
         } else {
           const nextDecisionAt = this.visitorDecisionCooldowns.get(id) ?? 0;
           if (now >= nextDecisionAt) {
-            this.assignNewActivity(visitor, entities, densityMap);
+            this.assignNewActivity(visitor, visitorGridPos, entities, densityMap);
             this.visitorDecisionCooldowns.set(id, now + 0.6 + Math.random() * 0.4);
           }
         }
@@ -330,10 +349,10 @@ export class VisitorSystem {
 
   private assignNewActivity(
     visitor: Visitor,
+    currentGridPos: GridPosition,
     entities: SimulationEntities,
     densityMap: Map<number, number>
   ): void {
-    const currentGridPos = GridHelper.worldToGrid(visitor.data.position);
     if (!this.pathfinding.hasPath(currentGridPos)) return;
 
     const rideChoice = this.selectBestRide(visitor, currentGridPos, entities.rides, densityMap, entities.getLocalDecorationBonus);
@@ -387,23 +406,28 @@ export class VisitorSystem {
     const p = visitor.data.personality;
     const personalityMult = p === 'thrill_seeker' ? 1.4 : p === 'foodie' ? 0.85 : 1.0;
 
-    // Reuse pre-allocated scratch array — avoids 1 array allocation per decision.
+    // Reuse pre-allocated scratch array + object pool — zero allocations per decision.
     const rideCandidates = this._rideCandidates;
     rideCandidates.length = 0;
     for (const ride of rides) {
       if (!visitor.canUseRide(ride.data.id)) continue;
       const useCount = visitor.data.rideUseCounts[ride.data.id] ?? 0;
       const varietyPenalty = Math.min(useCount * 0.12, 0.4);
-      rideCandidates.push({
-        id: ride.data.id,
-        type: 'ride' as const,
-        accessCell: ride.data.accessCell,
-        baseNeedScore: funNeed * (ride.data.funFactor / 40) * personalityMult * (1 - varietyPenalty),
-        price: ride.data.price,
-        valueScore: ride.data.valueScore,
-        quality: ride.data.quality,
-        decorationBonus: getLocalDecorationBonus(ride.data.accessCell)
-      });
+      const idx = rideCandidates.length;
+      // Grow pool lazily on first few playthroughs, then always reuses.
+      if (idx >= this._rideCandidatePool.length) {
+        this._rideCandidatePool.push({ id: '', type: 'ride', accessCell: { x: 0, z: 0 }, baseNeedScore: 0, price: 0, valueScore: 0, quality: 0, decorationBonus: 0 });
+      }
+      const c = this._rideCandidatePool[idx];
+      c.id = ride.data.id;
+      c.type = 'ride';
+      c.accessCell = ride.data.accessCell;
+      c.baseNeedScore = funNeed * (ride.data.funFactor / 40) * personalityMult * (1 - varietyPenalty);
+      c.price = ride.data.price;
+      c.valueScore = ride.data.valueScore;
+      c.quality = ride.data.quality;
+      c.decorationBonus = getLocalDecorationBonus(ride.data.accessCell);
+      rideCandidates.push(c);
     }
     return this.pickBestTarget(rideCandidates, current, visitor, densityMap);
   }
@@ -425,7 +449,7 @@ export class VisitorSystem {
     const foodMult = p === 'foodie' ? 1.4 : 1.0;
     const giftMult = p === 'relaxer' ? 1.2 : p === 'thrill_seeker' ? 0.75 : 1.0;
 
-    // Reuse pre-allocated scratch array — avoids 1 array allocation per decision.
+    // Reuse pre-allocated scratch array + object pool — zero allocations per decision.
     const shopCandidates = this._shopCandidates;
     shopCandidates.length = 0;
     for (const shop of shops) {
@@ -441,16 +465,20 @@ export class VisitorSystem {
         needScore = giftNeed;
         personalityMult = giftMult;
       }
-      shopCandidates.push({
-        id: shop.data.id,
-        type: 'shop' as const,
-        accessCell: shop.data.accessCell,
-        baseNeedScore: needScore * (shop.data.quality / 55) * personalityMult,
-        price: shop.data.price,
-        valueScore: shop.data.valueScore,
-        quality: shop.data.quality,
-        decorationBonus: getLocalDecorationBonus(shop.data.accessCell)
-      });
+      const idx = shopCandidates.length;
+      if (idx >= this._shopCandidatePool.length) {
+        this._shopCandidatePool.push({ id: '', type: 'shop', accessCell: { x: 0, z: 0 }, baseNeedScore: 0, price: 0, valueScore: 0, quality: 0, decorationBonus: 0 });
+      }
+      const c = this._shopCandidatePool[idx];
+      c.id = shop.data.id;
+      c.type = 'shop';
+      c.accessCell = shop.data.accessCell;
+      c.baseNeedScore = needScore * (shop.data.quality / 55) * personalityMult;
+      c.price = shop.data.price;
+      c.valueScore = shop.data.valueScore;
+      c.quality = shop.data.quality;
+      c.decorationBonus = getLocalDecorationBonus(shop.data.accessCell);
+      shopCandidates.push(c);
     }
     return this.pickBestTarget(shopCandidates, current, visitor, densityMap);
   }
@@ -464,20 +492,24 @@ export class VisitorSystem {
     const hygieneNeed = (100 - visitor.data.needs.hygiene) / 100;
     if (hygieneNeed < 0.1) return null;
 
-    // Reuse pre-allocated scratch array — avoids 1 array allocation per decision.
+    // Reuse pre-allocated scratch array + object pool — zero allocations per decision.
     const serviceCandidates = this._serviceCandidates;
     serviceCandidates.length = 0;
     for (const service of services) {
-      serviceCandidates.push({
-        id: service.data.id,
-        type: 'service' as const,
-        accessCell: service.data.accessCell,
-        baseNeedScore: hygieneNeed * (service.data.quality / 50),
-        price: service.data.price,
-        valueScore: Math.max(1, service.data.valueScore),
-        quality: service.data.quality,
-        decorationBonus: 0
-      });
+      const idx = serviceCandidates.length;
+      if (idx >= this._serviceCandidatePool.length) {
+        this._serviceCandidatePool.push({ id: '', type: 'service', accessCell: { x: 0, z: 0 }, baseNeedScore: 0, price: 0, valueScore: 0, quality: 0, decorationBonus: 0 });
+      }
+      const c = this._serviceCandidatePool[idx];
+      c.id = service.data.id;
+      c.type = 'service';
+      c.accessCell = service.data.accessCell;
+      c.baseNeedScore = hygieneNeed * (service.data.quality / 50);
+      c.price = service.data.price;
+      c.valueScore = Math.max(1, service.data.valueScore);
+      c.quality = service.data.quality;
+      c.decorationBonus = 0;
+      serviceCandidates.push(c);
     }
     return this.pickBestTarget(serviceCandidates, current, visitor, densityMap);
   }
@@ -625,7 +657,8 @@ export class VisitorSystem {
   private buildDensityMap(): void {
     this.densityMapCache.clear();
     this.visitors.forEach(visitor => {
-      const key = GridHelper.getGridKey(GridHelper.worldToGrid(visitor.data.position));
+      // worldToGridKey skips the intermediate {x,z} object entirely.
+      const key = GridHelper.worldToGridKey(visitor.data.position);
       this.densityMapCache.set(key, (this.densityMapCache.get(key) ?? 0) + 1);
     });
   }
