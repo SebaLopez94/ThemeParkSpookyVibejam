@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GRID_WIDTH, GRID_HEIGHT, GRID_SIZE } from '../utils/GridHelper';
 import { sharedGLTFLoader, sharedTextureLoader } from './AssetLoader';
 import { isMobile } from '../utils/platform';
@@ -12,10 +13,18 @@ export class GameScene {
   public hemisphereLight: THREE.HemisphereLight;
   private fillLight: THREE.DirectionalLight;
   private retroOverlay: RetroOverlay;
+  /** Stores InstancedMesh objects (one per GLTF submesh per model type). */
   private surroundingClones: THREE.Object3D[] = [];
   private readonly baseAmbientIntensity: number;
   private readonly baseHemisphereIntensity: number;
   private readonly baseDirectionalIntensity: number;
+  /** Cached once at construction — avoids re-running the UA regex every frame. */
+  private readonly mobile: boolean;
+  /** Reusable scratch matrix for instanced transform composition. */
+  private readonly _tempMatrix = new THREE.Matrix4();
+  /** Reusable scratch objects for GLTF bounding-box computation. */
+  private readonly _box3 = new THREE.Box3();
+  private readonly _vec3 = new THREE.Vector3();
   private rainGeometry: THREE.BufferGeometry | null = null;
   private rainMaterial: THREE.LineBasicMaterial | null = null;
   private rainLines: THREE.LineSegments | null = null;
@@ -34,7 +43,8 @@ export class GameScene {
 
 
   constructor() {
-    const mobile = isMobile();
+    this.mobile = isMobile();
+    const mobile = this.mobile;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x130b1d);
@@ -214,21 +224,28 @@ export class GameScene {
     this.scene.add(spikeMesh);
 
     // --- Rails (thin horizontal bars per side) ---
+    // Collect all span geometries in world space and merge into one Mesh = 1 draw call.
+    const railGeoAccum: THREE.BufferGeometry[] = [];
+    const railDummy = new THREE.Object3D();
+
     const addRailSpan = (x1: number, z1: number, x2: number, z2: number) => {
-      const dx = x2 - x1;
-      const dz = z2 - z1;
+      const dx  = x2 - x1;
+      const dz  = z2 - z1;
       const len = Math.sqrt(dx * dx + dz * dz);
-      const angle = Math.atan2(dx, dz); // rotation around Y
+      const angle = Math.atan2(dx, dz);
       const cx = (x1 + x2) / 2;
       const cz = (z1 + z2) / 2;
-      const railGeo = new THREE.BoxGeometry(railD, railH, len);
+      const unitGeo = new THREE.BoxGeometry(railD, railH, len);
       for (const yFrac of [0.28, 0.72]) {
-        const rail = new THREE.Mesh(railGeo, mat);
-        rail.position.set(cx, postH * yFrac, cz);
-        rail.rotation.y = angle;
-        rail.castShadow = false;
-        this.scene.add(rail);
+        railDummy.position.set(cx, postH * yFrac, cz);
+        railDummy.rotation.set(0, angle, 0);
+        railDummy.scale.set(1, 1, 1);
+        railDummy.updateMatrix();
+        const worldGeo = unitGeo.clone();
+        worldGeo.applyMatrix4(railDummy.matrix);
+        railGeoAccum.push(worldGeo);
       }
+      unitGeo.dispose(); // raw geometry disposed; world copies survive in the array
     };
 
     // Bottom left of entrance gap
@@ -241,10 +258,17 @@ export class GameScene {
     addRailSpan(-halfW, -halfH, -halfW, halfH);
     // Right
     addRailSpan(halfW, -halfH, halfW, halfH);
+
+    // Merge all 10 rail geometries → 1 draw call
+    const mergedRails = mergeGeometries(railGeoAccum, false);
+    railGeoAccum.forEach(g => g.dispose()); // free the per-span clones
+    const railMesh = new THREE.Mesh(mergedRails, mat);
+    railMesh.castShadow = false;
+    this.scene.add(railMesh);
   }
 
   private createSurroundings(): void {
-    const mobile = isMobile();
+    const mobile = this.mobile;
     let seed = 42;
     const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 
@@ -254,34 +278,66 @@ export class GameScene {
       (Math.abs(x) >= fence || Math.abs(z) >= fence) && // outside fence
       !(Math.abs(x) < 4 && z > fence);                  // only clear the path gap
 
-    const placeClones = (path: string, count: number, maxDist: number, targetH: number, scaleVar: number, sink = 0) => {
+    /**
+     * Replaces N individual clones with InstancedMesh objects — one per GLTF submesh.
+     * Reduces surroundings from O(count × submeshes) draw calls to O(submeshes) — typically 2-4.
+     * RNG call order is identical to the old placeClones so positions are unchanged.
+     */
+    const placeInstanced = (
+      path: string, count: number, maxDist: number, targetH: number, scaleVar: number, sink = 0
+    ) => {
+      // Pre-generate all instance data synchronously using the seeded RNG
+      // so the call order is deterministic regardless of async GLTF load timing.
+      type InstanceData = { x: number; z: number; sv: number; rotY: number };
+      const instances: InstanceData[] = [];
+      for (let i = 0; i < count; i++) {
+        let x = 0, z = 0, tries = 0;
+        do {
+          const sign = rng() > 0.5 ? 1 : -1;
+          const axis = rng() > 0.5;
+          x = axis ? (fence + rng() * (maxDist - fence)) * sign : (rng() * 2 - 1) * maxDist;
+          z = axis ? (rng() * 2 - 1) * maxDist : (fence + rng() * (maxDist - fence)) * sign;
+        } while (!isValid(x, z) && ++tries < 200);
+        const sv  = 1 + (rng() - 0.5) * scaleVar;
+        const rotY = rng() * Math.PI * 2;
+        instances.push({ x, z, sv, rotY });
+      }
+
       sharedGLTFLoader.load(path, (gltf) => {
         const tmpl = gltf.scene;
-        const box  = new THREE.Box3().setFromObject(tmpl);
-        const s    = targetH / Math.max(box.getSize(new THREE.Vector3()).y, 0.01);
-        const gy   = -box.min.y * s;
+        this._box3.setFromObject(tmpl);
+        const baseScale = targetH / Math.max(this._box3.getSize(this._vec3).y, 0.01);
+        const groundY   = -this._box3.min.y * baseScale;
 
-        for (let i = 0; i < count; i++) {
-          let x: number, z: number, tries = 0;
-          do {
-            // Bias positions toward the fence — sample in [fence, maxDist] per axis
-            const sign = rng() > 0.5 ? 1 : -1;
-            const axis = rng() > 0.5; // true = vary X, false = vary Z
-            x = axis ? (fence + rng() * (maxDist - fence)) * sign : (rng() * 2 - 1) * maxDist;
-            z = axis ? (rng() * 2 - 1) * maxDist : (fence + rng() * (maxDist - fence)) * sign;
-          } while (!isValid(x, z) && ++tries < 200);
+        // Compute world matrices for all nodes in the template (at scale 1, at origin).
+        tmpl.updateMatrixWorld(true);
 
-          const clone = tmpl.clone(true);
-          const sv = 1 + (rng() - 0.5) * scaleVar;
-          clone.scale.setScalar(s * sv);
-          clone.position.set(x, gy * sv - sink, z);
-          clone.rotation.y = rng() * Math.PI * 2;
-          clone.traverse(c => {
-            if (c instanceof THREE.Mesh) { c.castShadow = false; c.receiveShadow = false; }
+        const dummy = new THREE.Object3D();
+
+        // One InstancedMesh per submesh — preserves multi-material models.
+        tmpl.traverse(child => {
+          if (!(child instanceof THREE.Mesh)) return;
+          child.updateWorldMatrix(true, false);
+
+          const instMesh = new THREE.InstancedMesh(child.geometry, child.material, instances.length);
+          instMesh.castShadow    = false;
+          instMesh.receiveShadow = false;
+          instMesh.frustumCulled = true;
+
+          instances.forEach(({ x, z, sv, rotY }, idx) => {
+            dummy.position.set(x, groundY * sv - sink, z);
+            dummy.rotation.set(0, rotY, 0);
+            dummy.scale.setScalar(baseScale * sv);
+            dummy.updateMatrix();
+            // Compose: instance world transform × mesh's local transform within template.
+            this._tempMatrix.multiplyMatrices(dummy.matrix, child.matrixWorld);
+            instMesh.setMatrixAt(idx, this._tempMatrix);
           });
-          this.surroundingClones.push(clone);
-          this.scene.add(clone);
-        }
+
+          instMesh.instanceMatrix.needsUpdate = true;
+          this.surroundingClones.push(instMesh);
+          this.scene.add(instMesh);
+        });
       });
     };
 
@@ -289,9 +345,9 @@ export class GameScene {
     // Mobile uses far fewer to keep draw calls and memory manageable.
     const treeCount = mobile ? 30 : 120;
     const pumpkinCount = mobile ? 6 : 20;
-    placeClones('/models/tree.glb',    treeCount,    fence + 14, 6.0, 0.45, 0.04);
-    placeClones('/models/tree2.glb',   treeCount,    fence + 14, 6.5, 0.45, 0.04);
-    placeClones('/models/pumpkin.glb', pumpkinCount, fence + 10, 0.5, 0.4);
+    placeInstanced('/models/tree.glb',    treeCount,    fence + 14, 6.0, 0.45, 0.04);
+    placeInstanced('/models/tree2.glb',   treeCount,    fence + 14, 6.5, 0.45, 0.04);
+    placeInstanced('/models/pumpkin.glb', pumpkinCount, fence + 10, 0.5, 0.4);
   }
 
   private createMountains(): void {
@@ -533,7 +589,7 @@ export class GameScene {
   }
 
   private createRain(): void {
-    const mobile = isMobile();
+    const mobile = this.mobile;
     const dropCount = mobile ? 90 : 520;
     const areaRadius = mobile ? 46 : 72;
     const topY = mobile ? 34 : 42;
@@ -584,7 +640,7 @@ export class GameScene {
   }
 
   private createLightning(): void {
-    const mobile = isMobile();
+    const mobile = this.mobile;
     this.lightningTimer = 4 + Math.random() * 6;
 
     const light = new THREE.PointLight(0xdde9ff, mobile ? 0 : 0, 220);
@@ -615,7 +671,7 @@ export class GameScene {
   private triggerLightning(): void {
     if (!this.lightningLight || !this.lightningGeometry || !this.lightningMaterial || !this.lightningBolt) return;
 
-    const mobile = isMobile();
+    const mobile = this.mobile;
     const startX = this.camera.position.x + (Math.random() - 0.5) * 90;
     const startZ = this.camera.position.z - 30 - Math.random() * 80;
     const topY = 34 + Math.random() * 10;
@@ -656,7 +712,7 @@ export class GameScene {
   }
 
   public updateWeather(deltaTime: number): void {
-    const mobile = isMobile();
+    const mobile = this.mobile;
     if (this.rainGeometry && this.rainPositions && this.rainSpeeds && this.rainDrift) {
       const areaRadius = mobile ? 46 : 72;
       const topY = mobile ? 34 : 42;
@@ -770,18 +826,16 @@ export class GameScene {
     this.lightningBolt = null;
     this.lightningLight = null;
 
-    for (const clone of this.surroundingClones) {
-      this.scene.remove(clone);
-      clone.traverse(c => {
-        if (c instanceof THREE.Mesh) {
-          c.geometry.dispose();
-          if (Array.isArray(c.material)) {
-            c.material.forEach(m => m.dispose());
-          } else {
-            c.material.dispose();
-          }
-        }
-      });
+    for (const obj of this.surroundingClones) {
+      this.scene.remove(obj);
+      // surroundingClones now holds InstancedMesh objects directly (not containers),
+      // so we dispose geometry/material on the object itself, not via traverse.
+      if (obj instanceof THREE.InstancedMesh) {
+        obj.geometry.dispose();
+        const mat = obj.material;
+        if (Array.isArray(mat)) mat.forEach(m => m.dispose());
+        else (mat as THREE.Material).dispose();
+      }
     }
     this.surroundingClones.length = 0;
   }

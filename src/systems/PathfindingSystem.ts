@@ -11,11 +11,14 @@ interface PathNode {
 }
 
 export class PathfindingSystem {
-  private readonly pathGrid: Set<string> = new Set();
+  private readonly pathGrid: Set<number> = new Set();
   private pathPositions: GridPosition[] = [];
 
-  /** Cached A* results; invalidated whenever the walkable grid changes. */
-  private readonly pathCache: Map<string, GridPosition[]> = new Map();
+  /**
+   * Cached A* results; invalidated whenever the walkable grid changes.
+   * Key: composite number (startKey * GRID_CELLS + goalKey) — no string allocation.
+   */
+  private readonly pathCache: Map<number, GridPosition[]> = new Map();
 
   public registerPath(position: GridPosition): void {
     const key = GridHelper.getGridKey(position);
@@ -44,7 +47,9 @@ export class PathfindingSystem {
   public findPath(start: GridPosition, goal: GridPosition): GridPosition[] {
     if (!this.hasPath(start) || !this.hasPath(goal)) return [];
 
-    const cacheKey = `${start.x},${start.z}|${goal.x},${goal.z}`;
+    // Composite number key — no string allocation.
+    // Max individual key = 24*25+24 = 624; 624*1000+624 = 624624, well within safe int range.
+    const cacheKey = GridHelper.getGridKey(start) * 1000 + GridHelper.getGridKey(goal);
     const cached = this.pathCache.get(cacheKey);
     if (cached) return cached;
 
@@ -55,8 +60,8 @@ export class PathfindingSystem {
 
   private astar(start: GridPosition, goal: GridPosition): GridPosition[] {
     const open = new MinHeap<PathNode>(node => node.f);
-    const openMap = new Map<string, PathNode>();
-    const closedSet = new Set<string>();
+    const openMap = new Map<number, PathNode>();
+    const closedSet = new Set<number>();
 
     const startNode: PathNode = {
       position: start,
@@ -80,11 +85,12 @@ export class PathfindingSystem {
 
       closedSet.add(currentKey);
 
-      for (const neighborPos of GridHelper.getAdjacentPositions(current.position)) {
-        if (!this.hasPath(neighborPos)) continue;
+      // forEachAdjacent avoids the intermediate GridPosition[] + filter() allocation.
+      GridHelper.forEachAdjacent(current.position, (neighborPos) => {
+        if (!this.hasPath(neighborPos)) return;
 
         const neighborKey = GridHelper.getGridKey(neighborPos);
-        if (closedSet.has(neighborKey)) continue;
+        if (closedSet.has(neighborKey)) return;
 
         const g = current.g + 1;
         const existing = openMap.get(neighborKey);
@@ -103,7 +109,7 @@ export class PathfindingSystem {
           open.push(neighbor);
           openMap.set(neighborKey, neighbor);
         }
-      }
+      });
     }
 
     return [];

@@ -147,6 +147,19 @@ export class Game {
   private readonly MAINTENANCE_UPDATE_INTERVAL = 20;
   private readonly CHALLENGE_REWARD_SPACING = 4.25;
 
+  /** Reused every frame — avoids allocating a new object literal on every update tick. */
+  private readonly simulationEntities = {
+    rides: [] as ReturnType<BuildingSystem['getRides']>,
+    shops: [] as ReturnType<BuildingSystem['getShops']>,
+    services: [] as ReturnType<BuildingSystem['getServices']>,
+    decorations: [] as ReturnType<BuildingSystem['getDecorations']>,
+    getLocalDecorationBonus: (_pos: GridPosition) => 0,
+    getLocalHygieneBonus: (_pos: GridPosition) => 0,
+    isOpen: false,
+    ticketPrice: 0,
+    parkRating: 0,
+  };
+
   // Selection highlight (shown when BuildingPanel is open)
   private selectionHighlight: THREE.Group | null = null;
   private selectionHighlightFill: THREE.Mesh | null = null;
@@ -185,6 +198,10 @@ export class Game {
     this.visitorSystem.onVisitorRestoreSpawn = () => this.economySystem.addRestoredVisitor();
     this.visitorSystem.onVisitorLeave = () => this.economySystem.removeVisitor();
     this.visitorSystem.onVisitorSpend = amount => this.economySystem.addMoney(amount);
+
+    // Wire up stable function references for simulationEntities — set once, reused every frame.
+    this.simulationEntities.getLocalDecorationBonus = pos => this.buildingSystem.getLocalDecorationBonus(pos);
+    this.simulationEntities.getLocalHygieneBonus = pos => this.buildingSystem.getLocalHygieneBonus(pos);
 
     this.mouseController = new MouseController(this.scene.camera, this.renderer.renderer.domElement);
     this.cameraController = new CameraController(this.scene.camera);
@@ -1154,8 +1171,8 @@ export class Game {
       throw new Error('Save buildings data is invalid.');
     }
 
-    const pathSet = new Set<string>();
-    const occupied = new Set<string>();
+    const pathSet = new Set<number>();
+    const occupied = new Set<number>();
 
     const paths = value.paths.map(entry => this.validatePathEntry(entry, pathSet));
     const rides = value.rides.map(entry => this.validateRideEntry(entry, occupied, pathSet));
@@ -1183,7 +1200,7 @@ export class Game {
     return validated;
   }
 
-  private validatePathEntry(raw: unknown, pathSet: Set<string>): SavedPathEntry {
+  private validatePathEntry(raw: unknown, pathSet: Set<number>): SavedPathEntry {
     const entry = raw as Partial<SavedPathEntry>;
     const position = this.validatePosition(entry.position, 'Path');
     const key = GridHelper.getGridKey(position);
@@ -1192,7 +1209,7 @@ export class Game {
     return { position };
   }
 
-  private validateRideEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedRideEntry {
+  private validateRideEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedRideEntry {
     const entry = raw as Partial<SavedRideEntry>;
     if (!Object.values(RideType).includes(entry.subType as RideType)) {
       throw new Error('Save contains an unknown ride.');
@@ -1225,7 +1242,7 @@ export class Game {
     return { position, subType: entry.subType as RideType, price: Math.round(entry.price) };
   }
 
-  private validateShopEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedShopEntry {
+  private validateShopEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedShopEntry {
     const entry = raw as Partial<SavedShopEntry>;
     if (!Object.values(ShopType).includes(entry.subType as ShopType)) {
       throw new Error('Save contains an unknown shop.');
@@ -1238,7 +1255,7 @@ export class Game {
     return { position, subType: entry.subType as ShopType, price: Math.round(entry.price) };
   }
 
-  private validateServiceEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedServiceEntry {
+  private validateServiceEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedServiceEntry {
     const entry = raw as Partial<SavedServiceEntry>;
     if (!Object.values(ServiceType).includes(entry.subType as ServiceType)) {
       throw new Error('Save contains an unknown service.');
@@ -1248,7 +1265,7 @@ export class Game {
     return { position, subType: entry.subType as ServiceType };
   }
 
-  private validateDecorationEntry(raw: unknown, occupied: Set<string>, pathSet: Set<string>): SavedDecorationEntry {
+  private validateDecorationEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedDecorationEntry {
     const entry = raw as Partial<SavedDecorationEntry>;
     if (!Object.values(DecorationType).includes(entry.subType as DecorationType)) {
       throw new Error('Save contains an unknown decoration.');
@@ -1257,7 +1274,7 @@ export class Game {
     return { position, subType: entry.subType as DecorationType };
   }
 
-  private validateSingleCellBuilding(raw: unknown, occupied: Set<string>, pathSet: Set<string>, label: string): GridPosition {
+  private validateSingleCellBuilding(raw: unknown, occupied: Set<number>, pathSet: Set<number>, label: string): GridPosition {
     const position = this.validatePosition(raw, label);
     const key = GridHelper.getGridKey(position);
     if (occupied.has(key) || pathSet.has(key)) {
@@ -1267,7 +1284,7 @@ export class Game {
     return position;
   }
 
-  private assertPathAdjacent(position: GridPosition, pathSet: Set<string>, label: string): void {
+  private assertPathAdjacent(position: GridPosition, pathSet: Set<number>, label: string): void {
     const hasAdjacentPath = GridHelper
       .getAdjacentPositions(position)
       .some(neighbor => pathSet.has(GridHelper.getGridKey(neighbor)));
@@ -1290,17 +1307,16 @@ export class Game {
 
     this.scene.updateWeather(deltaTime);
     this.buildingSystem.update(deltaTime);
-    this.visitorSystem.update(deltaTime, {
-      rides: this.buildingSystem.getRides(),
-      shops: this.buildingSystem.getShops(),
-      services: this.buildingSystem.getServices(),
-      decorations: this.buildingSystem.getDecorations(),
-      getLocalDecorationBonus: position => this.buildingSystem.getLocalDecorationBonus(position),
-      getLocalHygieneBonus: position => this.buildingSystem.getLocalHygieneBonus(position),
-      isOpen: this.economySystem.getState().isOpen,
-      ticketPrice: this.economySystem.getState().ticketPrice,
-      parkRating: this.economySystem.getState().parkRating
-    });
+    // Use direct getters — no per-frame object spread (getState() copies the whole state).
+    const sim = this.simulationEntities;
+    sim.rides       = this.buildingSystem.getRides();
+    sim.shops       = this.buildingSystem.getShops();
+    sim.services    = this.buildingSystem.getServices();
+    sim.decorations = this.buildingSystem.getDecorations();
+    sim.isOpen      = this.economySystem.isOpen;
+    sim.ticketPrice = this.economySystem.ticketPrice;
+    sim.parkRating  = this.economySystem.parkRating;
+    this.visitorSystem.update(deltaTime, sim);
 
     const unlocked = this.researchSystem.update(deltaTime);
     if (unlocked.length > 0) {
@@ -1329,25 +1345,23 @@ export class Game {
     this.ratingUpdateTimer += deltaTime;
     if (this.ratingUpdateTimer >= this.RATING_UPDATE_INTERVAL) {
       this.ratingUpdateTimer = 0;
-      const _counts = this.buildingSystem.getBuildingCounts();
+      const counts = this.buildingSystem.getBuildingCounts();
       this.economySystem.updateParkRating(
         this.visitorSystem.getAverageHappiness(),
         this.buildingSystem.getFacilityScore(),
         this.buildingSystem.getDecorationAppeal(),
         this.visitorSystem.getVisitorCount(),
-        _counts[BuildingType.RIDE],
-        _counts[BuildingType.SHOP],
-        _counts[BuildingType.SERVICE]
+        counts[BuildingType.RIDE],
+        counts[BuildingType.SHOP],
+        counts[BuildingType.SERVICE]
       );
-
-      const counts = this.buildingSystem.getBuildingCounts();
-      const econState = this.economySystem.getState();
+      const updatedEconState = this.economySystem.getState();
       const completed = this.challengeSystem.update(this.RATING_UPDATE_INTERVAL, {
-        totalVisitors: econState.totalVisitors,
-        activeVisitors: econState.activeVisitors,
+        totalVisitors: updatedEconState.totalVisitors,
+        activeVisitors: updatedEconState.activeVisitors,
         averageHappiness: this.visitorSystem.getAverageHappiness(),
-        netProfit: econState.netProfit,
-        parkRating: econState.parkRating,
+        netProfit: updatedEconState.netProfit,
+        parkRating: updatedEconState.parkRating,
         buildingCounts: counts,
         serviceAndDecorationCount: counts[BuildingType.SERVICE] + counts[BuildingType.DECORATION],
         rideCount: counts[BuildingType.RIDE],

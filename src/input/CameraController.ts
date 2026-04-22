@@ -63,8 +63,12 @@ export class CameraController {
     this.camera.lookAt(this.target);
   }
 
+  /**
+   * Returns the internal target reference — read only.
+   * Callers must not mutate the returned vector; use setTarget() for that.
+   */
   public getTarget(): THREE.Vector3 {
-    return this.target.clone();
+    return this.target;
   }
 
   public setTarget(target: THREE.Vector3): void {

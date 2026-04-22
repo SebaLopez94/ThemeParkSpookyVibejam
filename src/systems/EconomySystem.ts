@@ -24,9 +24,18 @@ export class EconomySystem {
     };
   }
 
+  /**
+   * Returns a shallow copy of the state — safe for subscribers/UI that may hold references.
+   * Not for hot paths: use the direct getters below when you only need specific fields.
+   */
   public getState(): EconomyState {
     return { ...this.state };
   }
+
+  // Direct property accessors — zero allocation, for use in the per-frame update loop.
+  public get isOpen(): boolean    { return this.state.isOpen; }
+  public get ticketPrice(): number { return this.state.ticketPrice; }
+  public get parkRating(): number  { return this.state.parkRating; }
 
   public exportSaveData(): SavedEconomyData {
     return {

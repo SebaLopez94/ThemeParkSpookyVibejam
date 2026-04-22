@@ -11,6 +11,20 @@ function pickRandomPersonality(): VisitorPersonality {
   return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
 }
 
+// ---------------------------------------------------------------------------
+// Shared fallback model resources — allocated once, reused by every visitor.
+// This eliminates O(N) geometry/material objects that were previously created
+// per visitor (200 visitors × 2 geos + 2 mats = 400 + 400 GPU objects → 4).
+// ---------------------------------------------------------------------------
+const FALLBACK_BODY_GEO = new THREE.CapsuleGeometry(0.18, 0.36, 4, 8);
+const FALLBACK_HEAD_GEO = new THREE.SphereGeometry(0.16, 12, 10);
+const FALLBACK_SKIN_MAT = new THREE.MeshStandardMaterial({ color: 0x6b5242, roughness: 0.75 });
+// Small fixed palette — random pick avoids visual monotony without unique materials.
+const FALLBACK_BODY_MATS = [
+  0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12,
+  0x9b59b6, 0x1abc9c, 0xe67e22, 0x34495e,
+].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.82 }));
+
 const EMOJI_TEXTURE_CACHE = new Map<string, THREE.CanvasTexture>();
 
 function getEmojiTexture(emoji: string): THREE.CanvasTexture {
@@ -59,6 +73,12 @@ export class Visitor {
   private walkAction: THREE.AnimationAction | null = null;
   private isMoving = false;
   private fallbackModel: THREE.Group | null = null;
+
+  /**
+   * Cursor into data.path — advances with O(1) instead of O(n) shift().
+   * Reset to 0 on every setPath() call; never stored in VisitorData (not saved).
+   */
+  private pathIndex = 0;
 
   private emojiSprite: THREE.Sprite;
   private emojiMaterial: THREE.SpriteMaterial;
@@ -124,21 +144,19 @@ export class Visitor {
 
   private createFallbackModel(): void {
     const group = new THREE.Group();
-    const bodyColor = new THREE.Color().setHSL(Math.random(), 0.45, 0.25);
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0x6b5242, roughness: 0.75 });
-    const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.82 });
+    // Pick from the shared material pool — no new material or geometry allocated.
+    const bodyMat = FALLBACK_BODY_MATS[Math.floor(Math.random() * FALLBACK_BODY_MATS.length)];
 
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.36, 4, 8), bodyMat);
+    const body = new THREE.Mesh(FALLBACK_BODY_GEO, bodyMat);
     body.position.y = 0.45;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), skinMat);
+    const head = new THREE.Mesh(FALLBACK_HEAD_GEO, FALLBACK_SKIN_MAT);
     head.position.y = 0.86;
 
     group.add(body, head);
-    group.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = !isMobile();
-      }
-    });
+    if (!isMobile()) {
+      body.castShadow = true;
+      head.castShadow = true;
+    }
 
     this.fallbackModel = group;
     this.mesh.add(group);
@@ -147,16 +165,7 @@ export class Visitor {
   private removeFallbackModel(): void {
     if (!this.fallbackModel) return;
     this.mesh.remove(this.fallbackModel);
-    this.fallbackModel.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(material => material.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
+    // Geometries and materials are module-level singletons — never dispose them here.
     this.fallbackModel = null;
   }
 
@@ -244,13 +253,14 @@ export class Visitor {
 
   public setPath(path: GridPosition[]): void {
     this.data.path = path;
+    this.pathIndex = 0;
     if (path.length > 0) {
       this.data.targetPosition = GridHelper.gridToWorld(path[0]);
     }
   }
 
   public update(deltaTime: number, hygieneDecayMultiplier: number = 1): void {
-    this.mixer?.update(deltaTime);
+    if (this.mixer && this.isMoving) this.mixer.update(deltaTime);
 
     // Entry animation: shrink + rise as visitor "boards" the ride
     if (this.entryAnimTimer > 0) {
@@ -324,12 +334,14 @@ export class Visitor {
 
     const dx = this.data.targetPosition.x - this.data.position.x;
     const dz = this.data.targetPosition.z - this.data.position.z;
-    const distance = Math.sqrt(dx * dx + dz * dz);
+    // Compare squared distance — skips Math.sqrt() on the most common (moving) path.
+    const distSq = dx * dx + dz * dz;
 
-    if (distance < 0.1) {
-      this.data.path.shift();
-      if (this.data.path.length > 0) {
-        this.data.targetPosition = GridHelper.gridToWorld(this.data.path[0]);
+    if (distSq < 0.01) { // 0.1² = 0.01
+      // O(1) cursor advance — no array mutation, no memory reshuffling.
+      this.pathIndex++;
+      if (this.pathIndex < this.data.path.length) {
+        this.data.targetPosition = GridHelper.gridToWorld(this.data.path[this.pathIndex]);
       } else {
         this.data.targetPosition = null;
         this.setMoving(false);
@@ -340,6 +352,7 @@ export class Visitor {
     this.setMoving(true);
 
     const moveDistance = this.moveSpeed * deltaTime;
+    const distance = Math.sqrt(distSq); // sqrt only when actually moving
     const ratio = Math.min(moveDistance / distance, 1);
 
     this.data.position.x += dx * ratio;

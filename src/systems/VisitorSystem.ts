@@ -35,6 +35,17 @@ interface TargetChoice {
   path: GridPosition[];
 }
 
+interface TargetCandidate {
+  id: string;
+  type: 'ride' | 'shop' | 'service';
+  accessCell: GridPosition;
+  baseNeedScore: number;
+  price: number;
+  valueScore: number;
+  quality: number;
+  decorationBonus: number;
+}
+
 export class VisitorSystem {
   private visitors: Map<string, Visitor> = new Map();
   private visitorTargets: Map<string, VisitorTarget> = new Map();
@@ -50,9 +61,29 @@ export class VisitorSystem {
   private visitorIdCounter = 0;
   // Mobile keeps far fewer visitors to avoid GPU/memory pressure.
   private readonly maxVisitors = isMobile() ? 35 : 200;
-  private densityMapCache: Map<string, number> = new Map();
+  private densityMapCache: Map<number, number> = new Map();
   private densityRefreshTimer = 0;
   private readonly densityRefreshInterval = 0.25;
+  /** Reused each frame — avoids allocating a new string[] on every update tick. */
+  private readonly toRemoveBuffer: string[] = [];
+  /**
+   * Pre-allocated candidate scratch arrays — reused across every visitor decision.
+   * Reset with .length = 0 before each use; never held beyond the decision call.
+   */
+  private readonly _rideCandidates:    TargetCandidate[] = [];
+  private readonly _shopCandidates:    TargetCandidate[] = [];
+  private readonly _serviceCandidates: TargetCandidate[] = [];
+
+  /**
+   * Id → entity maps rebuilt only when the array references change.
+   * Allows O(1) lookup in handleArrival instead of O(n) .find().
+   */
+  private ridesById:    Map<string, import('../entities/Ride').Ride>    = new Map();
+  private shopsById:    Map<string, import('../entities/Shop').Shop>    = new Map();
+  private servicesById: Map<string, import('../entities/Service').Service> = new Map();
+  private _lastRidesRef:    unknown = null;
+  private _lastShopsRef:    unknown = null;
+  private _lastServicesRef: unknown = null;
 
   public onVisitorSpawn: (() => void) | null = null;
   public onVisitorRestoreSpawn: (() => void) | null = null;
@@ -81,6 +112,23 @@ export class VisitorSystem {
       }
     }
 
+    // Rebuild id-lookup maps only when the array references swap (O(n) rebuild, O(1) lookups).
+    if (entities.rides !== this._lastRidesRef) {
+      this._lastRidesRef = entities.rides;
+      this.ridesById.clear();
+      entities.rides.forEach(r => this.ridesById.set(r.data.id, r));
+    }
+    if (entities.shops !== this._lastShopsRef) {
+      this._lastShopsRef = entities.shops;
+      this.shopsById.clear();
+      entities.shops.forEach(s => this.shopsById.set(s.data.id, s));
+    }
+    if (entities.services !== this._lastServicesRef) {
+      this._lastServicesRef = entities.services;
+      this.servicesById.clear();
+      entities.services.forEach(s => this.servicesById.set(s.data.id, s));
+    }
+
     this.spawnTimer += deltaTime;
     if (entities.isOpen && this.spawnTimer >= this.spawnInterval && this.visitors.size < this.maxVisitors) {
       this.spawnVisitor(false);
@@ -94,7 +142,8 @@ export class VisitorSystem {
       this.buildDensityMap();
     }
     const densityMap = this.densityMapCache;
-    const toRemove: string[] = [];
+    this.toRemoveBuffer.length = 0;
+    const toRemove = this.toRemoveBuffer;
     const now = performance.now() / 1000;
 
     this.visitors.forEach((visitor, id) => {
@@ -119,8 +168,7 @@ export class VisitorSystem {
 
       // If park is closed, visitors head to the entrance and leave gradually
       if (!entities.isOpen) {
-        const gridPos = GridHelper.worldToGrid(visitor.data.position);
-        const distToEntrance = Math.abs(gridPos.x - this.entrancePosition.x) + Math.abs(gridPos.z - this.entrancePosition.z);
+        const distToEntrance = Math.abs(visitorGridPos.x - this.entrancePosition.x) + Math.abs(visitorGridPos.z - this.entrancePosition.z);
         if (distToEntrance < 2) {
           toRemove.push(id);
           return;
@@ -155,12 +203,12 @@ export class VisitorSystem {
     visitor: Visitor,
     target: VisitorTarget,
     entities: SimulationEntities,
-    densityMap: Map<string, number>
+    densityMap: Map<number, number>
   ): void {
     this.visitorTargets.delete(visitor.data.id);
 
     if (target.type === 'ride') {
-      const ride = entities.rides.find(item => item.data.id === target.id);
+      const ride = this.ridesById.get(target.id);
       if (!ride) return;
 
       visitor.faceWorldPosition(ride.mesh.position);
@@ -181,7 +229,7 @@ export class VisitorSystem {
     }
 
     if (target.type === 'shop') {
-      const shop = entities.shops.find(item => item.data.id === target.id);
+      const shop = this.shopsById.get(target.id);
       if (!shop) return;
 
       const fairness = this.getPriceFairness(shop.data.price, shop.data.valueScore, shop.data.quality);
@@ -189,9 +237,10 @@ export class VisitorSystem {
       if (visitor.spendMoney(shop.data.price)) {
         visitor.faceWorldPosition(shop.mesh.position);
         this.onVisitorSpend?.(shop.data.price);
-        Object.entries(shop.data.satisfactionEffects).forEach(([need, amount]) => {
-          visitor.boostNeed(need as VisitorNeedType, amount ?? 0);
-        });
+        // Avoid Object.entries() + forEach() allocation — iterate keys directly.
+        for (const key in shop.data.satisfactionEffects) {
+          visitor.boostNeed(key as VisitorNeedType, (shop.data.satisfactionEffects as Record<string, number>)[key] ?? 0);
+        }
         if (shop.data.shopType === ShopType.GIFT_SHOP) {
           visitor.adjustHappiness(fairness < 0.45 ? -3 : 4);
         } else if (fairness < 0.45) {
@@ -209,7 +258,7 @@ export class VisitorSystem {
     }
 
     if (target.type === 'service') {
-      const service = entities.services.find(item => item.data.id === target.id);
+      const service = this.servicesById.get(target.id);
       if (!service) return;
 
       const fairness = this.getPriceFairness(service.data.price, service.data.valueScore, service.data.quality);
@@ -217,9 +266,9 @@ export class VisitorSystem {
       if (visitor.spendMoney(service.data.price)) {
         visitor.faceWorldPosition(service.mesh.position);
         this.onVisitorSpend?.(service.data.price);
-        Object.entries(service.data.satisfactionEffects).forEach(([need, amount]) => {
-          visitor.boostNeed(need as VisitorNeedType, amount ?? 0);
-        });
+        for (const key in service.data.satisfactionEffects) {
+          visitor.boostNeed(key as VisitorNeedType, (service.data.satisfactionEffects as Record<string, number>)[key] ?? 0);
+        }
         if (fairness < 0.5) visitor.adjustHappiness(-2);
         visitor.showMoodWithOptions({
           kind: 'shopping',
@@ -282,7 +331,7 @@ export class VisitorSystem {
   private assignNewActivity(
     visitor: Visitor,
     entities: SimulationEntities,
-    densityMap: Map<string, number>
+    densityMap: Map<number, number>
   ): void {
     const currentGridPos = GridHelper.worldToGrid(visitor.data.position);
     if (!this.pathfinding.hasPath(currentGridPos)) return;
@@ -290,13 +339,14 @@ export class VisitorSystem {
     const rideChoice = this.selectBestRide(visitor, currentGridPos, entities.rides, densityMap, entities.getLocalDecorationBonus);
     const shopChoice = this.selectBestShop(visitor, currentGridPos, entities.shops, densityMap, entities.getLocalDecorationBonus);
     const serviceChoice = this.selectBestService(visitor, currentGridPos, entities.services, densityMap);
-    const options: TargetChoice[] = [rideChoice, shopChoice, serviceChoice].filter(
-      (value): value is TargetChoice => value !== null
-    );
-    options.sort((a, b) => b.score - a.score);
 
-    if (options.length > 0 && options[0].score > 0.12 && entities.isOpen) {
-      const best = options[0];
+    // Pick best without allocating a temp array — inline three-way comparison
+    let best: TargetChoice | null = null;
+    if (rideChoice && (!best || rideChoice.score > best.score)) best = rideChoice;
+    if (shopChoice && (!best || shopChoice.score > best.score)) best = shopChoice;
+    if (serviceChoice && (!best || serviceChoice.score > best.score)) best = serviceChoice;
+
+    if (best && best.score > 0.12 && entities.isOpen) {
       visitor.setPath(best.path);
       this.visitorTargets.set(visitor.data.id, { type: best.type, id: best.id });
       visitor.setThought(null);
@@ -328,7 +378,7 @@ export class VisitorSystem {
     visitor: Visitor,
     current: GridPosition,
     rides: Ride[],
-    densityMap: Map<string, number>,
+    densityMap: Map<number, number>,
     getLocalDecorationBonus: (position: GridPosition) => number
   ): TargetChoice | null {
     const funNeed = (100 - visitor.data.needs.fun) / 100;
@@ -337,7 +387,9 @@ export class VisitorSystem {
     const p = visitor.data.personality;
     const personalityMult = p === 'thrill_seeker' ? 1.4 : p === 'foodie' ? 0.85 : 1.0;
 
-    const rideCandidates: Parameters<typeof this.pickBestTarget>[0] = [];
+    // Reuse pre-allocated scratch array — avoids 1 array allocation per decision.
+    const rideCandidates = this._rideCandidates;
+    rideCandidates.length = 0;
     for (const ride of rides) {
       if (!visitor.canUseRide(ride.data.id)) continue;
       const useCount = visitor.data.rideUseCounts[ride.data.id] ?? 0;
@@ -360,7 +412,7 @@ export class VisitorSystem {
     visitor: Visitor,
     current: GridPosition,
     shops: Shop[],
-    densityMap: Map<string, number>,
+    densityMap: Map<number, number>,
     getLocalDecorationBonus: (position: GridPosition) => number
   ): TargetChoice | null {
     const hungerNeed = (100 - visitor.data.needs.hunger) / 100;
@@ -373,49 +425,50 @@ export class VisitorSystem {
     const foodMult = p === 'foodie' ? 1.4 : 1.0;
     const giftMult = p === 'relaxer' ? 1.2 : p === 'thrill_seeker' ? 0.75 : 1.0;
 
-    return this.pickBestTarget(
-      shops.map(shop => {
-        let needScore: number;
-        let personalityMult: number;
-        if (shop.data.shopType === ShopType.FOOD_STALL) {
-          needScore = hungerNeed;
-          personalityMult = foodMult;
-        } else if (shop.data.shopType === ShopType.DRINK_STAND) {
-          needScore = thirstNeed;
-          personalityMult = foodMult;
-        } else {
-          needScore = giftNeed;
-          personalityMult = giftMult;
-        }
-
-        return {
-          id: shop.data.id,
-          type: 'shop' as const,
-          accessCell: shop.data.accessCell,
-          baseNeedScore: needScore * (shop.data.quality / 55) * personalityMult,
-          price: shop.data.price,
-          valueScore: shop.data.valueScore,
-          quality: shop.data.quality,
-          decorationBonus: getLocalDecorationBonus(shop.data.accessCell)
-        };
-      }),
-      current,
-      visitor,
-      densityMap
-    );
+    // Reuse pre-allocated scratch array — avoids 1 array allocation per decision.
+    const shopCandidates = this._shopCandidates;
+    shopCandidates.length = 0;
+    for (const shop of shops) {
+      let needScore: number;
+      let personalityMult: number;
+      if (shop.data.shopType === ShopType.FOOD_STALL) {
+        needScore = hungerNeed;
+        personalityMult = foodMult;
+      } else if (shop.data.shopType === ShopType.DRINK_STAND) {
+        needScore = thirstNeed;
+        personalityMult = foodMult;
+      } else {
+        needScore = giftNeed;
+        personalityMult = giftMult;
+      }
+      shopCandidates.push({
+        id: shop.data.id,
+        type: 'shop' as const,
+        accessCell: shop.data.accessCell,
+        baseNeedScore: needScore * (shop.data.quality / 55) * personalityMult,
+        price: shop.data.price,
+        valueScore: shop.data.valueScore,
+        quality: shop.data.quality,
+        decorationBonus: getLocalDecorationBonus(shop.data.accessCell)
+      });
+    }
+    return this.pickBestTarget(shopCandidates, current, visitor, densityMap);
   }
 
   private selectBestService(
     visitor: Visitor,
     current: GridPosition,
     services: Service[],
-    densityMap: Map<string, number>
+    densityMap: Map<number, number>
   ): TargetChoice | null {
     const hygieneNeed = (100 - visitor.data.needs.hygiene) / 100;
     if (hygieneNeed < 0.1) return null;
 
-    return this.pickBestTarget(
-      services.map(service => ({
+    // Reuse pre-allocated scratch array — avoids 1 array allocation per decision.
+    const serviceCandidates = this._serviceCandidates;
+    serviceCandidates.length = 0;
+    for (const service of services) {
+      serviceCandidates.push({
         id: service.data.id,
         type: 'service' as const,
         accessCell: service.data.accessCell,
@@ -424,27 +477,16 @@ export class VisitorSystem {
         valueScore: Math.max(1, service.data.valueScore),
         quality: service.data.quality,
         decorationBonus: 0
-      })),
-      current,
-      visitor,
-      densityMap
-    );
+      });
+    }
+    return this.pickBestTarget(serviceCandidates, current, visitor, densityMap);
   }
 
   private pickBestTarget(
-    candidates: Array<{
-      id: string;
-      type: 'ride' | 'shop' | 'service';
-      accessCell: GridPosition;
-      baseNeedScore: number;
-      price: number;
-      valueScore: number;
-      quality: number;
-      decorationBonus: number;
-    }>,
+    candidates: TargetCandidate[],
     current: GridPosition,
     visitor: Visitor,
-    densityMap: Map<string, number>
+    densityMap: Map<number, number>
   ): TargetChoice | null {
     // Phase 1: score every candidate using cheap Manhattan distance (no A*).
     // This avoids O(buildings) A* calls per visitor per frame.
@@ -516,65 +558,54 @@ export class VisitorSystem {
 
   private tryShowAmbientMood(visitor: Visitor): void {
     const needs = visitor.data.needs;
+    const r = Math.random();
+
+    // Inline checks — no array allocation. Each branch short-circuits as soon as one mood fires.
+    const sickSeverity = THREE.MathUtils.clamp((18 - needs.hygiene) / 14, 0, 1);
+    if (sickSeverity > 0 && visitor.canShowMood('sick') && r < 0.003 + sickSeverity * 0.012) {
+      visitor.showMood({ kind: 'sick', emoji: '🤢', message: 'This place feels gross.', duration: 2.1 });
+      return;
+    }
 
     const hungerSeverity = THREE.MathUtils.clamp((55 - needs.hunger) / 35, 0, 1);
-    const thirstSeverity = THREE.MathUtils.clamp((60 - needs.thirst) / 35, 0, 1);
-    const boredSeverity = THREE.MathUtils.clamp((40 - needs.fun) / 25, 0, 1);
-    const sadSeverity = THREE.MathUtils.clamp((38 - needs.happiness) / 22, 0, 1);
-    const sickSeverity = THREE.MathUtils.clamp((18 - needs.hygiene) / 14, 0, 1);
-    const happySeverity = THREE.MathUtils.clamp((needs.happiness - 78) / 18, 0, 1);
-    const excitedSeverity = THREE.MathUtils.clamp((needs.happiness - 88) / 10, 0, 1);
-    const brokeSeverity = THREE.MathUtils.clamp((12 - needs.money) / 10, 0, 1);
-
-    const moods: Array<{ thought: VisitorThought; threshold: boolean; chancePerTick: number }> = [
-      {
-        thought: { kind: 'sick', emoji: '🤢', message: 'This place feels gross.', duration: 2.1 },
-        threshold: sickSeverity > 0,
-        chancePerTick: 0.003 + sickSeverity * 0.012,
-      },
-      {
-        thought: { kind: 'hunger', emoji: '🍔', message: 'I need food.', duration: 1.9 },
-        threshold: hungerSeverity > 0,
-        chancePerTick: 0.008 + hungerSeverity * 0.02,
-      },
-      {
-        thought: { kind: 'thirst', emoji: '🥤', message: 'I need a drink.', duration: 1.9 },
-        threshold: thirstSeverity > 0,
-        chancePerTick: 0.008 + thirstSeverity * 0.02,
-      },
-      {
-        thought: { kind: 'bored', emoji: '🥱', message: 'This park needs more fun.', duration: 1.8 },
-        threshold: boredSeverity > 0,
-        chancePerTick: 0.005 + boredSeverity * 0.012,
-      },
-      {
-        thought: { kind: 'sad', emoji: '☹️', message: 'I am not having a great time.', duration: 1.8 },
-        threshold: sadSeverity > 0,
-        chancePerTick: 0.004 + sadSeverity * 0.01,
-      },
-      {
-        thought: { kind: 'broke', emoji: '😔', message: 'I am running out of money.', duration: 1.8 },
-        threshold: brokeSeverity > 0,
-        chancePerTick: 0.006 + brokeSeverity * 0.015,
-      },
-      {
-        thought: { kind: 'excited', emoji: '🤩', message: 'This park is amazing!', duration: 2.0 },
-        threshold: excitedSeverity > 0,
-        chancePerTick: 0.001 + excitedSeverity * 0.004,
-      },
-      {
-        thought: { kind: 'happy', emoji: '😊', message: 'This place is great!', duration: 1.7 },
-        threshold: happySeverity > 0,
-        chancePerTick: 0.0015 + happySeverity * 0.003,
-      },
-    ];
-
-    for (const mood of moods) {
-      if (!mood.threshold) continue;
-      if (!visitor.canShowMood(mood.thought.kind)) continue;
-      if (Math.random() > mood.chancePerTick) continue;
-      visitor.showMood(mood.thought);
+    if (hungerSeverity > 0 && visitor.canShowMood('hunger') && r < 0.008 + hungerSeverity * 0.02) {
+      visitor.showMood({ kind: 'hunger', emoji: '🍔', message: 'I need food.', duration: 1.9 });
       return;
+    }
+
+    const thirstSeverity = THREE.MathUtils.clamp((60 - needs.thirst) / 35, 0, 1);
+    if (thirstSeverity > 0 && visitor.canShowMood('thirst') && r < 0.008 + thirstSeverity * 0.02) {
+      visitor.showMood({ kind: 'thirst', emoji: '🥤', message: 'I need a drink.', duration: 1.9 });
+      return;
+    }
+
+    const boredSeverity = THREE.MathUtils.clamp((40 - needs.fun) / 25, 0, 1);
+    if (boredSeverity > 0 && visitor.canShowMood('bored') && r < 0.005 + boredSeverity * 0.012) {
+      visitor.showMood({ kind: 'bored', emoji: '🥱', message: 'This park needs more fun.', duration: 1.8 });
+      return;
+    }
+
+    const sadSeverity = THREE.MathUtils.clamp((38 - needs.happiness) / 22, 0, 1);
+    if (sadSeverity > 0 && visitor.canShowMood('sad') && r < 0.004 + sadSeverity * 0.01) {
+      visitor.showMood({ kind: 'sad', emoji: '☹️', message: 'I am not having a great time.', duration: 1.8 });
+      return;
+    }
+
+    const brokeSeverity = THREE.MathUtils.clamp((12 - needs.money) / 10, 0, 1);
+    if (brokeSeverity > 0 && visitor.canShowMood('broke') && r < 0.006 + brokeSeverity * 0.015) {
+      visitor.showMood({ kind: 'broke', emoji: '😔', message: 'I am running out of money.', duration: 1.8 });
+      return;
+    }
+
+    const excitedSeverity = THREE.MathUtils.clamp((needs.happiness - 88) / 10, 0, 1);
+    if (excitedSeverity > 0 && visitor.canShowMood('excited') && r < 0.001 + excitedSeverity * 0.004) {
+      visitor.showMood({ kind: 'excited', emoji: '🤩', message: 'This park is amazing!', duration: 2.0 });
+      return;
+    }
+
+    const happySeverity = THREE.MathUtils.clamp((needs.happiness - 78) / 18, 0, 1);
+    if (happySeverity > 0 && visitor.canShowMood('happy') && r < 0.0015 + happySeverity * 0.003) {
+      visitor.showMood({ kind: 'happy', emoji: '😊', message: 'This place is great!', duration: 1.7 });
     }
   }
 

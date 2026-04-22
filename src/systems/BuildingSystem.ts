@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Decoration } from '../entities/Decoration';
 import { Path } from '../entities/Path';
 import { Ride } from '../entities/Ride';
@@ -21,12 +22,12 @@ import { PathfindingSystem } from './PathfindingSystem';
 export class BuildingSystem {
   private scene: THREE.Scene;
   private pathfinding: PathfindingSystem;
-  private paths: Map<string, Path> = new Map();
-  private rides: Map<string, Ride> = new Map();
-  private shops: Map<string, Shop> = new Map();
-  private services: Map<string, Service> = new Map();
-  private decorations: Map<string, Decoration> = new Map();
-  private occupiedCells: Map<string, string> = new Map();
+  private paths: Map<number, Path> = new Map();
+  private rides: Map<number, Ride> = new Map();
+  private shops: Map<number, Shop> = new Map();
+  private services: Map<number, Service> = new Map();
+  private decorations: Map<number, Decoration> = new Map();
+  private occupiedCells: Map<number, number> = new Map();
   private buildingIdCounter = 0;
 
 
@@ -34,12 +35,57 @@ export class BuildingSystem {
   private shopsCache: Shop[] | null = null;
   private servicesCache: Service[] | null = null;
   private decorationsCache: Decoration[] | null = null;
-  private decorationBonusCache: Map<string, number> = new Map();
-  private hygienesBonusCache:   Map<string, number> = new Map();
+  private decorationBonusCache: Map<number, number> = new Map();
+  private hygienesBonusCache:   Map<number, number> = new Map();
+
+  /**
+   * Single merged Mesh that represents ALL path tiles.
+   * Reduces N draw calls (one per tile) to exactly 1.
+   * Rebuilt only when paths are added, removed, or change connections.
+   */
+  private pathMergedMesh: THREE.Mesh | null = null;
 
   constructor(scene: THREE.Scene, pathfinding: PathfindingSystem) {
     this.scene = scene;
     this.pathfinding = pathfinding;
+  }
+
+  /**
+   * Merges every path tile's world-space geometry into one Mesh.
+   * Called after any path placement, removal, or connection update.
+   * Cost: O(tiles × 16 verts) — only runs on user interaction, never per-frame.
+   */
+  private rebuildMergedPathMesh(): void {
+    if (this.paths.size === 0) {
+      if (this.pathMergedMesh) {
+        this.scene.remove(this.pathMergedMesh);
+        this.pathMergedMesh.geometry.dispose();
+        this.pathMergedMesh = null;
+      }
+      return;
+    }
+
+    // Clone + world-transform each tile's geometry for merging.
+    const geos = Array.from(this.paths.values()).map(p => p.cloneTransformedGeometry());
+    const merged = mergeGeometries(geos, false);
+    // Dispose temporary clones immediately — merged owns the data now.
+    geos.forEach(g => g.dispose());
+
+    if (this.pathMergedMesh) {
+      // Reuse the existing Mesh object; only swap the geometry.
+      this.pathMergedMesh.geometry.dispose();
+      this.pathMergedMesh.geometry = merged;
+    } else {
+      // Import sharedPathMaterial from Path module via the first path instance.
+      const anyPath = this.paths.values().next().value!;
+      // Access the material through the planeMesh (exposed via the mesh's first child).
+      const mat = (anyPath.mesh.children[0] as THREE.Mesh).material as THREE.Material;
+      this.pathMergedMesh = new THREE.Mesh(merged, mat);
+      this.pathMergedMesh.receiveShadow = true;
+      // World-space geometry → mesh stays at origin with no rotation.
+      this.pathMergedMesh.position.set(0, 0, 0);
+      this.scene.add(this.pathMergedMesh);
+    }
   }
 
   private getRideFootprintCells(anchor: GridPosition, rideType: RideType): GridPosition[] {
@@ -82,6 +128,8 @@ export class BuildingSystem {
   private refreshPathConnectionsAround(position: GridPosition): void {
     this.updatePathConnectionsAt(position);
     GridHelper.getAdjacentPositions(position).forEach(neighbor => this.updatePathConnectionsAt(neighbor));
+    // Geometries may have changed (corner rounding updates) — rebuild the merged mesh.
+    this.rebuildMergedPathMesh();
   }
 
   public canPlaceBuilding(
@@ -120,7 +168,8 @@ export class BuildingSystem {
     const key = GridHelper.getGridKey(position);
 
     this.paths.set(key, path);
-    this.scene.add(path.mesh);
+    // Individual path meshes are NOT added to the scene — the single merged
+    // mesh (rebuilt by refreshPathConnectionsAround) covers all tiles at once.
     this.pathfinding.registerPath(position);
     this.refreshPathConnectionsAround(position);
 
@@ -198,10 +247,11 @@ export class BuildingSystem {
 
     if (this.paths.has(key)) {
       const path = this.paths.get(key)!;
-      this.scene.remove(path.mesh);
+      // Individual mesh was never added to scene; just dispose its geometry.
       path.dispose();
       this.paths.delete(key);
       this.pathfinding.unregisterPath(position);
+      // refreshPathConnectionsAround triggers rebuildMergedPathMesh internally.
       this.refreshPathConnectionsAround(position);
       return true;
     }
@@ -429,12 +479,16 @@ export class BuildingSystem {
   }
 
   public clear(): void {
-    this.paths.forEach(path => {
-      this.scene.remove(path.mesh);
-      path.dispose();
-    });
+    this.paths.forEach(path => path.dispose());
     this.paths.clear();
     this.pathfinding.clear();
+
+    // Remove and dispose the single merged path mesh.
+    if (this.pathMergedMesh) {
+      this.scene.remove(this.pathMergedMesh);
+      this.pathMergedMesh.geometry.dispose();
+      this.pathMergedMesh = null;
+    }
 
     this.rides.forEach(ride => {
       this.scene.remove(ride.mesh);

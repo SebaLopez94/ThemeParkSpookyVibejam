@@ -120,6 +120,20 @@ export class Path {
     this.rebuildGeometry();
   }
 
+  /**
+   * Returns a world-space clone of this tile's geometry.
+   * Used by BuildingSystem to merge all path tiles into one draw call.
+   * Caller is responsible for disposing the returned geometry after merging.
+   */
+  public cloneTransformedGeometry(): THREE.BufferGeometry {
+    // updateMatrixWorld works correctly even when the mesh is not in the scene
+    // (parent is null → worldMatrix = localMatrix chain).
+    this.mesh.updateMatrixWorld(true);
+    const geo = this.planeMesh.geometry.clone();
+    geo.applyMatrix4(this.planeMesh.matrixWorld);
+    return geo;
+  }
+
   private rebuildGeometry(): void {
     const worldPos = GridHelper.gridToWorld(this.data.position);
     const { x, z } = this.data.position;

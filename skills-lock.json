@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "Geek-skills-threejs-performance": {
+      "source": "staruhub/claudeskills",
+      "sourceType": "github",
+      "computedHash": "45f92878cd65a38bfa08ff13fba4b9638c0667ca46176b7a9446d825613950a3"
+    },
     "threejs-fundamentals": {
       "source": "cloudai-x/threejs-skills",
       "sourceType": "github",
