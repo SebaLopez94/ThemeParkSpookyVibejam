@@ -5,6 +5,8 @@ import { sharedGLTFLoader, sharedTextureLoader } from './AssetLoader';
 import { isMobile } from '../utils/platform';
 import { RetroOverlay } from './RetroOverlay';
 
+const BACKGROUND_FOG_LAYER = 1;
+
 export class GameScene {
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
@@ -50,7 +52,7 @@ export class GameScene {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x11091b);
-    this.scene.fog = new THREE.Fog(0x171021, mobile ? 56 : 44, mobile ? 152 : 170);
+    this.scene.fog = new THREE.Fog(0x171021, mobile ? 42 : 32, mobile ? 128 : 138);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -115,6 +117,11 @@ export class GameScene {
     this.retroOverlay = mobile ? null : new RetroOverlay(this.scene);
   }
 
+  private enableBackgroundFogLayer(object: THREE.Object3D): void {
+    object.layers.enable(BACKGROUND_FOG_LAYER);
+    object.traverse(child => child.layers.enable(BACKGROUND_FOG_LAYER));
+  }
+
   private createEntranceGate(): void {
     sharedGLTFLoader.load('/models/entrance.glb', (gltf) => {
       const model = gltf.scene;
@@ -153,17 +160,20 @@ export class GameScene {
         });
       });
 
+      this.enableBackgroundFogLayer(model);
       this.scene.add(model);
 
       // Warm torch glow — one light per pillar of the entrance arch
       const leftLight  = new THREE.PointLight(0xff7020, 6.0, 28);
       leftLight.position.set(-3.5, 5.0, 27);
       leftLight.castShadow = false;
+      leftLight.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(leftLight);
 
       const rightLight = new THREE.PointLight(0xff7020, 6.0, 28);
       rightLight.position.set(3.5, 5.0, 27);
       rightLight.castShadow = false;
+      rightLight.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(rightLight);
     });
   }
@@ -213,6 +223,7 @@ export class GameScene {
       postMesh.setMatrixAt(i, dummy.matrix);
     });
     postMesh.instanceMatrix.needsUpdate = true;
+    postMesh.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(postMesh);
 
     // Spike tips on every post
@@ -226,6 +237,7 @@ export class GameScene {
       spikeMesh.setMatrixAt(i, dummy.matrix);
     });
     spikeMesh.instanceMatrix.needsUpdate = true;
+    spikeMesh.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(spikeMesh);
 
     // --- Rails (thin horizontal bars per side) ---
@@ -269,6 +281,7 @@ export class GameScene {
     railGeoAccum.forEach(g => g.dispose()); // free the per-span clones
     const railMesh = new THREE.Mesh(mergedRails, mat);
     railMesh.castShadow = false;
+    railMesh.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(railMesh);
   }
 
@@ -340,6 +353,7 @@ export class GameScene {
           });
 
           instMesh.instanceMatrix.needsUpdate = true;
+          instMesh.layers.enable(BACKGROUND_FOG_LAYER);
           this.surroundingClones.push(instMesh);
           this.scene.add(instMesh);
         });
@@ -397,6 +411,7 @@ export class GameScene {
         inst.setMatrixAt(i, dummy.matrix);
       }
       inst.instanceMatrix.needsUpdate = true;
+      inst.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(inst);
     };
 
@@ -444,13 +459,13 @@ export class GameScene {
     const group = new THREE.Group();
     const layers = this.mobile
       ? [
-          { scale: [86, 26], opacity: 0.22, y: 7.5 },
-          { scale: [118, 34], opacity: 0.16, y: 10.5 },
+          { scale: [94, 28], opacity: 0.34, y: 7.5 },
+          { scale: [128, 38], opacity: 0.24, y: 10.5 },
         ]
       : [
-          { scale: [98, 30], opacity: 0.28, y: 8.5 },
-          { scale: [134, 40], opacity: 0.2, y: 11.5 },
-          { scale: [168, 48], opacity: 0.12, y: 15.5 },
+          { scale: [108, 34], opacity: 0.42, y: 8.5 },
+          { scale: [148, 44], opacity: 0.28, y: 11.5 },
+          { scale: [182, 52], opacity: 0.18, y: 15.5 },
         ];
 
     const ringPositions = [
@@ -479,10 +494,12 @@ export class GameScene {
         sprite.position.set(entry.x, layer.y, entry.z);
         sprite.scale.set(layer.scale[0], layer.scale[1], 1);
         sprite.renderOrder = 1;
+        sprite.layers.enable(BACKGROUND_FOG_LAYER);
         group.add(sprite);
       });
     });
 
+    this.enableBackgroundFogLayer(group);
     this.scene.add(group);
   }
 
@@ -608,6 +625,7 @@ export class GameScene {
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = 0.01;
     mesh.receiveShadow = false;
+    mesh.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(mesh);
 
   }
@@ -620,6 +638,7 @@ export class GameScene {
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.02;
     ground.receiveShadow = false;
+    ground.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(ground);
   }
 
@@ -665,9 +684,11 @@ export class GameScene {
     // Extremely diffuse and subtle light source
     const moonLight = new THREE.PointLight(0xb9ccff, 0.14, 900);
     moonLight.position.set(0, 0, 0); 
+    moonLight.layers.enable(BACKGROUND_FOG_LAYER);
     moonGroup.add(moonLight);
 
     moonGroup.position.copy(moonPos);
+    this.enableBackgroundFogLayer(moonGroup);
     this.scene.add(moonGroup);
   }
 
