@@ -19,6 +19,31 @@ import {
 import { GridHelper } from '../utils/GridHelper';
 import { PathfindingSystem } from './PathfindingSystem';
 
+// ---------------------------------------------------------------------------
+// Maintenance cost tables — module-level constants so they are never
+// re-allocated inside getMaintenanceChargePerInterval(), which is called
+// every frame from Game.update().
+// ---------------------------------------------------------------------------
+const RIDE_MAINTENANCE: Record<RideType, number> = {
+  [RideType.CAROUSEL]:        4,
+  [RideType.FERRIS_WHEEL]:    6,
+  [RideType.ROLLER_COASTER]: 10,
+  [RideType.HAUNTED_HOUSE]:   7,
+  [RideType.PIRATE_SHIP]:     7,
+  [RideType.KRAKEN_RIDE]:     9,
+  [RideType.INFERNAL_TOWER]:  8,
+};
+
+const SHOP_MAINTENANCE: Record<ShopType, number> = {
+  [ShopType.FOOD_STALL]:  3,
+  [ShopType.DRINK_STAND]: 2,
+  [ShopType.GIFT_SHOP]:   3,
+};
+
+const SERVICE_MAINTENANCE: Record<ServiceType, number> = {
+  [ServiceType.RESTROOM]: 3,
+};
+
 export class BuildingSystem {
   private scene: THREE.Scene;
   private pathfinding: PathfindingSystem;
@@ -37,6 +62,12 @@ export class BuildingSystem {
   private decorationsCache: Decoration[] | null = null;
   private decorationBonusCache: Map<number, number> = new Map();
   private hygienesBonusCache:   Map<number, number> = new Map();
+  /**
+   * Cached maintenance total — invalidated whenever any building is added or
+   * removed.  Turns a per-frame reduce() across all buildings into an O(1)
+   * lookup; the value only changes on user interaction, never during simulation.
+   */
+  private maintenanceCache: number | null = null;
 
   /**
    * Single merged Mesh that represents ALL path tiles.
@@ -189,6 +220,7 @@ export class BuildingSystem {
     footprintCells.forEach(cell => this.occupiedCells.set(GridHelper.getGridKey(cell), anchorKey));
     this.scene.add(ride.mesh);
     this.ridesCache = null;
+    this.maintenanceCache = null;
 
     return ride;
   }
@@ -205,6 +237,7 @@ export class BuildingSystem {
     this.occupiedCells.set(key, key);
     this.scene.add(shop.mesh);
     this.shopsCache = null;
+    this.maintenanceCache = null;
 
     return shop;
   }
@@ -221,6 +254,7 @@ export class BuildingSystem {
     this.occupiedCells.set(key, key);
     this.scene.add(service.mesh);
     this.servicesCache = null;
+    this.maintenanceCache = null;
 
     return service;
   }
@@ -236,6 +270,7 @@ export class BuildingSystem {
     this.occupiedCells.set(key, key);
     this.scene.add(decoration.mesh);
     this.decorationsCache = null;
+    this.maintenanceCache = null;
     this.decorationBonusCache.clear();
     this.hygienesBonusCache.clear();
 
@@ -269,6 +304,7 @@ export class BuildingSystem {
       ride.dispose();
       this.rides.delete(anchorKey);
       this.ridesCache = null;
+      this.maintenanceCache = null;
       return true;
     }
 
@@ -279,6 +315,7 @@ export class BuildingSystem {
       shop.dispose();
       this.shops.delete(anchorKey);
       this.shopsCache = null;
+      this.maintenanceCache = null;
       return true;
     }
 
@@ -289,6 +326,7 @@ export class BuildingSystem {
       service.dispose();
       this.services.delete(anchorKey);
       this.servicesCache = null;
+      this.maintenanceCache = null;
       return true;
     }
 
@@ -299,6 +337,7 @@ export class BuildingSystem {
       decoration.dispose();
       this.decorations.delete(anchorKey);
       this.decorationsCache = null;
+      this.maintenanceCache = null;
       this.decorationBonusCache.clear();
       this.hygienesBonusCache.clear();
       return true;
@@ -377,37 +416,28 @@ export class BuildingSystem {
     };
   }
 
+  /**
+   * Returns the total maintenance cost per charge interval.
+   * Result is cached and only recomputed when buildings are added or removed —
+   * the previous implementation allocated 3 Record objects and ran 4 reduce()
+   * passes on every call, which Game.update() invokes every frame.
+   */
   public getMaintenanceChargePerInterval(): number {
-    const rideMaintenance: Record<RideType, number> = {
-      [RideType.CAROUSEL]: 4,
-      [RideType.FERRIS_WHEEL]: 6,
-      [RideType.ROLLER_COASTER]: 10,
-      [RideType.HAUNTED_HOUSE]: 7,
-      [RideType.PIRATE_SHIP]: 7,
-      [RideType.KRAKEN_RIDE]: 9,
-      [RideType.INFERNAL_TOWER]: 8
-    };
+    if (this.maintenanceCache !== null) return this.maintenanceCache;
 
-    const shopMaintenance: Record<ShopType, number> = {
-      [ShopType.FOOD_STALL]: 3,
-      [ShopType.DRINK_STAND]: 2,
-      [ShopType.GIFT_SHOP]: 3
-    };
+    let total = 0;
+    this.rides.forEach(ride => { total += RIDE_MAINTENANCE[ride.data.rideType]; });
+    this.shops.forEach(shop => { total += SHOP_MAINTENANCE[shop.data.shopType]; });
+    this.services.forEach(service => { total += SERVICE_MAINTENANCE[service.data.serviceType]; });
+    this.decorations.forEach(decoration => {
+      if (
+        decoration.data.decorationType === DecorationType.LANTERN ||
+        decoration.data.decorationType === DecorationType.TRASH_CUBE
+      ) total += 1;
+    });
 
-    const serviceMaintenance: Record<ServiceType, number> = {
-      [ServiceType.RESTROOM]: 3
-    };
-
-    const rideCost = this.getRides().reduce((total, ride) => total + rideMaintenance[ride.data.rideType], 0);
-    const shopCost = this.getShops().reduce((total, shop) => total + shopMaintenance[shop.data.shopType], 0);
-    const serviceCost = this.getServices().reduce((total, service) => total + serviceMaintenance[service.data.serviceType], 0);
-    const decorationCost = this.getDecorations().reduce((total, decoration) => {
-      if (decoration.data.decorationType === DecorationType.LANTERN) return total + 1;
-      if (decoration.data.decorationType === DecorationType.TRASH_CUBE) return total + 1;
-      return total;
-    }, 0);
-
-    return rideCost + shopCost + serviceCost + decorationCost;
+    this.maintenanceCache = total;
+    return total;
   }
 
   public exportSaveData(): SavedBuildingsData {
@@ -517,6 +547,7 @@ export class BuildingSystem {
     });
     this.decorations.clear();
     this.decorationsCache = null;
+    this.maintenanceCache = null;
     this.decorationBonusCache.clear();
     this.hygienesBonusCache.clear();
 

@@ -59,8 +59,9 @@ export class VisitorSystem {
   private restoreSpawnInterval = 0.22;
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
-  // Mobile keeps far fewer visitors to avoid GPU/memory pressure.
-  private readonly maxVisitors = isMobile() ? 35 : 200;
+  // Mobile: 20 visitors use only shared fallback meshes (no GLTF/SkinnedMesh),
+  // keeping GPU + RAM well within the browser's tab-kill threshold.
+  private readonly maxVisitors = isMobile() ? 20 : 200;
   private densityMapCache: Map<number, number> = new Map();
   private densityRefreshTimer = 0;
   private readonly densityRefreshInterval = 0.25;
@@ -160,7 +161,10 @@ export class VisitorSystem {
     const densityMap = this.densityMapCache;
     this.toRemoveBuffer.length = 0;
     const toRemove = this.toRemoveBuffer;
+    // Compute once per frame — passed into every visitor to eliminate per-visitor system calls.
     const now = performance.now() / 1000;
+    // Math.pow(0.995, deltaTime*60) computed once — eliminates 200 Math.pow calls/frame.
+    const moodDecay = Math.pow(0.995, deltaTime * 60);
 
     const gridScratch = this._visitorGridPosScratch;
     this.visitors.forEach((visitor, id) => {
@@ -168,8 +172,8 @@ export class VisitorSystem {
       const visitorGridPos = GridHelper.worldToGridInto(visitor.data.position, gridScratch);
       const localHygieneSupport = entities.getLocalHygieneBonus(visitorGridPos);
       const hygieneDecayMultiplier = THREE.MathUtils.clamp(1 - localHygieneSupport / 100, 0.35, 1);
-      visitor.update(deltaTime, hygieneDecayMultiplier);
-      this.tryShowAmbientMood(visitor);
+      visitor.update(deltaTime, hygieneDecayMultiplier, now, moodDecay);
+      this.tryShowAmbientMood(visitor, now);
 
       if (visitor.data.needs.money <= 0) {
         toRemove.push(id);
@@ -360,8 +364,7 @@ export class VisitorSystem {
     const serviceChoice = this.selectBestService(visitor, currentGridPos, entities.services, densityMap);
 
     // Pick best without allocating a temp array — inline three-way comparison
-    let best: TargetChoice | null = null;
-    if (rideChoice && (!best || rideChoice.score > best.score)) best = rideChoice;
+    let best: TargetChoice | null = rideChoice;
     if (shopChoice && (!best || shopChoice.score > best.score)) best = shopChoice;
     if (serviceChoice && (!best || serviceChoice.score > best.score)) best = serviceChoice;
 
@@ -588,55 +591,56 @@ export class VisitorSystem {
     visitor.showMood(mood);
   }
 
-  private tryShowAmbientMood(visitor: Visitor): void {
+  private tryShowAmbientMood(visitor: Visitor, now: number): void {
     const needs = visitor.data.needs;
     const r = Math.random();
 
     // Inline checks — no array allocation. Each branch short-circuits as soon as one mood fires.
+    // now passed in — no extra performance.now() call per canShowMood check.
     const sickSeverity = THREE.MathUtils.clamp((18 - needs.hygiene) / 14, 0, 1);
-    if (sickSeverity > 0 && visitor.canShowMood('sick') && r < 0.003 + sickSeverity * 0.012) {
+    if (sickSeverity > 0 && visitor.canShowMood('sick', now) && r < 0.003 + sickSeverity * 0.012) {
       visitor.showMood({ kind: 'sick', emoji: '🤢', message: 'This place feels gross.', duration: 2.1 });
       return;
     }
 
     const hungerSeverity = THREE.MathUtils.clamp((55 - needs.hunger) / 35, 0, 1);
-    if (hungerSeverity > 0 && visitor.canShowMood('hunger') && r < 0.008 + hungerSeverity * 0.02) {
+    if (hungerSeverity > 0 && visitor.canShowMood('hunger', now) && r < 0.008 + hungerSeverity * 0.02) {
       visitor.showMood({ kind: 'hunger', emoji: '🍔', message: 'I need food.', duration: 1.9 });
       return;
     }
 
     const thirstSeverity = THREE.MathUtils.clamp((60 - needs.thirst) / 35, 0, 1);
-    if (thirstSeverity > 0 && visitor.canShowMood('thirst') && r < 0.008 + thirstSeverity * 0.02) {
+    if (thirstSeverity > 0 && visitor.canShowMood('thirst', now) && r < 0.008 + thirstSeverity * 0.02) {
       visitor.showMood({ kind: 'thirst', emoji: '🥤', message: 'I need a drink.', duration: 1.9 });
       return;
     }
 
     const boredSeverity = THREE.MathUtils.clamp((40 - needs.fun) / 25, 0, 1);
-    if (boredSeverity > 0 && visitor.canShowMood('bored') && r < 0.005 + boredSeverity * 0.012) {
+    if (boredSeverity > 0 && visitor.canShowMood('bored', now) && r < 0.005 + boredSeverity * 0.012) {
       visitor.showMood({ kind: 'bored', emoji: '🥱', message: 'This park needs more fun.', duration: 1.8 });
       return;
     }
 
     const sadSeverity = THREE.MathUtils.clamp((38 - needs.happiness) / 22, 0, 1);
-    if (sadSeverity > 0 && visitor.canShowMood('sad') && r < 0.004 + sadSeverity * 0.01) {
+    if (sadSeverity > 0 && visitor.canShowMood('sad', now) && r < 0.004 + sadSeverity * 0.01) {
       visitor.showMood({ kind: 'sad', emoji: '☹️', message: 'I am not having a great time.', duration: 1.8 });
       return;
     }
 
     const brokeSeverity = THREE.MathUtils.clamp((12 - needs.money) / 10, 0, 1);
-    if (brokeSeverity > 0 && visitor.canShowMood('broke') && r < 0.006 + brokeSeverity * 0.015) {
+    if (brokeSeverity > 0 && visitor.canShowMood('broke', now) && r < 0.006 + brokeSeverity * 0.015) {
       visitor.showMood({ kind: 'broke', emoji: '😔', message: 'I am running out of money.', duration: 1.8 });
       return;
     }
 
     const excitedSeverity = THREE.MathUtils.clamp((needs.happiness - 88) / 10, 0, 1);
-    if (excitedSeverity > 0 && visitor.canShowMood('excited') && r < 0.001 + excitedSeverity * 0.004) {
+    if (excitedSeverity > 0 && visitor.canShowMood('excited', now) && r < 0.001 + excitedSeverity * 0.004) {
       visitor.showMood({ kind: 'excited', emoji: '🤩', message: 'This park is amazing!', duration: 2.0 });
       return;
     }
 
     const happySeverity = THREE.MathUtils.clamp((needs.happiness - 78) / 18, 0, 1);
-    if (happySeverity > 0 && visitor.canShowMood('happy') && r < 0.0015 + happySeverity * 0.003) {
+    if (happySeverity > 0 && visitor.canShowMood('happy', now) && r < 0.0015 + happySeverity * 0.003) {
       visitor.showMood({ kind: 'happy', emoji: '😊', message: 'This place is great!', duration: 1.7 });
     }
   }

@@ -12,7 +12,8 @@ export class GameScene {
   public directionalLight: THREE.DirectionalLight;
   public hemisphereLight: THREE.HemisphereLight;
   private fillLight: THREE.DirectionalLight;
-  private retroOverlay: RetroOverlay;
+  /** null on mobile — saves a fullscreen shader pass every frame. */
+  private retroOverlay: RetroOverlay | null;
   /** Stores InstancedMesh objects (one per GLTF submesh per model type). */
   private surroundingClones: THREE.Object3D[] = [];
   private readonly baseAmbientIntensity: number;
@@ -61,12 +62,12 @@ export class GameScene {
 
     // Dark global fill so the park stays readable without flattening all shadows.
     // Intensities boosted ~30% to compensate for ACESFilmicToneMapping mid-range compression.
-    this.ambientLight = new THREE.AmbientLight(0x66738f, mobile ? 0.50 : 0.44);
+    this.ambientLight = new THREE.AmbientLight(0x66738f, mobile ? 0.56 : 0.50);
     this.baseAmbientIntensity = this.ambientLight.intensity;
     this.scene.add(this.ambientLight);
 
     // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
-    this.hemisphereLight = new THREE.HemisphereLight(0x52658d, 0x1d120d, mobile ? 0.55 : 0.62);
+    this.hemisphereLight = new THREE.HemisphereLight(0x52658d, 0x1d120d, mobile ? 0.60 : 0.68);
     this.baseHemisphereIntensity = this.hemisphereLight.intensity;
     this.scene.add(this.hemisphereLight);
 
@@ -74,7 +75,7 @@ export class GameScene {
     this.directionalLight = new THREE.DirectionalLight(0xbfd2ff, mobile ? 1.00 : 1.15);
     this.baseDirectionalIntensity = this.directionalLight.intensity;
     this.directionalLight.position.set(38, 92, 14);
-    this.directionalLight.castShadow = true;
+    this.directionalLight.castShadow = !mobile;
     // Tight frustum (±32 world units) centred on shadow target — 3× better texel density
     // than the old ±100. Target is updated each frame via updateShadowFrustum().
     this.directionalLight.shadow.camera.left = -32;
@@ -107,7 +108,9 @@ export class GameScene {
     this.createRain();
     this.createLightning();
 
-    this.retroOverlay = new RetroOverlay(this.scene);
+    // Skip on mobile — eliminates a fullscreen shader pass (scanlines + grain)
+    // that's purely cosmetic and adds measurable GPU time on low-end devices.
+    this.retroOverlay = mobile ? null : new RetroOverlay(this.scene);
   }
 
   private createEntranceGate(): void {
@@ -791,10 +794,12 @@ export class GameScene {
   }
 
   public updateRetroOverlay(deltaTime: number): void {
-    this.retroOverlay.update(deltaTime);
+    this.retroOverlay?.update(deltaTime);
   }
 
   public updateShadowFrustum(targetX: number, targetZ: number): void {
+    // No-op on mobile — shadows are disabled, nothing to update.
+    if (this.mobile) return;
     this.directionalLight.target.position.set(targetX, 0, targetZ);
     this.directionalLight.target.updateMatrixWorld();
     this.directionalLight.shadow.camera.updateProjectionMatrix();
@@ -803,11 +808,11 @@ export class GameScene {
   public onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-    this.retroOverlay.onWindowResize();
+    this.retroOverlay?.onWindowResize();
   }
 
   public dispose(): void {
-    this.retroOverlay.dispose();
+    this.retroOverlay?.dispose();
     if (this.rainLines) this.scene.remove(this.rainLines);
     if (this.lightningBolt) this.scene.remove(this.lightningBolt);
     if (this.lightningLight) this.scene.remove(this.lightningLight);

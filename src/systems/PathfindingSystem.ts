@@ -116,12 +116,15 @@ export class PathfindingSystem {
   }
 
   private reconstructPath(node: PathNode): GridPosition[] {
+    // push() + reverse() is O(n) — unshift() in a loop would be O(n²) because
+    // each insertion shifts every existing element rightward.
     const path: GridPosition[] = [];
     let current: PathNode | null = node;
     while (current !== null) {
-      path.unshift(current.position);
+      path.push(current.position);
       current = current.parent;
     }
+    path.reverse();
     return path;
   }
 

@@ -11,6 +11,7 @@ import { PathfindingSystem } from './systems/PathfindingSystem';
 import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
+import { isMobile } from './utils/platform';
 import { EventBus } from './utils/EventBus';
 import { sharedGLTFLoader, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
 import { lanternPool } from './utils/LanternPool';
@@ -146,6 +147,14 @@ export class Game {
   private readonly RATING_UPDATE_INTERVAL = 1;
   private readonly MAINTENANCE_UPDATE_INTERVAL = 20;
   private readonly CHALLENGE_REWARD_SPACING = 4.25;
+  /**
+   * Shadow map throttle — re-render shadow map every N frames instead of every frame.
+   * The shadow camera still follows the player camera each frame (updateShadowFrustum),
+   * so 1-frame-old shadows are indistinguishable at 60fps.
+   * Building changes call renderer.invalidateShadowMap() for an immediate update.
+   */
+  private shadowFrameCounter = 0;
+  private static readonly SHADOW_EVERY_N_FRAMES = 2;
 
   /** Reused every frame — avoids allocating a new object literal on every update tick. */
   private readonly simulationEntities = {
@@ -185,7 +194,13 @@ export class Game {
     // before the first render — shader compiles once at startup, never again.
     lanternPool.init(this.scene.scene);
     this.renderer = new GameRenderer(container);
-    this.gameLoop = new GameLoop(deltaTime => this.update(deltaTime), () => this.render());
+    // Cap mobile to ~30 fps — halves simulation + render work without affecting
+    // gameplay (all motion uses deltaTime).  Desktop runs uncapped.
+    this.gameLoop = new GameLoop(
+      deltaTime => this.update(deltaTime),
+      () => this.render(),
+      isMobile() ? 1000 / 30 : 0
+    );
 
     this.pathfindingSystem = new PathfindingSystem();
     this.buildingSystem = new BuildingSystem(this.scene.scene, this.pathfindingSystem);
@@ -257,6 +272,7 @@ export class Game {
       this.buildingSystem.placePath({ x: 13, z });
     }
     this.visitorSystem.setEntrancePosition({ x: 12, z: 24 });
+    this.renderer.invalidateShadowMap();
   }
 
   private loadAudio(): void {
@@ -526,6 +542,7 @@ export class Game {
     }
 
     if (success) {
+      this.renderer.invalidateShadowMap();
       const placedType = this.selectedBuilding.type;
       this.playInstantOneShot(this.buildTrack);
       if (this.movingBuilding) {
@@ -585,6 +602,7 @@ export class Game {
 
     if (!this.buildingSystem.removeBuilding(position)) return;
 
+    this.renderer.invalidateShadowMap();
     const refund = cost <= 0 ? 0 : Math.floor(cost * 0.5);
     if (refund > 0) {
       this.economySystem.addMoney(refund);
@@ -985,6 +1003,7 @@ export class Game {
       if (info.currentPrice !== null) {
         this.buildingSystem.updateBuildingPrice(info.position, info.currentPrice);
       }
+      this.renderer.invalidateShadowMap();
     }
 
     this.movingBuilding = null;
@@ -1021,6 +1040,8 @@ export class Game {
       const placed = this.buildingSystem.placeDecoration(entry.position, entry.subType);
       if (!placed) throw new Error(`Failed to restore decoration at ${entry.position.x},${entry.position.z}.`);
     });
+
+    this.renderer.invalidateShadowMap();
   }
 
   private validateSaveData(raw: unknown): SaveGameData {
@@ -1373,6 +1394,15 @@ export class Game {
       this.economySystem.notify();
 
       completed.forEach(challenge => this.queueChallengeReward(challenge.id));
+    }
+
+    // Shadow map throttle: re-render every N frames instead of every frame.
+    // Visitor movement doesn't cast shadows so there's nothing dynamic to track.
+    // Building changes call invalidateShadowMap() directly for an immediate update.
+    this.shadowFrameCounter++;
+    if (this.shadowFrameCounter >= Game.SHADOW_EVERY_N_FRAMES) {
+      this.shadowFrameCounter = 0;
+      this.renderer.invalidateShadowMap();
     }
   }
 

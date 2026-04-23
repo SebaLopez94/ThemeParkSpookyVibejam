@@ -1,7 +1,21 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { useIsMobile } from './hooks/useIsMobile';
-import { FlaskConical, Gem, Hammer, HelpCircle, Landmark, MousePointer2, Route, RotateCw, Trash2, Trophy, Volume2, VolumeX, X } from 'lucide-react';
+import {
+  FlaskConical,
+  Gem,
+  Hammer,
+  HelpCircle,
+  Landmark,
+  MousePointer2,
+  RotateCw,
+  Route,
+  Trash2,
+  Trophy,
+  Volume2,
+  VolumeX,
+  X
+} from 'lucide-react';
 import { Game } from './Game';
 import { INITIAL_UNLOCKED_BUILDINGS, getPathDefinition } from './data/buildings';
 import { ChallengesPanel } from './ui/ChallengesPanel';
@@ -391,7 +405,6 @@ function App() {
           <button
             className="px-btn px-side-tab px-side-tab--challenges"
             style={{ position: 'relative' }}
-            aria-label="Challenges"
             onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
           >
             <Trophy />
@@ -467,8 +480,6 @@ function App() {
           <div className="px-nav-bar">
             <button
               className={`px-btn px-mobile-tab px-side-tab--park${showParkPanel ? ' px-btn--active' : ''}`}
-              aria-label="Manage Park"
-              aria-pressed={showParkPanel}
               onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); setShowBuildMenu(false); }}
             >
               <Landmark size={16} />
@@ -477,8 +488,6 @@ function App() {
             <button
               className={`px-btn px-mobile-tab px-side-tab--challenges${showChallenges ? ' px-btn--active' : ''}`}
               style={{ position: 'relative' }}
-              aria-label="View Challenges"
-              aria-pressed={showChallenges}
               onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); setShowBuildMenu(false); }}
             >
               <Trophy size={16} />
@@ -489,8 +498,6 @@ function App() {
             </button>
             <button
               className={`px-btn px-mobile-tab px-side-tab--research${showResearch ? ' px-btn--active' : ''}`}
-              aria-label="Research Buildings"
-              aria-pressed={showResearch}
               onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); setShowBuildMenu(false); }}
             >
               <FlaskConical size={16} />
@@ -506,7 +513,6 @@ function App() {
             <>
               <button
                 className="px-btn px-btn--lg"
-                aria-label="Place path (free)"
                 onClick={() => {
                   handleSelectBuilding(getPathDefinition());
                   setShowBuildMenu(false);
@@ -517,8 +523,6 @@ function App() {
               </button>
               <button
                 className="px-btn px-btn--lg"
-                aria-label="Open build menu"
-                aria-expanded={showBuildMenu}
                 onClick={() => {
                   const opening = !showBuildMenu;
                   setShowBuildMenu(opening);
@@ -541,24 +545,21 @@ function App() {
           )}
           <button
             className="px-btn"
-            style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, fontSize: 22, justifyContent: 'center', flexShrink: 0 }}
-            aria-label="How to play"
-            aria-expanded={showHelp}
+            style={{ width: isMobile ? 46 : 52, height: isMobile ? 46 : 52, padding: 0 }}
             onClick={() => {
               setShowHelp(value => !value);
               setShowBuildMenu(false);
             }}
           >
-            <HelpCircle />
+            <HelpCircle size={isMobile ? 18 : 20} />
           </button>
           <button
             className="px-btn"
-            style={{ width: isMobile ? 44 : 60, height: isMobile ? 44 : 60, padding: 0, justifyContent: 'center', flexShrink: 0 }}
+            style={{ width: isMobile ? 46 : 52, height: isMobile ? 46 : 52, padding: 0 }}
             onClick={handleToggleMute}
             aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
-            aria-pressed={isMuted}
           >
-            {isMuted ? <VolumeX /> : <Volume2 />}
+            {isMuted ? <VolumeX size={isMobile ? 18 : 20} /> : <Volume2 size={isMobile ? 18 : 20} />}
           </button>
         </div>
       )}

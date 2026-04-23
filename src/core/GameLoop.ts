@@ -4,13 +4,21 @@ export class GameLoop {
   private updateCallback: (deltaTime: number) => void;
   private renderCallback: () => void;
   private animationFrameId: number | null = null;
+  /**
+   * Minimum milliseconds between frames.
+   * 0 = uncapped (desktop).  ~33 ms = 30 fps cap (mobile) — halves CPU/GPU work
+   * without affecting gameplay since deltaTime stays frame-rate independent.
+   */
+  private readonly minFrameTime: number;
 
   constructor(
     updateCallback: (deltaTime: number) => void,
-    renderCallback: () => void
+    renderCallback: () => void,
+    minFrameTime = 0
   ) {
     this.updateCallback = updateCallback;
     this.renderCallback = renderCallback;
+    this.minFrameTime = minFrameTime;
   }
 
   public start(): void {
@@ -31,14 +39,19 @@ export class GameLoop {
 
   private loop = (): void => {
     if (!this.running) return;
+    this.animationFrameId = requestAnimationFrame(this.loop);
 
     const currentTime = performance.now();
-    const deltaTime = (currentTime - this.lastTime) / 1000;
+    const elapsed = currentTime - this.lastTime;
+
+    // Skip this tick if we haven't reached the minimum frame interval.
+    // requestAnimationFrame still fires so the tab stays alive and input is responsive.
+    if (elapsed < this.minFrameTime) return;
+
+    const deltaTime = elapsed / 1000;
     this.lastTime = currentTime;
 
     this.updateCallback(Math.min(deltaTime, 0.1));
     this.renderCallback();
-
-    this.animationFrameId = requestAnimationFrame(this.loop);
   };
 }

@@ -9,12 +9,12 @@ interface ChallengesPanelProps {
   onClose?: () => void;
 }
 
-const TIER_META: Record<ChallengeTier, { roman: string; title: string; subtitle: string }> = {
-  1: { roman: 'I', title: 'Open the Gates', subtitle: 'Start with the basics: rides, shops and your first guests.' },
-  2: { roman: 'II', title: 'Build a Real Park', subtitle: 'Add comfort, decoration and stable guest happiness.' },
-  3: { roman: 'III', title: 'Grow the Business', subtitle: 'Expand variety so visitors have more reasons to stay.' },
-  4: { roman: 'IV', title: 'Run at Scale', subtitle: 'Handle bigger crowds while keeping ratings and profit healthy.' },
-  5: { roman: 'V', title: 'Master the Park', subtitle: 'Reach late-game goals and prove the park can thrive.' },
+const TIER_META: Record<ChallengeTier, { roman: string; title: string }> = {
+  1: { roman: 'I', title: 'Open the Gates' },
+  2: { roman: 'II', title: 'Build a Real Park' },
+  3: { roman: 'III', title: 'Grow the Business' },
+  4: { roman: 'IV', title: 'Run at Scale' },
+  5: { roman: 'V', title: 'Master the Park' },
 };
 
 function getChallengeLabel(challenge: ChallengeState): string {
@@ -59,10 +59,6 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
   const isMobile = useIsMobile();
   const claimed = challenges.filter(challenge => challenge.claimed);
   const ready = challenges.filter(challenge => challenge.completed && !challenge.claimed);
-  const active = challenges.filter(challenge => !challenge.completed && !challenge.claimed);
-  const featured = ready[0] ?? active
-    .slice()
-    .sort((a, b) => getChallengePercent(b) - getChallengePercent(a))[0] ?? null;
   const totalRewardMoney = challenges.reduce((sum, challenge) => sum + challenge.reward.money, 0);
   const completionPercent = challenges.length > 0 ? (claimed.length / challenges.length) * 100 : 0;
 
@@ -124,22 +120,6 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
         </div>
       </div>
 
-      {featured && (
-        <div className={`px-challenge-feature px-challenge-feature--${getStatus(featured)}`}>
-          <div className="px-challenge-feature__icon">
-            {getStatus(featured) === 'ready' ? <Gem /> : <Trophy />}
-          </div>
-          <div className="px-challenge-feature__copy">
-            <span>{getStatus(featured) === 'ready' ? 'Reward waiting' : 'Next best contract'}</span>
-            <strong>{featured.title}</strong>
-          </div>
-          <div className="px-challenge-feature__meta">
-            <span>{getProgressText(featured)}</span>
-            <span><Coins /> +${featured.reward.money}</span>
-          </div>
-        </div>
-      )}
-
       <div className="px-challenge-board__body px-scroll-hidden">
         {tiers.map(group => {
           const tierPercent = group.total > 0 ? (group.claimed / group.total) * 100 : 0;
@@ -156,7 +136,6 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
                   <div>
                     <span className="px-challenge-tier__label">Tier {group.tier}</span>
                     <h3>{group.title}</h3>
-                    <p>{group.subtitle}</p>
                   </div>
                   <div className="px-challenge-tier__progress">
                     <strong>{group.claimed}/{group.total}</strong>

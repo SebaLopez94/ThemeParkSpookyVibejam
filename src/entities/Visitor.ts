@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { GridPosition, VisitorData, VisitorNeedType, VisitorPersonality, VisitorThought } from '../types';
 import { GridHelper } from '../utils/GridHelper';
 import { sharedGLTFLoader } from '../core/AssetLoader';
@@ -6,6 +8,15 @@ import { isMobile } from '../utils/platform';
 
 const PERSONALITIES: VisitorPersonality[] = ['thrill_seeker', 'foodie', 'relaxer'];
 const VISITOR_MODEL_PATHS = ['/models/kid1.glb', '/models/kid2.glb', '/models/kid3.glb'] as const;
+const MOBILE_DEVICE_REGEX = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i;
+
+/**
+ * Cached once at module load — avoids re-running the UA regex on every Visitor
+ * constructor call (200 visitors × regex = measurable overhead; also used to
+ * skip GLTF loading on mobile where SkinnedMesh + AnimationMixer cause OOM).
+ */
+const IS_MOBILE = isMobile();
+const SHOULD_SKIP_VISITOR_MIXER = MOBILE_DEVICE_REGEX.test(navigator.userAgent);
 
 function pickRandomPersonality(): VisitorPersonality {
   return PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
@@ -18,12 +29,26 @@ function pickRandomPersonality(): VisitorPersonality {
 // ---------------------------------------------------------------------------
 const FALLBACK_BODY_GEO = new THREE.CapsuleGeometry(0.18, 0.36, 4, 8);
 const FALLBACK_HEAD_GEO = new THREE.SphereGeometry(0.16, 12, 10);
-const FALLBACK_SKIN_MAT = new THREE.MeshStandardMaterial({ color: 0x6b5242, roughness: 0.75 });
+const FALLBACK_SKIN_MAT = new THREE.MeshStandardMaterial({ color: 0x56453b, roughness: 0.88 });
 // Small fixed palette — random pick avoids visual monotony without unique materials.
 const FALLBACK_BODY_MATS = [
-  0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12,
-  0x9b59b6, 0x1abc9c, 0xe67e22, 0x34495e,
-].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.82 }));
+  0xa05552, 0x456893, 0x547f5b, 0x9c7842,
+  0x70558d, 0x487a74, 0x955f42, 0x3c4854,
+].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.92 }));
+
+// ---------------------------------------------------------------------------
+// GLTF model cache — process each model path exactly once, then clone it for
+// every subsequent visitor with SkeletonUtils.clone().
+//
+// Result: geometries + materials are shared across all visitors of the same
+// model. GPU material count: 200 visitors × ~4 mats → 3 models × ~4 mats = 12.
+// AnimationClips are read-only data and safe to share across mixers.
+// ---------------------------------------------------------------------------
+interface CachedGltfModel {
+  scene:    THREE.Group;
+  clips:    THREE.AnimationClip[];
+}
+const GLTF_MODEL_CACHE = new Map<string, CachedGltfModel>();
 
 const EMOJI_TEXTURE_CACHE = new Map<string, THREE.CanvasTexture>();
 
@@ -73,12 +98,21 @@ export class Visitor {
   private walkAction: THREE.AnimationAction | null = null;
   private isMoving = false;
   private fallbackModel: THREE.Group | null = null;
+  private walkBobPhase = Math.random() * Math.PI * 2;
 
   /**
    * Cursor into data.path — advances with O(1) instead of O(n) shift().
    * Reset to 0 on every setPath() call; never stored in VisitorData (not saved).
    */
   private pathIndex = 0;
+
+  /**
+   * Personality-driven need-decay multipliers, baked once at construction.
+   * Avoids 6 string comparisons × 200 visitors × 60 fps = 72 000 comparisons/sec.
+   */
+  private readonly funMult: number;
+  private readonly hungerMult: number;
+  private readonly thirstMult: number;
 
   private emojiSprite: THREE.Sprite;
   private emojiMaterial: THREE.SpriteMaterial;
@@ -96,6 +130,11 @@ export class Visitor {
     const worldPos = GridHelper.gridToWorld(startPosition);
 
     const personality = pickRandomPersonality();
+
+    // Bake personality multipliers once — never recomputed per frame.
+    this.funMult    = personality === 'thrill_seeker' ? 1.25 : personality === 'relaxer' ? 0.80 : 1.0;
+    this.hungerMult = personality === 'foodie'        ? 1.20 : personality === 'relaxer' ? 0.85 : 1.0;
+    this.thirstMult = personality === 'foodie'        ? 1.15 : personality === 'relaxer' ? 0.85 : 1.0;
 
     this.data = {
       id,
@@ -133,8 +172,8 @@ export class Visitor {
     this.emojiSprite = new THREE.Sprite(this.emojiMaterial);
     this.emojiSprite.visible = false;
     this.emojiSprite.renderOrder = 12;
-    this.emojiSprite.position.set(0, isMobile() ? 1.45 : 1.58, 0);
-    const emojiScale = isMobile() ? 0.68 : 0.82;
+    this.emojiSprite.position.set(0, IS_MOBILE ? 1.45 : 1.58, 0);
+    const emojiScale = IS_MOBILE ? 0.68 : 0.82;
     this.emojiSprite.scale.setScalar(emojiScale);
     this.mesh.add(this.emojiSprite);
 
@@ -153,7 +192,7 @@ export class Visitor {
     head.position.y = 0.86;
 
     group.add(body, head);
-    if (!isMobile()) {
+    if (!IS_MOBILE) {
       body.castShadow = true;
       head.castShadow = true;
     }
@@ -171,72 +210,107 @@ export class Visitor {
 
   private loadModel(): void {
     const modelPath = VISITOR_MODEL_PATHS[Math.floor(Math.random() * VISITOR_MODEL_PATHS.length)];
+
+    const cached = GLTF_MODEL_CACHE.get(modelPath);
+    if (cached) {
+      // Fast path: clone the pre-processed template — zero parse, shared GPU resources.
+      this.attachCachedModel(cached);
+      return;
+    }
+
     sharedGLTFLoader.load(modelPath, (gltf) => {
-      const model = gltf.scene;
-      this.removeFallbackModel();
-      model.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(model);
-      const height = box.getSize(new THREE.Vector3()).y;
-      const scale = height > 0.01 ? 0.9 / height : 0.5;
+      // First visitor of this model type: process, cache, then attach.
+      const entry = this.processAndCacheGltf(gltf, modelPath);
+      this.attachCachedModel(entry);
+    }, undefined, () => {
+      // Keep the lightweight fallback visible if the model cannot be loaded.
+    });
+  }
 
-      const yNudge = modelPath.includes('kid2') ? 0.12 : modelPath.includes('kid3') ? 0.08 : 0.05;
-      const isKid3 = modelPath.includes('kid3');
-      model.scale.setScalar(scale);
-      model.position.y = -box.min.y * scale + yNudge;
+  /**
+   * Processes a raw GLTF result: computes scale, applies material tweaks, stores
+   * the result in GLTF_MODEL_CACHE.  Runs exactly once per model path.
+   */
+  private processAndCacheGltf(gltf: GLTF, modelPath: string): CachedGltfModel {
+    const scene = gltf.scene;
+    scene.updateMatrixWorld(true);
 
-      model.traverse(child => {
-        if (child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh) {
-          child.castShadow = !isMobile();
-          const mats = Array.isArray(child.material) ? child.material : [child.material];
-          mats.forEach(mat => {
-            if (!mat) return;
-            if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
-              mat.color.multiplyScalar(0.38);
-              mat.needsUpdate = true;
-            }
-            if (mat.alphaTest > 0) {
-              // Keep cutout materials in alpha-test mode so faces/hair cards
-              // don't sort like translucent glass and appear sliced.
-              mat.transparent = false;
-              mat.depthWrite = true;
-            } else if (mat.transparent) {
-              mat.transparent = true;
-              mat.depthWrite = false;
-            }
-            // kid3 appears to use facial cards/material layering that breaks
-            // when polygon offset is forced globally, so keep its original depth
-            // behavior while preserving the offset workaround for the other kids.
-            if (isKid3) {
-              mat.polygonOffset = false;
-              mat.polygonOffsetFactor = 0;
-              mat.polygonOffsetUnits = 0;
-            } else {
-              mat.polygonOffset = true;
-              mat.polygonOffsetFactor = -1;
-              mat.polygonOffsetUnits = -1;
-            }
-          });
+    const box    = new THREE.Box3().setFromObject(scene);
+    const height = box.getSize(new THREE.Vector3()).y;
+    const scale  = height > 0.01 ? 0.9 / height : 0.5;
+    const yNudge = modelPath.includes('kid2') ? 0.12 : modelPath.includes('kid3') ? 0.08 : 0.05;
+    const isKid3 = modelPath.includes('kid3');
+
+    scene.scale.setScalar(scale);
+    scene.position.y = -box.min.y * scale + yNudge;
+
+    // Visitors never cast shadows — from isometric view they're too small to notice,
+    // and keeping them out of the shadow pass removes ~200 skinned-mesh draw calls
+    // from the depth render, allowing shadowMap.autoUpdate = false to be effective.
+    scene.traverse(child => {
+      if (!(child instanceof THREE.Mesh) && !(child instanceof THREE.SkinnedMesh)) return;
+      child.castShadow = false;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(mat => {
+        if (!mat) return;
+        if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
+          mat.color.multiplyScalar(0.33);
+          mat.color.offsetHSL(0, -0.28, -0.1);
+          mat.roughness = Math.max(mat.roughness, 0.9);
+          mat.metalness *= 0.5;
+          mat.needsUpdate = true;
+        }
+        if (mat.alphaTest > 0) {
+          // Keep cutout materials in alpha-test mode so faces/hair cards
+          // don't sort like translucent glass and appear sliced.
+          mat.transparent = false;
+          mat.depthWrite  = true;
+        } else if (mat.transparent) {
+          mat.transparent = true;
+          mat.depthWrite  = false;
+        }
+        // kid3 uses facial card layering that breaks with global polygon offset.
+        if (isKid3) {
+          mat.polygonOffset       = false;
+          mat.polygonOffsetFactor = 0;
+          mat.polygonOffsetUnits  = 0;
+        } else {
+          mat.polygonOffset       = true;
+          mat.polygonOffsetFactor = -1;
+          mat.polygonOffsetUnits  = -1;
         }
       });
-
-      this.mesh.add(model);
-
-      // Show brief excitement burst on spawn
-      this.showMoodWithOptions(
-        { kind: 'excited', emoji: '🎉', message: 'Arrived at the park!', duration: 2.2 },
-        { force: true, cooldownSeconds: 0 }
-      );
-
-      if (gltf.animations.length > 0) {
-        this.mixer = new THREE.AnimationMixer(model);
-        const walkClip = gltf.animations.find(animation => animation.name.toLowerCase().includes('walk')) ?? gltf.animations[0];
-        this.walkAction = this.mixer.clipAction(walkClip);
-        this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
-        if (this.isMoving) this.walkAction.play();
-      }
-    }, undefined, () => {
-      // Keep the lightweight fallback visible if a kid model cannot be loaded.
     });
+
+    const entry: CachedGltfModel = { scene, clips: gltf.animations };
+    GLTF_MODEL_CACHE.set(modelPath, entry);
+    return entry;
+  }
+
+  /**
+   * Clones the cached scene with SkeletonUtils (handles SkinnedMesh / bone rebinding).
+   * Clones share geometries and materials with the template — only transforms and
+   * skeleton state are independent per visitor.
+   */
+  private attachCachedModel(cached: CachedGltfModel): void {
+    const model = SkeletonUtils.clone(cached.scene) as THREE.Group;
+    this.removeFallbackModel();
+    this.mesh.add(model);
+
+    this.showMoodWithOptions(
+      { kind: 'excited', emoji: '🎉', message: 'Arrived at the park!', duration: 2.2 },
+      { force: true, cooldownSeconds: 0 }
+    );
+
+    // Only skip mixers on actual mobile devices.
+    // Narrow desktop windows should keep full walk animation.
+    if (!SHOULD_SKIP_VISITOR_MIXER && cached.clips.length > 0) {
+      this.mixer    = new THREE.AnimationMixer(model);
+      const walkClip = cached.clips.find(c => c.name.toLowerCase().includes('walk')) ?? cached.clips[0];
+      this.walkAction = this.mixer.clipAction(walkClip);
+      this.walkAction.setLoop(THREE.LoopRepeat, Infinity);
+      if (this.isMoving) this.walkAction.play();
+    }
   }
 
   private setMoving(moving: boolean): void {
@@ -259,7 +333,11 @@ export class Visitor {
     }
   }
 
-  public update(deltaTime: number, hygieneDecayMultiplier: number = 1): void {
+  /**
+   * @param now       - performance.now()/1000, computed once in VisitorSystem.update()
+   * @param moodDecay - Math.pow(0.995, deltaTime*60), computed once per frame
+   */
+  public update(deltaTime: number, hygieneDecayMultiplier: number, now: number, moodDecay: number): void {
     if (this.mixer && this.isMoving) this.mixer.update(deltaTime);
 
     // Entry animation: shrink + rise as visitor "boards" the ride
@@ -291,8 +369,8 @@ export class Visitor {
           this.mesh.visible = true;
         }
       }
-      this.updateNeeds(deltaTime, hygieneDecayMultiplier);
-      this.updateMoodSprite();
+      this.updateNeeds(deltaTime, hygieneDecayMultiplier, moodDecay);
+      this.updateMoodSprite(now);
       return;
     }
 
@@ -310,7 +388,7 @@ export class Visitor {
         this.mesh.position.y = 0;
       }
       this.setMoving(false);
-      this.updateMoodSprite();
+      this.updateMoodSprite(now);
       return;
     }
 
@@ -325,8 +403,27 @@ export class Visitor {
       this.setMoving(false);
     }
 
-    this.updateNeeds(deltaTime, hygieneDecayMultiplier);
-    this.updateMoodSprite();
+    this.updateWalkPresentation(deltaTime);
+    this.updateNeeds(deltaTime, hygieneDecayMultiplier, moodDecay);
+    this.updateMoodSprite(now);
+  }
+
+  private updateWalkPresentation(deltaTime: number): void {
+    if (this.entryAnimTimer > 0 || this.exitAnimTimer > 0 || this.data.currentActivity) return;
+    if (this.mixer) {
+      if (!this.isMoving) {
+        this.mesh.position.y = THREE.MathUtils.lerp(this.mesh.position.y, 0, 0.22);
+      }
+      return;
+    }
+
+    if (this.isMoving) {
+      this.walkBobPhase += deltaTime * 11;
+      this.mesh.position.y = Math.abs(Math.sin(this.walkBobPhase)) * 0.05;
+      return;
+    }
+
+    this.mesh.position.y = THREE.MathUtils.lerp(this.mesh.position.y, 0, 0.22);
   }
 
   private moveTowardsTarget(deltaTime: number): void {
@@ -362,23 +459,18 @@ export class Visitor {
     this.mesh.rotation.y = Math.atan2(dx, dz);
   }
 
-  private updateNeeds(deltaTime: number, hygieneDecayMultiplier: number = 1): void {
-    const p = this.data.personality;
-    // Personality modifies individual decay rates
-    const funMult    = p === 'thrill_seeker' ? 1.25 : p === 'relaxer' ? 0.80 : 1.0;
-    const hungerMult = p === 'foodie'        ? 1.20 : p === 'relaxer' ? 0.85 : 1.0;
-    const thirstMult = p === 'foodie'        ? 1.15 : p === 'relaxer' ? 0.85 : 1.0;
-
-    this.data.needs.fun     = Math.max(0, this.data.needs.fun     - deltaTime * 0.45 * funMult);
-    this.data.needs.hunger  = Math.max(0, this.data.needs.hunger  - deltaTime * 0.50 * hungerMult);
-    this.data.needs.thirst  = Math.max(0, this.data.needs.thirst  - deltaTime * 0.60 * thirstMult);
-    const clampedHygieneDecay = THREE.MathUtils.clamp(hygieneDecayMultiplier, 0.2, 1.1);
-    this.data.needs.hygiene = Math.max(0, this.data.needs.hygiene - deltaTime * 0.30 * clampedHygieneDecay);
+  private updateNeeds(deltaTime: number, hygieneDecayMultiplier: number, moodDecay: number): void {
+    // funMult/hungerMult/thirstMult are baked at construction — no string comparisons per frame.
+    this.data.needs.fun    = Math.max(0, this.data.needs.fun    - deltaTime * 0.45 * this.funMult);
+    this.data.needs.hunger = Math.max(0, this.data.needs.hunger - deltaTime * 0.50 * this.hungerMult);
+    this.data.needs.thirst = Math.max(0, this.data.needs.thirst - deltaTime * 0.60 * this.thirstMult);
+    // hygieneDecayMultiplier arrives already clamped [0.35, 1] from VisitorSystem — no re-clamp needed.
+    this.data.needs.hygiene   = Math.max(0, this.data.needs.hygiene - deltaTime * 0.30 * hygieneDecayMultiplier);
     this.data.needs.happiness = this.calculateHappiness();
 
     this.data.timeInPark += deltaTime;
-    // Emotional history decays toward neutral over time
-    this.data.moodMomentum *= Math.pow(0.995, deltaTime * 60);
+    // moodDecay = Math.pow(0.995, deltaTime*60) computed once per frame in VisitorSystem.
+    this.data.moodMomentum *= moodDecay;
   }
 
   private calculateHappiness(): number {
@@ -390,8 +482,7 @@ export class Visitor {
     );
   }
 
-  private updateMoodSprite(): void {
-    const now = performance.now() / 1000;
+  private updateMoodSprite(now: number): void {
     const suppressedByAnim = this.entryAnimTimer > 0;
     const isMoodVisible = !suppressedByAnim && this.mesh.visible && this.data.lastThought !== null && now < this.activeMoodUntil;
     this.emojiSprite.visible = isMoodVisible;
@@ -411,8 +502,11 @@ export class Visitor {
     this.emojiMaterial.opacity = THREE.MathUtils.lerp(this.emojiMaterial.opacity, targetOpacity, 0.28);
   }
 
-  public canShowMood(kind: VisitorThought['kind']): boolean {
-    const now = performance.now() / 1000;
+  /**
+   * @param now - pass performance.now()/1000 from the caller to avoid a redundant system call
+   *              in the per-frame hot path; omit only in event-driven (non-frame) contexts.
+   */
+  public canShowMood(kind: VisitorThought['kind'], now = performance.now() / 1000): boolean {
     if (now < this.moodCooldownUntil) return false;
     if (!this.mesh.visible) return false;
     if (this.activeMoodKind === kind && now < this.activeMoodUntil) return false;
@@ -513,16 +607,20 @@ export class Visitor {
       this.mixer = null;
     }
     this.removeFallbackModel();
+
+    // emojiMaterial is per-visitor — safe to dispose.
+    // Its texture map comes from EMOJI_TEXTURE_CACHE (module-level shared) — do NOT
+    // dispose the texture itself, only detach the reference.
+    this.emojiMaterial.map = null;
     this.emojiMaterial.dispose();
-    this.mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
+
+    // GLTF model meshes use geometries and materials that are SHARED across all
+    // visitors of the same model type via SkeletonUtils.clone().  Disposing them
+    // here would corrupt every other visitor still in the scene that references
+    // the same GPU buffers — causing missing/black textures and WebGL errors.
+    // The VisitorSystem already calls scene.remove(visitor.mesh) before dispose(),
+    // which is sufficient for the cloned Object3D tree to be GC'd by JS.
+    // Fallback model resources (FALLBACK_*_GEO, FALLBACK_*_MAT) are module-level
+    // singletons and are likewise never disposed per-visitor.
   }
 }
