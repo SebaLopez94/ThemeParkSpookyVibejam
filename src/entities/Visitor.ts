@@ -29,12 +29,12 @@ function pickRandomPersonality(): VisitorPersonality {
 // ---------------------------------------------------------------------------
 const FALLBACK_BODY_GEO = new THREE.CapsuleGeometry(0.18, 0.36, 4, 8);
 const FALLBACK_HEAD_GEO = new THREE.SphereGeometry(0.16, 12, 10);
-const FALLBACK_SKIN_MAT = new THREE.MeshStandardMaterial({ color: 0x56453b, roughness: 0.88 });
+const FALLBACK_SKIN_MAT = new THREE.MeshStandardMaterial({ color: 0x8d7161, roughness: 0.76, metalness: 0 });
 // Small fixed palette — random pick avoids visual monotony without unique materials.
 const FALLBACK_BODY_MATS = [
-  0xa05552, 0x456893, 0x547f5b, 0x9c7842,
-  0x70558d, 0x487a74, 0x955f42, 0x3c4854,
-].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.92 }));
+  0xed857b, 0x85a6c9, 0x8eb07f, 0xdfae63,
+  0xaf8dc9, 0x84b0a5, 0xd39267, 0x78848d,
+].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.78, metalness: 0 }));
 
 // ---------------------------------------------------------------------------
 // GLTF model cache — process each model path exactly once, then clone it for
@@ -253,13 +253,36 @@ export class Visitor {
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       mats.forEach(mat => {
         if (!mat) return;
-        if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhysicalMaterial) {
-          mat.color.multiplyScalar(0.33);
-          mat.color.offsetHSL(0, -0.28, -0.1);
-          mat.roughness = Math.max(mat.roughness, 0.9);
-          mat.metalness *= 0.5;
-          mat.needsUpdate = true;
+        const colorMat = mat as THREE.Material & {
+          color?: THREE.Color;
+          emissive?: THREE.Color;
+          emissiveIntensity?: number;
+          roughness?: number;
+          metalness?: number;
+          envMapIntensity?: number;
+          toneMapped?: boolean;
+        };
+
+        if (colorMat.color) {
+          colorMat.color.multiplyScalar(1.38);
+          colorMat.color.offsetHSL(0, -0.015, 0.13);
         }
+        if (typeof colorMat.roughness === 'number') {
+          colorMat.roughness = Math.max(colorMat.roughness, 0.72);
+        }
+        if (typeof colorMat.metalness === 'number') {
+          colorMat.metalness = 0;
+        }
+        if (typeof colorMat.envMapIntensity === 'number') {
+          colorMat.envMapIntensity = 0;
+        }
+        if (colorMat.emissive) {
+          colorMat.emissive.setRGB(0, 0, 0);
+        }
+        if (typeof colorMat.emissiveIntensity === 'number') {
+          colorMat.emissiveIntensity = 0;
+        }
+        colorMat.needsUpdate = true;
         if (mat.alphaTest > 0) {
           // Keep cutout materials in alpha-test mode so faces/hair cards
           // don't sort like translucent glass and appear sliced.
