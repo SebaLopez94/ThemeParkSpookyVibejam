@@ -77,6 +77,7 @@ export class GameRenderer {
   private readonly heightFogMaterials = new Set<THREE.Material>();
   private fogTime = 0;
   private fogPatchFrame = 0;
+  private fogUniformFrame = 0;
 
   constructor(container: HTMLElement) {
     const mobile = isMobile();
@@ -91,7 +92,7 @@ export class GameRenderer {
     });
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1 : 1.5));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 0.85 : 1.5));
     this.renderer.shadowMap.enabled = !mobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
@@ -105,24 +106,25 @@ export class GameRenderer {
   }
 
   private patchHeightFogMaterial(material: THREE.Material): void {
+    if (this.mobile) return;
     this.heightFogMaterials.add(material);
     if (this.fogPatchedMaterials.has(material)) return;
     if (material instanceof THREE.ShaderMaterial || material instanceof THREE.RawShaderMaterial) return;
 
     const originalOnBeforeCompile = material.onBeforeCompile;
     material.onBeforeCompile = (shader, renderer) => {
-      shader.uniforms.uFogRadius = { value: this.mobile ? 205 : 285 };
+      shader.uniforms.uFogRadius = { value: this.mobile ? 170 : 285 };
       shader.uniforms.uFogColor = { value: new THREE.Color(0xe3eaf2) };
       shader.uniforms.uFogTop = { value: 6.2 };
       shader.uniforms.uFogDepth = { value: 5.0 };
       shader.uniforms.uFogOpacity = { value: this.mobile ? 0.16 : 0.25 };
       shader.uniforms.uFogExponent = { value: 1.2 };
-      shader.uniforms.uNoiseScale = { value: this.mobile ? 0.24 : 0.40 };
-      shader.uniforms.uNoiseStrength = { value: 0.12 };
-      shader.uniforms.uNoiseOctaves = { value: this.mobile ? 4 : 5 };
+      shader.uniforms.uNoiseScale = { value: this.mobile ? 0.18 : 0.40 };
+      shader.uniforms.uNoiseStrength = { value: this.mobile ? 0.08 : 0.12 };
+      shader.uniforms.uNoiseOctaves = { value: this.mobile ? 2 : 5 };
       shader.uniforms.uWindDir = { value: new THREE.Vector2(0.0, 1.0) };
-      shader.uniforms.uWindSpeed = { value: this.mobile ? 0.26 : 0.34 };
-      shader.uniforms.uVerticalBillow = { value: 0.08 };
+      shader.uniforms.uWindSpeed = { value: this.mobile ? 0.16 : 0.34 };
+      shader.uniforms.uVerticalBillow = { value: this.mobile ? 0.04 : 0.08 };
       shader.uniforms.uTime = { value: 0 };
 
       shader.vertexShader = `varying vec3 vWorldPos;\n${shader.vertexShader}`;
@@ -155,9 +157,26 @@ export class GameRenderer {
         ${shader.fragmentShader}
       `;
 
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <fog_fragment>',
-        `#include <fog_fragment>
+      const fogFragmentChunk = this.mobile
+        ? `#include <fog_fragment>
+        if (vWorldPos.y < uFogTop) {
+          float distXZ = distance(cameraPosition.xz, vWorldPos.xz);
+          if (uFogRadius > 0.0 && distXZ <= uFogRadius) {
+            float normalized = clamp((uFogTop - vWorldPos.y) / max(0.0001, uFogDepth), 0.0, 1.0);
+            float heightAtten = pow(normalized, uFogExponent);
+            if (heightAtten > 0.0) {
+              vec3 samplePos = vWorldPos * uNoiseScale;
+              samplePos += vec3(uWindDir.x, 0.0, uWindDir.y) * uWindSpeed * uTime * uNoiseScale;
+              samplePos.y += sin(uTime * 0.06 + samplePos.x * 0.35 + samplePos.z * 0.35) * uVerticalBillow;
+              float noiseMix = fbm01(samplePos, uNoiseOctaves);
+              float noiseMod = mix(1.0 - uNoiseStrength, 1.0 + uNoiseStrength, noiseMix);
+              float radiusFactor = 1.0 - smoothstep(uFogRadius * 0.72, uFogRadius, distXZ);
+              float fogFactor = clamp(heightAtten * noiseMod * uFogOpacity * radiusFactor, 0.0, 1.0);
+              gl_FragColor.rgb = mix(gl_FragColor.rgb, uFogColor, fogFactor);
+            }
+          }
+        }`
+        : `#include <fog_fragment>
         if (vWorldPos.y < uFogTop) {
           vec2 camXZ = cameraPosition.xz;
           vec2 posXZ = vWorldPos.xz;
@@ -186,8 +205,9 @@ export class GameRenderer {
               gl_FragColor.rgb = mix(gl_FragColor.rgb, fogTint, fogFactor);
             }
           }
-        }`
-      );
+        }`;
+
+      shader.fragmentShader = shader.fragmentShader.replace('#include <fog_fragment>', fogFragmentChunk);
 
       const userData = material.userData as { heightFogShader?: HeightFogShaderHandle };
       userData.heightFogShader = { uniforms: shader.uniforms as Record<string, { value: unknown }> };
@@ -228,13 +248,20 @@ export class GameRenderer {
   }
 
   public render(scene: THREE.Scene, camera: THREE.Camera): void {
+    if (this.mobile) {
+      this.renderer.render(scene, camera);
+      return;
+    }
+
     // Background fog geometry changes rarely, so rescan infrequently and keep
     // a cached material set for the cheap per-frame uniform updates.
     if (this.fogPatchFrame++ % 120 === 0) {
       this.patchSceneHeightFog(scene);
     }
-    this.fogTime += this.mobile ? 0.007 : 0.011;
-    this.updateHeightFog();
+    this.fogTime += 0.011;
+    if (this.fogUniformFrame++ % 2 === 0) {
+      this.updateHeightFog();
+    }
     this.renderer.render(scene, camera);
   }
 
