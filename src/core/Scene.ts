@@ -41,6 +41,7 @@ export class GameScene {
   private lightningTimer = 0;
   private lightningFlashTimer = 0;
   private lightningTriggered = false;
+  private exteriorMistTexture: THREE.CanvasTexture | null = null;
 
 
   constructor() {
@@ -48,8 +49,8 @@ export class GameScene {
     const mobile = this.mobile;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x130b1d);
-    this.scene.fog = new THREE.Fog(0x120b19, mobile ? 62 : 50, mobile ? 165 : 185);
+    this.scene.background = new THREE.Color(0x11091b);
+    this.scene.fog = new THREE.Fog(0x171021, mobile ? 56 : 44, mobile ? 152 : 170);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -62,12 +63,12 @@ export class GameScene {
 
     // Dark global fill so the park stays readable without flattening all shadows.
     // Intensities boosted ~30% to compensate for ACESFilmicToneMapping mid-range compression.
-    this.ambientLight = new THREE.AmbientLight(0x66738f, mobile ? 0.56 : 0.50);
+    this.ambientLight = new THREE.AmbientLight(0x5d6782, mobile ? 0.54 : 0.48);
     this.baseAmbientIntensity = this.ambientLight.intensity;
     this.scene.add(this.ambientLight);
 
     // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
-    this.hemisphereLight = new THREE.HemisphereLight(0x52658d, 0x1d120d, mobile ? 0.60 : 0.68);
+    this.hemisphereLight = new THREE.HemisphereLight(0x4c5e88, 0x20130f, mobile ? 0.64 : 0.72);
     this.baseHemisphereIntensity = this.hemisphereLight.intensity;
     this.scene.add(this.hemisphereLight);
 
@@ -92,7 +93,7 @@ export class GameScene {
 
     // Soft purple fill from the opposite side — reduces harsh unlit faces without
     // flattening the scene. No shadow casting: zero cost.
-    this.fillLight = new THREE.DirectionalLight(0x4a2255, mobile ? 0.14 : 0.18);
+    this.fillLight = new THREE.DirectionalLight(0x5a2966, mobile ? 0.18 : 0.24);
     this.fillLight.position.set(-38, 30, -14);
     this.fillLight.castShadow = false;
     this.scene.add(this.fillLight);
@@ -104,6 +105,7 @@ export class GameScene {
     this.createEntranceGate();
     this.createPerimeterFence();
     this.createSurroundings();
+    this.createExteriorMist();
     this.createMoon();
     this.createRain();
     this.createLightning();
@@ -404,6 +406,84 @@ export class GameScene {
     buildLayer(40,  75, 105, 18, 28, 14, 28, matFar);
     // Far peaks — tallest, visible above everything
     buildLayer(24, 100, 130, 25, 38, 16, 30, matFar);
+  }
+
+  private createExteriorMist(): void {
+    const makeMistTexture = (): THREE.CanvasTexture => {
+      const cached = this.exteriorMistTexture;
+      if (cached) return cached;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        const fallback = new THREE.CanvasTexture(canvas);
+        this.exteriorMistTexture = fallback;
+        return fallback;
+      }
+
+      const gradient = ctx.createRadialGradient(128, 156, 12, 128, 156, 112);
+      gradient.addColorStop(0, 'rgba(255,255,255,0.65)');
+      gradient.addColorStop(0.32, 'rgba(230,225,255,0.34)');
+      gradient.addColorStop(0.68, 'rgba(120,110,150,0.12)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 256, 256);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.needsUpdate = true;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      this.exteriorMistTexture = texture;
+      return texture;
+    };
+
+    const mistTexture = makeMistTexture();
+    const group = new THREE.Group();
+    const layers = this.mobile
+      ? [
+          { scale: [86, 26], opacity: 0.22, y: 7.5 },
+          { scale: [118, 34], opacity: 0.16, y: 10.5 },
+        ]
+      : [
+          { scale: [98, 30], opacity: 0.28, y: 8.5 },
+          { scale: [134, 40], opacity: 0.2, y: 11.5 },
+          { scale: [168, 48], opacity: 0.12, y: 15.5 },
+        ];
+
+    const ringPositions = [
+      { x: 0, z: -88, ry: 0 },
+      { x: 0, z: 88, ry: Math.PI },
+      { x: -88, z: 0, ry: Math.PI / 2 },
+      { x: 88, z: 0, ry: -Math.PI / 2 },
+      { x: -68, z: -68, ry: Math.PI / 4 },
+      { x: 68, z: -68, ry: -Math.PI / 4 },
+      { x: -68, z: 68, ry: Math.PI * 0.75 },
+      { x: 68, z: 68, ry: -Math.PI * 0.75 },
+    ];
+
+    ringPositions.forEach((entry, index) => {
+      layers.forEach((layer, layerIndex) => {
+        const material = new THREE.SpriteMaterial({
+          map: mistTexture,
+          color: layerIndex === 0 ? 0xddd4ef : 0x9f93b5,
+          transparent: true,
+          opacity: layer.opacity * (index < 4 ? 1 : 0.92),
+          depthWrite: false,
+          depthTest: true,
+          fog: true,
+        });
+        const sprite = new THREE.Sprite(material);
+        sprite.position.set(entry.x, layer.y, entry.z);
+        sprite.scale.set(layer.scale[0], layer.scale[1], 1);
+        sprite.renderOrder = 1;
+        group.add(sprite);
+      });
+    });
+
+    this.scene.add(group);
   }
 
   private createForestFloor(): void {
@@ -820,6 +900,7 @@ export class GameScene {
     this.rainMaterial?.dispose();
     this.lightningGeometry?.dispose();
     this.lightningMaterial?.dispose();
+    this.exteriorMistTexture?.dispose();
     this.rainGeometry = null;
     this.rainMaterial = null;
     this.rainLines = null;
@@ -830,6 +911,7 @@ export class GameScene {
     this.lightningMaterial = null;
     this.lightningBolt = null;
     this.lightningLight = null;
+    this.exteriorMistTexture = null;
 
     for (const obj of this.surroundingClones) {
       this.scene.remove(obj);
