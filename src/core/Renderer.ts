@@ -74,6 +74,7 @@ export class GameRenderer {
   public renderer: THREE.WebGLRenderer;
   private readonly mobile: boolean;
   private readonly fogPatchedMaterials = new WeakSet<THREE.Material>();
+  private readonly heightFogMaterials = new Set<THREE.Material>();
   private fogTime = 0;
   private fogPatchFrame = 0;
 
@@ -104,6 +105,7 @@ export class GameRenderer {
   }
 
   private patchHeightFogMaterial(material: THREE.Material): void {
+    this.heightFogMaterials.add(material);
     if (this.fogPatchedMaterials.has(material)) return;
     if (material instanceof THREE.ShaderMaterial || material instanceof THREE.RawShaderMaterial) return;
 
@@ -209,16 +211,11 @@ export class GameRenderer {
     });
   }
 
-  private updateHeightFog(scene: THREE.Scene): void {
-    scene.traverse(object => {
-      if (!(object instanceof THREE.Mesh || object instanceof THREE.SkinnedMesh || object instanceof THREE.InstancedMesh)) return;
-      if (!object.layers.isEnabled(BACKGROUND_FOG_LAYER)) return;
-      const materials = Array.isArray(object.material) ? object.material : [object.material];
-      materials.forEach(material => {
-        const handle = (material.userData as { heightFogShader?: HeightFogShaderHandle }).heightFogShader;
-        if (!handle) return;
-        if (handle.uniforms.uTime) handle.uniforms.uTime.value = this.fogTime;
-      });
+  private updateHeightFog(): void {
+    this.heightFogMaterials.forEach(material => {
+      const handle = (material.userData as { heightFogShader?: HeightFogShaderHandle }).heightFogShader;
+      if (!handle) return;
+      if (handle.uniforms.uTime) handle.uniforms.uTime.value = this.fogTime;
     });
   }
 
@@ -231,11 +228,13 @@ export class GameRenderer {
   }
 
   public render(scene: THREE.Scene, camera: THREE.Camera): void {
-    if (this.fogPatchFrame++ % 20 === 0) {
+    // Background fog geometry changes rarely, so rescan infrequently and keep
+    // a cached material set for the cheap per-frame uniform updates.
+    if (this.fogPatchFrame++ % 120 === 0) {
       this.patchSceneHeightFog(scene);
     }
     this.fogTime += this.mobile ? 0.007 : 0.011;
-    this.updateHeightFog(scene);
+    this.updateHeightFog();
     this.renderer.render(scene, camera);
   }
 
