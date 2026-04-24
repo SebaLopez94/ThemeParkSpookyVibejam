@@ -39,6 +39,38 @@ export const sharedAudioLoader = new THREE.AudioLoader(gameLoadingManager);
 // ---------------------------------------------------------------------------
 const _buildingSceneCache = new Map<string, THREE.Group>();
 
+function _disposeMaterial(material: THREE.Material, disposedTextures: Set<THREE.Texture>): void {
+  Object.values(material).forEach(value => {
+    if (value instanceof THREE.Texture && !disposedTextures.has(value)) {
+      value.source.data?.close?.();
+      value.dispose();
+      disposedTextures.add(value);
+    }
+  });
+  material.dispose();
+}
+
+function _disposeSceneResources(scene: THREE.Object3D): void {
+  const disposedGeometries = new Set<THREE.BufferGeometry>();
+  const disposedMaterials = new Set<THREE.Material>();
+  const disposedTextures = new Set<THREE.Texture>();
+
+  scene.traverse(child => {
+    if (!(child instanceof THREE.Mesh)) return;
+    if (child.geometry && !disposedGeometries.has(child.geometry)) {
+      child.geometry.dispose();
+      disposedGeometries.add(child.geometry);
+    }
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material as THREE.Material];
+    materials.forEach(material => {
+      if (!material || disposedMaterials.has(material)) return;
+      _disposeMaterial(material, disposedTextures);
+      disposedMaterials.add(material);
+    });
+  });
+}
+
 /**
  * Returns a deep clone of `source` where every Mesh gets its own material
  * copy (via material.clone()) while geometry and texture references stay
@@ -57,6 +89,10 @@ function _cloneWithOwnMaterials(source: THREE.Object3D): THREE.Group {
   return clone as THREE.Group;
 }
 
+function _cloneWithSharedMaterials(source: THREE.Object3D): THREE.Group {
+  return source.clone(true) as THREE.Group;
+}
+
 /**
  * Loads a building GLTF model with session-level caching.
  *
@@ -68,15 +104,25 @@ function _cloneWithOwnMaterials(source: THREE.Object3D): THREE.Group {
  * tuning (colorLift, roughness, etc.) only affects that instance, never the
  * cache or other buildings.  Geometry and texture GPU objects are shared.
  */
-export function loadBuildingGLTF(url: string, callback: (model: THREE.Group) => void): void {
+export function loadBuildingGLTF(
+  url: string,
+  callback: (model: THREE.Group) => void,
+  options?: { cloneMaterials?: boolean }
+): void {
+  const cloneMaterials = options?.cloneMaterials ?? true;
+  const cloneModel = cloneMaterials ? _cloneWithOwnMaterials : _cloneWithSharedMaterials;
   const cached = _buildingSceneCache.get(url);
   if (cached) {
-    callback(_cloneWithOwnMaterials(cached));
+    callback(cloneModel(cached));
     return;
   }
   sharedGLTFLoader.load(url, (gltf) => {
     _buildingSceneCache.set(url, gltf.scene);
-    callback(_cloneWithOwnMaterials(gltf.scene));
+    callback(cloneModel(gltf.scene));
   });
 }
 
+export function disposeBuildingGLTFCache(): void {
+  _buildingSceneCache.forEach(scene => _disposeSceneResources(scene));
+  _buildingSceneCache.clear();
+}

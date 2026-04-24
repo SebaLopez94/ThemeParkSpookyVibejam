@@ -58,6 +58,37 @@ export function disposeEmojiTextureCache(): void {
   EMOJI_TEXTURE_CACHE.clear();
 }
 
+export function disposeVisitorModelCache(): void {
+  const disposedGeometries = new Set<THREE.BufferGeometry>();
+  const disposedMaterials = new Set<THREE.Material>();
+  const disposedTextures = new Set<THREE.Texture>();
+
+  GLTF_MODEL_CACHE.forEach(entry => {
+    entry.scene.traverse(child => {
+      if (!(child instanceof THREE.Mesh) && !(child instanceof THREE.SkinnedMesh)) return;
+      if (child.geometry && !disposedGeometries.has(child.geometry)) {
+        child.geometry.dispose();
+        disposedGeometries.add(child.geometry);
+      }
+
+      const materials = Array.isArray(child.material) ? child.material : [child.material as THREE.Material];
+      materials.forEach(material => {
+        if (!material || disposedMaterials.has(material)) return;
+        Object.values(material).forEach(value => {
+          if (value instanceof THREE.Texture && !disposedTextures.has(value)) {
+            value.source.data?.close?.();
+            value.dispose();
+            disposedTextures.add(value);
+          }
+        });
+        material.dispose();
+        disposedMaterials.add(material);
+      });
+    });
+  });
+  GLTF_MODEL_CACHE.clear();
+}
+
 function getEmojiTexture(emoji: string): THREE.CanvasTexture {
   const cached = EMOJI_TEXTURE_CACHE.get(emoji);
   if (cached) return cached;

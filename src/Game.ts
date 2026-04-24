@@ -10,11 +10,11 @@ import { EconomySystem } from './systems/EconomySystem';
 import { PathfindingSystem } from './systems/PathfindingSystem';
 import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
-import { disposeEmojiTextureCache } from './entities/Visitor';
+import { disposeEmojiTextureCache, disposeVisitorModelCache } from './entities/Visitor';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { isMobile } from './utils/platform';
 import { EventBus } from './utils/EventBus';
-import { loadBuildingGLTF, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
+import { disposeBuildingGLTFCache, loadBuildingGLTF, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
 import { lanternPool } from './utils/LanternPool';
 import {
   BUILDING_DISPLAY,
@@ -838,7 +838,7 @@ export class Game {
       });
 
       this.previewGroup!.add(model);
-    });
+    }, { cloneMaterials: false });
   }
 
   private updatePreview(): void {
@@ -1333,7 +1333,7 @@ export class Game {
     }
 
     const camTarget = this.cameraController.getTarget();
-    this.scene.updateShadowFrustum(camTarget.x, camTarget.z);
+    const shadowTargetChanged = this.scene.updateShadowFrustum(camTarget.x, camTarget.z);
     this.scene.updateRetroOverlay(deltaTime);
 
     this.scene.updateWeather(deltaTime);
@@ -1414,8 +1414,8 @@ export class Game {
     // Shadow map throttle: re-render every N frames instead of every frame.
     // Visitor movement doesn't cast shadows so there's nothing dynamic to track.
     // Building changes call invalidateShadowMap() directly for an immediate update.
-    this.shadowFrameCounter++;
-    if (this.shadowFrameCounter >= Game.SHADOW_EVERY_N_FRAMES) {
+    if (shadowTargetChanged) this.shadowFrameCounter++;
+    if (shadowTargetChanged && this.shadowFrameCounter >= Game.SHADOW_EVERY_N_FRAMES) {
       this.shadowFrameCounter = 0;
       this.renderer.invalidateShadowMap();
     }
@@ -1500,6 +1500,8 @@ export class Game {
     this.buildingSystem.clear();
     this.visitorSystem.clear();
     disposeEmojiTextureCache();
+    disposeVisitorModelCache();
+    disposeBuildingGLTFCache();
     this.scene.dispose();
     this.renderer.dispose();
     for (const track of this.loopTracks) {

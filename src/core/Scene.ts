@@ -44,6 +44,8 @@ export class GameScene {
   private lightningFlashTimer = 0;
   private lightningTriggered = false;
   private exteriorMistTexture: THREE.CanvasTexture | null = null;
+  private lastShadowTargetX = Number.NaN;
+  private lastShadowTargetZ = Number.NaN;
 
 
   constructor() {
@@ -914,12 +916,21 @@ export class GameScene {
     this.retroOverlay?.update(deltaTime);
   }
 
-  public updateShadowFrustum(targetX: number, targetZ: number): void {
+  public updateShadowFrustum(targetX: number, targetZ: number): boolean {
     // No-op on mobile — shadows are disabled, nothing to update.
-    if (this.mobile) return;
+    if (this.mobile) return false;
+    if (
+      Math.abs(targetX - this.lastShadowTargetX) < 0.01 &&
+      Math.abs(targetZ - this.lastShadowTargetZ) < 0.01
+    ) {
+      return false;
+    }
+    this.lastShadowTargetX = targetX;
+    this.lastShadowTargetZ = targetZ;
     this.directionalLight.target.position.set(targetX, 0, targetZ);
     this.directionalLight.target.updateMatrixWorld();
     this.directionalLight.shadow.camera.updateProjectionMatrix();
+    return true;
   }
 
   public onWindowResize(): void {
