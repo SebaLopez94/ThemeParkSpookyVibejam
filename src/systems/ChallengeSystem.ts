@@ -6,6 +6,17 @@ export class ChallengeSystem {
   private streaks: Map<string, number> = new Map();
   private listeners: Set<(state: ChallengeState[]) => void> = new Set();
 
+  /**
+   * Cached deep-clone of all challenges — rebuilt only when internal state mutates.
+   * Prevents 30+ object allocations per second when notify() fires every update tick.
+   */
+  private cachedState: ChallengeState[] | null = null;
+
+  /** Pre-allocated buffer for newly-completed challenges returned from update(). */
+  private readonly completedBuffer: ChallengeState[] = [];
+
+  private invalidateSnapshot(): void { this.cachedState = null; }
+
   private createInitialChallenges(): ChallengeState[] {
     return INITIAL_CHALLENGES.map(challenge => ({
       ...challenge,
@@ -16,23 +27,31 @@ export class ChallengeSystem {
   }
 
   public getState(): ChallengeState[] {
-    return this.challenges.map(challenge => ({ ...challenge, reward: { ...challenge.reward } }));
+    if (!this.cachedState) {
+      this.cachedState = this.challenges.map(c => ({ ...c, reward: { ...c.reward } }));
+    }
+    return this.cachedState;
   }
 
   public restoreSaveData(state: ChallengeState[]): void {
     this.challenges = state.map(challenge => ({ ...challenge, reward: { ...challenge.reward } }));
     this.streaks.clear();
+    this.invalidateSnapshot();
     this.notify();
   }
 
   public reset(): void {
     this.challenges = this.createInitialChallenges();
     this.streaks.clear();
+    this.invalidateSnapshot();
     this.notify();
   }
 
   public update(deltaTime: number, snapshot: SimulationSnapshot): ChallengeState[] {
-    const completedNow: ChallengeState[] = [];
+    // Reuse the pre-allocated buffer — avoids one array allocation per update tick.
+    this.completedBuffer.length = 0;
+    // Challenges will be mutated below; invalidate the snapshot cache up front.
+    this.invalidateSnapshot();
 
     this.challenges.forEach(challenge => {
       if (challenge.claimed) return;
@@ -83,12 +102,12 @@ export class ChallengeSystem {
       const targetValue = challenge.duration ?? challenge.target;
       if (!challenge.completed && challenge.progress >= targetValue) {
         challenge.completed = true;
-        completedNow.push({ ...challenge, reward: { ...challenge.reward } });
+        this.completedBuffer.push({ ...challenge, reward: { ...challenge.reward } });
       }
     });
 
     this.notify();
-    return completedNow;
+    return this.completedBuffer;
   }
 
   public claimReward(id: string): ChallengeState | null {
@@ -98,6 +117,7 @@ export class ChallengeSystem {
     }
 
     challenge.claimed = true;
+    this.invalidateSnapshot();
     this.notify();
     return { ...challenge, reward: { ...challenge.reward } };
   }

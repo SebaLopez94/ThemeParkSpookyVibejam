@@ -4,8 +4,42 @@ export class EconomySystem {
   private state: EconomyState;
   private listeners: Set<(state: EconomyState) => void> = new Set();
 
+  /**
+   * Cached shallow-copy of state. Rebuilt only when state is mutated.
+   * All subscribers receive the same object reference — safe because
+   * subscribers must not mutate the snapshot they receive.
+   */
+  private cachedSnapshot: EconomyState | null = null;
+
+  /**
+   * Batch-mode flag. While true, notifyListeners() is suppressed; the
+   * pending notification fires when endBatch() is called.
+   * Use beginBatch() / endBatch() around a group of mutations in Game.update()
+   * so that multiple state changes in the same tick produce a single UI update.
+   */
+  private batching = false;
+  private notifyPending = false;
+
   constructor() {
     this.state = this.createInitialState();
+  }
+
+  /** Invalidate the snapshot cache whenever internal state is mutated. */
+  private invalidateSnapshot(): void { this.cachedSnapshot = null; }
+
+  /** Start suppressing notifications until endBatch(). */
+  public beginBatch(): void { this.batching = true; }
+
+  /**
+   * End batch mode and fire a single notification if any mutations occurred
+   * since beginBatch(). No-op if nothing changed during the batch.
+   */
+  public endBatch(): void {
+    this.batching = false;
+    if (this.notifyPending) {
+      this.notifyPending = false;
+      this.doNotifyListeners();
+    }
   }
 
   private createInitialState(): EconomyState {
@@ -25,11 +59,15 @@ export class EconomySystem {
   }
 
   /**
-   * Returns a shallow copy of the state — safe for subscribers/UI that may hold references.
+   * Returns a shallow-copy snapshot of the state — safe for subscribers/UI that hold references.
+   * The snapshot is cached and only rebuilt after a mutation (invalidateSnapshot).
    * Not for hot paths: use the direct getters below when you only need specific fields.
    */
   public getState(): EconomyState {
-    return { ...this.state };
+    if (!this.cachedSnapshot) {
+      this.cachedSnapshot = { ...this.state };
+    }
+    return this.cachedSnapshot;
   }
 
   // Direct property accessors — zero allocation, for use in the per-frame update loop.
@@ -62,11 +100,13 @@ export class EconomySystem {
       netProfit: Math.round(data.netProfit),
       isOpen: data.isOpen
     };
+    this.invalidateSnapshot();
     this.notifyListeners();
   }
 
   public reset(): void {
     this.state = this.createInitialState();
+    this.invalidateSnapshot();
     this.notifyListeners();
   }
 
@@ -75,6 +115,7 @@ export class EconomySystem {
     this.state.money += intAmount;
     this.state.dailyIncome += intAmount;
     this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
+    this.invalidateSnapshot();
   }
 
   /** One-time purchase — deducts money but does NOT count as recurring expense. */
@@ -82,6 +123,7 @@ export class EconomySystem {
     const intAmount = Math.round(amount);
     if (this.state.money >= intAmount) {
       this.state.money -= intAmount;
+      this.invalidateSnapshot();
       this.notifyListeners();
       return true;
     }
@@ -94,11 +136,13 @@ export class EconomySystem {
     this.state.money -= intAmount;
     this.state.dailyExpenses += intAmount;
     this.state.netProfit = this.state.dailyIncome - this.state.dailyExpenses;
+    this.invalidateSnapshot();
     this.notifyListeners();
   }
 
   public setMaintenancePerMinute(amount: number): void {
     this.state.maintenancePerMinute = Math.max(0, Math.round(amount));
+    this.invalidateSnapshot();
   }
 
   public canAfford(amount: number): boolean {
@@ -113,11 +157,13 @@ export class EconomySystem {
 
   public addRestoredVisitor(): void {
     this.state.activeVisitors += 1;
+    this.invalidateSnapshot();
     this.notifyListeners();
   }
 
   public removeVisitor(): void {
     this.state.activeVisitors = Math.max(0, this.state.activeVisitors - 1);
+    this.invalidateSnapshot();
   }
 
   public updateParkRating(
@@ -152,6 +198,7 @@ export class EconomySystem {
     const smoothed = this.state.averageHappiness * 0.7 + averageHappiness * 0.3;
     this.state.averageHappiness = Math.round(smoothed);
     this.state.parkRating = Math.max(10, Math.min(visitorCap, diversityCap, Math.round(happinessComponent + facilityComponent + decorationComponent)));
+    this.invalidateSnapshot();
   }
 
   public notify(): void {
@@ -160,11 +207,13 @@ export class EconomySystem {
 
   public setTicketPrice(price: number): void {
     this.state.ticketPrice = Math.round(Math.max(0, Math.min(price, 50)));
+    this.invalidateSnapshot();
     this.notifyListeners();
   }
 
   public setParkOpen(isOpen: boolean): void {
     this.state.isOpen = isOpen;
+    this.invalidateSnapshot();
     this.notifyListeners();
   }
 
@@ -177,8 +226,22 @@ export class EconomySystem {
     };
   }
 
-  private notifyListeners(): void {
+  /** Immediately dispatches the current snapshot to all listeners. */
+  private doNotifyListeners(): void {
     const state = this.getState();
     this.listeners.forEach(listener => listener(state));
+  }
+
+  /**
+   * Schedules or immediately fires a listener notification.
+   * When inside a batch (beginBatch/endBatch), queues a single deferred
+   * notification rather than firing one per mutation.
+   */
+  private notifyListeners(): void {
+    if (this.batching) {
+      this.notifyPending = true;
+    } else {
+      this.doNotifyListeners();
+    }
   }
 }

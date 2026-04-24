@@ -52,6 +52,12 @@ const GLTF_MODEL_CACHE = new Map<string, CachedGltfModel>();
 
 const EMOJI_TEXTURE_CACHE = new Map<string, THREE.CanvasTexture>();
 
+/** Call once at game shutdown to release GPU memory held by cached emoji textures. */
+export function disposeEmojiTextureCache(): void {
+  EMOJI_TEXTURE_CACHE.forEach(tex => tex.dispose());
+  EMOJI_TEXTURE_CACHE.clear();
+}
+
 function getEmojiTexture(emoji: string): THREE.CanvasTexture {
   const cached = EMOJI_TEXTURE_CACHE.get(emoji);
   if (cached) return cached;

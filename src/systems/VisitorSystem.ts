@@ -102,6 +102,15 @@ export class VisitorSystem {
   private _lastShopsRef:    unknown = null;
   private _lastServicesRef: unknown = null;
 
+  /**
+   * Tracks when each visitor was first detected off all path tiles with no
+   * target and no activity.  If they remain stranded for STUCK_TIMEOUT seconds
+   * (path was deleted under them) they are despawned — simulating them finding
+   * their own way out.  Cleared when the visitor receives a new path or leaves.
+   */
+  private readonly visitorStuckTimers = new Map<string, number>();
+  private static readonly STUCK_TIMEOUT = 8; // seconds before forced despawn
+
   public onVisitorSpawn: (() => void) | null = null;
   public onVisitorRestoreSpawn: (() => void) | null = null;
   public onVisitorLeave: (() => void) | null = null;
@@ -198,6 +207,20 @@ export class VisitorSystem {
       }
 
       if (!visitor.data.targetPosition && !visitor.data.currentActivity) {
+        // Stranding check: if the visitor is off every path tile (e.g. the path
+        // beneath them was demolished) they can never get a new target.
+        // Track how long they've been stuck; despawn after STUCK_TIMEOUT seconds.
+        if (!this.pathfinding.hasPath(visitorGridPos)) {
+          if (!this.visitorStuckTimers.has(id)) {
+            this.visitorStuckTimers.set(id, now);
+          } else if (now - this.visitorStuckTimers.get(id)! >= VisitorSystem.STUCK_TIMEOUT) {
+            toRemove.push(id);
+          }
+          return; // can't assign activity — skip normal decision logic
+        }
+        // Visitor is on a valid path tile — clear any stuck timer.
+        this.visitorStuckTimers.delete(id);
+
         const target = this.visitorTargets.get(id);
         if (target) {
           this.handleArrival(visitor, target, entities, densityMap);
@@ -676,6 +699,7 @@ export class VisitorSystem {
     this.visitors.delete(id);
     this.visitorTargets.delete(id);
     this.visitorDecisionCooldowns.delete(id);
+    this.visitorStuckTimers.delete(id);
   }
 
   public getVisitorCount(): number {
@@ -699,6 +723,7 @@ export class VisitorSystem {
     this.visitors.clear();
     this.visitorTargets.clear();
     this.visitorDecisionCooldowns.clear();
+    this.visitorStuckTimers.clear();
     this.spawnTimer = 0;
     this.spawnInterval = 15 + Math.random() * 8;
     this.restoreSpawnRemaining = 0;

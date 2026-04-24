@@ -33,9 +33,9 @@ export class PathfindingSystem {
     const key = GridHelper.getGridKey(position);
     if (this.pathGrid.has(key)) {
       this.pathGrid.delete(key);
-      this.pathPositions = this.pathPositions.filter(
-        p => p.x !== position.x || p.z !== position.z
-      );
+      // splice instead of filter — mutates in-place, avoids allocating a new array.
+      const idx = this.pathPositions.findIndex(p => p.x === position.x && p.z === position.z);
+      if (idx !== -1) this.pathPositions.splice(idx, 1);
       this.pathCache.clear();
     }
   }

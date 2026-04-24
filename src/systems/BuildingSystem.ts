@@ -62,6 +62,8 @@ export class BuildingSystem {
   private decorationsCache: Decoration[] | null = null;
   private decorationBonusCache: Map<number, number> = new Map();
   private hygienesBonusCache:   Map<number, number> = new Map();
+  /** Cached total decoration appeal — invalidated when any decoration is added/removed. */
+  private decorationAppealCache: number | null = null;
   /**
    * Cached maintenance total — invalidated whenever any building is added or
    * removed.  Turns a per-frame reduce() across all buildings into an O(1)
@@ -271,6 +273,7 @@ export class BuildingSystem {
     this.scene.add(decoration.mesh);
     this.decorationsCache = null;
     this.maintenanceCache = null;
+    this.decorationAppealCache = null;
     this.decorationBonusCache.clear();
     this.hygienesBonusCache.clear();
 
@@ -338,6 +341,7 @@ export class BuildingSystem {
       this.decorations.delete(anchorKey);
       this.decorationsCache = null;
       this.maintenanceCache = null;
+      this.decorationAppealCache = null;
       this.decorationBonusCache.clear();
       this.hygienesBonusCache.clear();
       return true;
@@ -471,7 +475,13 @@ export class BuildingSystem {
   }
 
   public getDecorationAppeal(): number {
-    return this.getDecorations().reduce((total, decoration) => total + decoration.data.appealBonus, 0) / 2;
+    if (this.decorationAppealCache !== null) return this.decorationAppealCache;
+    let total = 0;
+    // Iterate the Map directly — avoids the getDecorations() array allocation
+    // and skips the cache-null check when decorations have recently changed.
+    this.decorations.forEach(d => { total += d.data.appealBonus; });
+    this.decorationAppealCache = total / 2;
+    return this.decorationAppealCache;
   }
 
   public getLocalDecorationBonus(position: GridPosition): number {
@@ -480,7 +490,8 @@ export class BuildingSystem {
     if (cached !== undefined) return cached;
 
     let total = 0;
-    this.getDecorations().forEach(decoration => {
+    // Iterate the Map directly — avoids the getDecorations() array allocation.
+    this.decorations.forEach(decoration => {
       const distance = GridHelper.getDistance(position, decoration.data.position);
       if (distance <= decoration.data.appealRadius) {
         total += Math.max(0, decoration.data.appealBonus - distance);
@@ -496,7 +507,8 @@ export class BuildingSystem {
     if (cached !== undefined) return cached;
 
     let total = 0;
-    this.getDecorations().forEach(decoration => {
+    // Iterate the Map directly — avoids the getDecorations() array allocation.
+    this.decorations.forEach(decoration => {
       const radius = decoration.data.hygieneRadius ?? 0;
       const bonus  = decoration.data.hygieneBonus  ?? 0;
       if (radius <= 0 || bonus <= 0) return;
@@ -548,6 +560,7 @@ export class BuildingSystem {
     this.decorations.clear();
     this.decorationsCache = null;
     this.maintenanceCache = null;
+    this.decorationAppealCache = null;
     this.decorationBonusCache.clear();
     this.hygienesBonusCache.clear();
 

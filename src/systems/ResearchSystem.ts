@@ -7,6 +7,22 @@ export class ResearchSystem {
   private state: ResearchState = this.createInitialState();
   private listeners: Set<(state: ResearchState) => void> = new Set();
 
+  /**
+   * Cached snapshot of the research state — rebuilt only when state mutates.
+   * During active research, notify() fires every second (remainingTime changes);
+   * the cache ensures we only spread the arrays once per tick, not once per listener.
+   */
+  private cachedState: ResearchState | null = null;
+
+  /**
+   * One-time deep-clone of RESEARCH_NODES.
+   * getNodes() used to re-spread every node on every call — nodes are static
+   * (they never change at runtime), so one clone is enough for the whole session.
+   */
+  private cachedNodes: ResearchNode[] | null = null;
+
+  private invalidateState(): void { this.cachedState = null; }
+
   private createInitialState(): ResearchState {
     return {
       unlocked: [...INITIAL_UNLOCKED_BUILDINGS],
@@ -17,12 +33,15 @@ export class ResearchSystem {
   }
 
   public getState(): ResearchState {
-    return {
-      unlocked: [...this.state.unlocked],
-      completed: [...this.state.completed],
-      activeResearchId: this.state.activeResearchId,
-      remainingTime: this.state.remainingTime
-    };
+    if (!this.cachedState) {
+      this.cachedState = {
+        unlocked: [...this.state.unlocked],
+        completed: [...this.state.completed],
+        activeResearchId: this.state.activeResearchId,
+        remainingTime: this.state.remainingTime
+      };
+    }
+    return this.cachedState;
   }
 
   public restoreSaveData(state: ResearchState): void {
@@ -32,16 +51,30 @@ export class ResearchSystem {
       activeResearchId: state.activeResearchId,
       remainingTime: state.remainingTime
     };
+    this.invalidateState();
     this.notify();
   }
 
   public reset(): void {
     this.state = this.createInitialState();
+    this.invalidateState();
     this.notify();
   }
 
+  /**
+   * Returns a deep-cloned snapshot of all research nodes.
+   * RESEARCH_NODES is static — the clone is built once and reused for the
+   * entire session, eliminating repeated spread allocations on every call.
+   */
   public getNodes(): ResearchNode[] {
-    return this.nodes.map(node => ({ ...node, unlocks: [...node.unlocks], dependencies: [...node.dependencies] }));
+    if (!this.cachedNodes) {
+      this.cachedNodes = this.nodes.map(node => ({
+        ...node,
+        unlocks: [...node.unlocks],
+        dependencies: [...node.dependencies]
+      }));
+    }
+    return this.cachedNodes;
   }
 
   public isUnlocked(kind: PlaceableBuildingKind): boolean {
@@ -63,6 +96,7 @@ export class ResearchSystem {
     const node = this.nodes.find(item => item.id === id)!;
     this.state.activeResearchId = id;
     this.state.remainingTime = node.duration;
+    this.invalidateState();
     this.notify();
     return node;
   }
@@ -71,6 +105,7 @@ export class ResearchSystem {
     if (!this.state.activeResearchId) return [];
 
     this.state.remainingTime = Math.max(0, this.state.remainingTime - deltaTime);
+    this.invalidateState(); // remainingTime changed
     if (this.state.remainingTime > 0) {
       this.notify();
       return [];

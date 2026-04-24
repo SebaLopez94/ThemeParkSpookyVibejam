@@ -10,6 +10,7 @@ import { EconomySystem } from './systems/EconomySystem';
 import { PathfindingSystem } from './systems/PathfindingSystem';
 import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
+import { disposeEmojiTextureCache } from './entities/Visitor';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { isMobile } from './utils/platform';
 import { EventBus } from './utils/EventBus';
@@ -183,6 +184,11 @@ export class Game {
   /** True once the first assetsLoaded has fired, to suppress repeated fires. */
   private assetsReadyFired = false;
 
+  /** Unsubscribe handles — called in dispose() to prevent listener leaks on restart. */
+  private unsubscribeEconomy: (() => void) | null = null;
+  private unsubscribeResearch: (() => void) | null = null;
+  private unsubscribeChallenges: (() => void) | null = null;
+
   private resizeHandler = (): void => {
     this.scene.onWindowResize();
     this.renderer.onWindowResize();
@@ -243,9 +249,12 @@ export class Game {
     this.setupAudioResume();
     this.initializeEntrance();
 
-    this.economySystem.subscribe(state => this.events.emit('economyUpdate', state));
-    this.researchSystem.subscribe(state => this.events.emit('researchUpdate', state));
-    this.challengeSystem.subscribe(state => this.events.emit('challengesUpdate', state));
+    // Store unsubscribe handles so dispose() can cleanly detach listeners.
+    // Without this, repeated Game instantiation (hot-reload / React StrictMode)
+    // accumulates stale callbacks inside the system instances.
+    this.unsubscribeEconomy   = this.economySystem.subscribe(state => this.events.emit('economyUpdate', state));
+    this.unsubscribeResearch  = this.researchSystem.subscribe(state => this.events.emit('researchUpdate', state));
+    this.unsubscribeChallenges = this.challengeSystem.subscribe(state => this.events.emit('challengesUpdate', state));
 
     gameLoadingManager.onStart = () => {
       this.events.emit('assetsProgress', 0);
@@ -1354,6 +1363,10 @@ export class Game {
 
     this.processChallengeRewardQueue(deltaTime);
 
+    // Batch all economy mutations in this tick so that chargeMaintenance() and
+    // updateParkRating() together produce a single UI notification instead of two.
+    this.economySystem.beginBatch();
+
     const maintenance = this.buildingSystem.getMaintenanceChargePerInterval();
     this.economySystem.setMaintenancePerMinute(maintenance * (60 / this.MAINTENANCE_UPDATE_INTERVAL));
 
@@ -1392,10 +1405,11 @@ export class Game {
         decorationCount: counts[BuildingType.DECORATION]
       });
 
-      this.economySystem.notify();
-
       completed.forEach(challenge => this.queueChallengeReward(challenge.id));
     }
+
+    // Flush: sends at most one notification to the UI covering all mutations above.
+    this.economySystem.endBatch();
 
     // Shadow map throttle: re-render every N frames instead of every frame.
     // Visitor movement doesn't cast shadows so there's nothing dynamic to track.
@@ -1460,6 +1474,13 @@ export class Game {
 
   public dispose(): void {
     this.gameLoop.stop();
+    // Detach system listeners before clearing anything else.
+    this.unsubscribeEconomy?.();
+    this.unsubscribeResearch?.();
+    this.unsubscribeChallenges?.();
+    this.unsubscribeEconomy = null;
+    this.unsubscribeResearch = null;
+    this.unsubscribeChallenges = null;
     gameLoadingManager.onStart = () => {};
     gameLoadingManager.onProgress = () => {};
     gameLoadingManager.onLoad = () => {};
@@ -1478,6 +1499,7 @@ export class Game {
     this.hideSelectionHighlight();
     this.buildingSystem.clear();
     this.visitorSystem.clear();
+    disposeEmojiTextureCache();
     this.scene.dispose();
     this.renderer.dispose();
     for (const track of this.loopTracks) {
