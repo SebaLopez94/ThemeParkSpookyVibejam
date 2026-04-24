@@ -203,9 +203,6 @@ function App() {
     setIsPlacing(true);
     setBuildRotation(0);
     setActiveBuildDefinition(definition);
-    if (!isMobile) {
-      pushToast('info', `Placing ${definition.name}. Left click to build, Esc or right click to cancel.`);
-    }
   };
 
   const handleCancelBuildMode = () => {
@@ -238,7 +235,6 @@ function App() {
       cost: 0,
       icon: info.icon
     });
-    if (!isMobile) pushToast('info', `Moving ${info.name}. Choose a new valid tile.`);
   };
 
   const handlePriceChange = (position: GridPosition, newPrice: number) => {
@@ -249,14 +245,12 @@ function App() {
     const clamped = Math.max(0, Math.min(50, Math.round(localTicketPrice)));
     setLocalTicketPrice(clamped);
     gameRef.current?.setTicketPrice(clamped);
-    pushToast('success', `Park entry price updated to $${clamped}.`);
   };
 
   const handleToggleMute = () => {
     const newState = !isMuted;
     setIsMuted(newState);
     gameRef.current?.setMuted(newState);
-    pushToast('info', newState ? 'Audio muted' : 'Audio unmuted');
   };
 
   const handleSaveGame = () => {
@@ -390,7 +384,6 @@ function App() {
                 onTicketPriceCommit={handleTicketCommit}
                 onToggleParkOpen={isOpen => {
                   gameRef.current?.setParkOpen(isOpen);
-                  pushToast('info', isOpen ? 'Park is now OPEN' : 'Park is now CLOSED');
                 }}
                 onSaveGame={handleSaveGame}
                 onLoadGame={handleLoadGame}

@@ -223,7 +223,7 @@ export class VisitorSystem {
 
         const target = this.visitorTargets.get(id);
         if (target) {
-          this.handleArrival(visitor, target, entities, densityMap);
+          this.handleArrival(visitor, target, entities, densityMap, visitorGridPos);
           if (!visitor.data.currentActivity) {
             // Pass the already-computed grid pos — avoids a duplicate worldToGrid call inside.
             this.assignNewActivity(visitor, visitorGridPos, entities, densityMap);
@@ -249,7 +249,8 @@ export class VisitorSystem {
     visitor: Visitor,
     target: VisitorTarget,
     entities: SimulationEntities,
-    densityMap: Map<number, number>
+    densityMap: Map<number, number>,
+    visitorGridPos: GridPosition
   ): void {
     this.visitorTargets.delete(visitor.data.id);
 
@@ -327,8 +328,8 @@ export class VisitorSystem {
       return;
     }
 
-    const currentGridPos = GridHelper.worldToGrid(visitor.data.position);
-    const localDensity = densityMap.get(GridHelper.getGridKey(currentGridPos)) ?? 0;
+    // visitorGridPos is the scratch already computed in the outer update() loop — no extra alloc.
+    const localDensity = densityMap.get(GridHelper.getGridKey(visitorGridPos)) ?? 0;
     if (localDensity > 3) {
       this.showPriorityMood(visitor, {
         kind: 'crowded',
