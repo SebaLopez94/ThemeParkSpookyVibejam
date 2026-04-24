@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GridPosition, ShopData, BuildingType, ShopType } from '../types';
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
-import { sharedGLTFLoader } from '../core/AssetLoader';
+import { loadBuildingGLTF } from '../core/AssetLoader';
 
 // Shared fallback primitive geometries & materials (only used when GLB fails to load)
 const sharedFallbackGeo = {
@@ -73,8 +73,7 @@ export class Shop {
   }
 
   private loadGlbShop(path: string, sizeMultiplier = 1): void {
-    sharedGLTFLoader.load(path, (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF(path, (model) => {
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -172,20 +171,17 @@ export class Shop {
   }
 
   public dispose(): void {
-    // GLB-loaded children have unique geometry/materials — dispose those.
-    // Primitive fallback children share module-level resources — skip them.
+    // GLB geometry is shared via loadBuildingGLTF cache — must NOT dispose.
+    // Fallback primitive geometry is shared via module-level constants — must NOT dispose.
+    // Each GLB clone has its own material copy (material.clone()) — safe to dispose.
+    // Fallback primitive materials are shared module-level — must NOT dispose.
+    const sharedGeos = new Set<THREE.BufferGeometry>(Object.values(sharedFallbackGeo));
+    const sharedMats = new Set<THREE.Material>(Object.values(sharedFallbackMat));
     this.mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const isShared = (Object.values(sharedFallbackGeo) as THREE.BufferGeometry[]).includes(child.geometry);
-        if (!isShared) {
-          child.geometry.dispose();
-          if (Array.isArray(child.material)) {
-            child.material.forEach(m => m.dispose());
-          } else {
-            child.material.dispose();
-          }
-        }
-      }
+      if (!(child instanceof THREE.Mesh)) return;
+      if (sharedGeos.has(child.geometry)) return; // skip shared fallback
+      const mats = Array.isArray(child.material) ? child.material : [child.material as THREE.Material];
+      mats.forEach(m => { if (!sharedMats.has(m)) m.dispose(); });
     });
   }
 }

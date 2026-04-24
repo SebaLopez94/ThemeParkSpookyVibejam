@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GridPosition, RideData, BuildingType, RideType, RIDE_SIZES } from '../types';
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
-import { sharedGLTFLoader } from '../core/AssetLoader';
+import { loadBuildingGLTF } from '../core/AssetLoader';
 
 export class Ride {
   public mesh: THREE.Group;
@@ -219,8 +219,7 @@ export class Ride {
   }
 
   private createCarousel(): void {
-    sharedGLTFLoader.load('/models/carusel.glb', (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF('/models/carusel.glb', (model) => {
 
       // Fit model within the 2×2 footprint (4×4 world units), use 90% of it
       const box = new THREE.Box3().setFromObject(model);
@@ -253,8 +252,7 @@ export class Ride {
   }
 
   private createFerrisWheel(): void {
-    sharedGLTFLoader.load('/models/noria.glb', (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF('/models/noria.glb', (model) => {
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -282,8 +280,7 @@ export class Ride {
   }
 
   private createRollerCoaster(): void {
-    sharedGLTFLoader.load('/models/rusa.glb', (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF('/models/rusa.glb', (model) => {
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -311,8 +308,7 @@ export class Ride {
   }
 
   private createHauntedHouse(): void {
-    sharedGLTFLoader.load('/models/house.glb', (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF('/models/house.glb', (model) => {
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -340,8 +336,7 @@ export class Ride {
   }
 
   private createPirateShip(): void {
-    sharedGLTFLoader.load('/models/pirate_ship.glb', (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF('/models/pirate_ship.glb', (model) => {
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -369,8 +364,7 @@ export class Ride {
   }
 
   private createKrakenRide(): void {
-    sharedGLTFLoader.load('/models/kraken.glb', (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF('/models/kraken.glb', (model) => {
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -398,8 +392,7 @@ export class Ride {
   }
 
   private createInfernalTower(): void {
-    sharedGLTFLoader.load('/models/infernal_tower.glb', (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF('/models/infernal_tower.glb', (model) => {
 
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -447,14 +440,14 @@ export class Ride {
   }
 
   public dispose(): void {
+    // Geometry is shared via loadBuildingGLTF cache — must NOT dispose.
+    // Each clone has its own material copy (via material.clone()) — safe to dispose.
     this.mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
+      if (!(child instanceof THREE.Mesh)) return;
+      if (Array.isArray(child.material)) {
+        child.material.forEach(m => m.dispose());
+      } else {
+        (child.material as THREE.Material).dispose();
       }
     });
   }

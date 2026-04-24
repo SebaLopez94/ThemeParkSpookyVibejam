@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BuildingType, DecorationData, DecorationType, GridPosition } from '../types';
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
-import { sharedGLTFLoader } from '../core/AssetLoader';
+import { loadBuildingGLTF } from '../core/AssetLoader';
 import { lanternPool } from '../utils/LanternPool';
 
 // Shared fallback geometry for jack-o-lantern (procedural, still used)
@@ -78,8 +78,7 @@ export class Decoration {
       metalness?: number;
     }
   ): void {
-    sharedGLTFLoader.load(path, (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF(path, (model) => {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
@@ -191,20 +190,16 @@ export class Decoration {
       this.pooledLight = null;
     }
 
-    // GLB-loaded children have unique resources — dispose them.
-    // Procedural shared resources (jack-o-lantern) must NOT be disposed.
+    // GLB geometry is shared via loadBuildingGLTF cache — must NOT dispose.
+    // Procedural jack-o-lantern geometry/materials are shared module-level — must NOT dispose.
+    // GLB clones have independent material copies (material.clone()) — safe to dispose.
+    const sharedGeos = new Set<THREE.BufferGeometry>(Object.values(sharedPumpkinGeo));
+    const sharedMats = new Set<THREE.Material>(Object.values(sharedPumpkinMat));
     this.mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const isSharedGeo = (Object.values(sharedPumpkinGeo) as THREE.BufferGeometry[]).includes(child.geometry);
-        if (!isSharedGeo) {
-          child.geometry.dispose();
-          if (Array.isArray(child.material)) {
-            child.material.forEach(m => m.dispose());
-          } else {
-            child.material.dispose();
-          }
-        }
-      }
+      if (!(child instanceof THREE.Mesh)) return;
+      if (sharedGeos.has(child.geometry)) return; // skip procedural jack-o-lantern
+      const mats = Array.isArray(child.material) ? child.material : [child.material as THREE.Material];
+      mats.forEach(m => { if (!sharedMats.has(m)) m.dispose(); });
     });
     this.mesh.clear();
   }

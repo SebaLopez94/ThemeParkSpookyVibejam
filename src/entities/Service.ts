@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GridPosition, ServiceData, ServiceType, BuildingType } from '../types';
 import { GridHelper, GRID_SIZE } from '../utils/GridHelper';
 import { getBuildingCatalogItem } from '../data/buildings';
-import { sharedGLTFLoader } from '../core/AssetLoader';
+import { loadBuildingGLTF } from '../core/AssetLoader';
 
 export class Service {
   public mesh: THREE.Group;
@@ -33,8 +33,7 @@ export class Service {
   }
 
   private loadGlb(path: string): void {
-    sharedGLTFLoader.load(path, (gltf) => {
-      const model = gltf.scene;
+    loadBuildingGLTF(path, (model) => {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.z);
@@ -72,14 +71,14 @@ export class Service {
   }
 
   public dispose(): void {
+    // Geometry is shared via loadBuildingGLTF cache — must NOT dispose.
+    // Each clone has its own material copy (material.clone()) — safe to dispose.
     this.mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(material => material.dispose());
-        } else {
-          child.material.dispose();
-        }
+      if (!(child instanceof THREE.Mesh)) return;
+      if (Array.isArray(child.material)) {
+        child.material.forEach(m => m.dispose());
+      } else {
+        (child.material as THREE.Material).dispose();
       }
     });
   }

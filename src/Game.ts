@@ -13,7 +13,7 @@ import { VisitorSystem } from './systems/VisitorSystem';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { isMobile } from './utils/platform';
 import { EventBus } from './utils/EventBus';
-import { sharedGLTFLoader, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
+import { loadBuildingGLTF, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
 import { lanternPool } from './utils/LanternPool';
 import {
   BUILDING_DISPLAY,
@@ -263,6 +263,7 @@ export class Game {
       this.events.emit('assetsProgress', 1);
       this.events.emit('assetsLoaded', undefined as void);
     };
+
   }
 
   private initializeEntrance(): void {
@@ -785,11 +786,11 @@ export class Game {
 
     const token = this.previewGroup; // capture to detect stale loads
 
-    sharedGLTFLoader.load(path, (gltf) => {
+    // loadBuildingGLTF shares geometry/textures from the session cache —
+    // no extra VRAM per preview. Ghost materials are replaced below anyway.
+    loadBuildingGLTF(path, (model) => {
       // Discard if a new preview was created while loading
       if (this.previewGroup !== token || !this.previewGroup) return;
-
-      const model = gltf.scene;
 
       // Scale to fit footprint
       const box = new THREE.Box3().setFromObject(model);
@@ -874,21 +875,21 @@ export class Game {
   private disposePreview(): void {
     if (!this.previewGroup) return;
     this.scene.scene.remove(this.previewGroup);
-    this.previewGroup.traverse(child => {
-      if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
-        child.geometry.dispose();
-        // Only dispose ghost model materials (not the persistent preview mats)
-        const isPreviewMat = (m: THREE.Material) =>
-          m === this.previewGreenMat || m === this.previewRedMat ||
-          m === this.previewEdgeGreenMat || m === this.previewEdgeRedMat;
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => { if (!isPreviewMat(m)) m.dispose(); });
-        } else {
-          if (!isPreviewMat(child.material as THREE.Material))
-            (child.material as THREE.Material).dispose();
-        }
+
+    // Footprint slab + edge geometry are created fresh per preview — safe to dispose.
+    this.previewFloorMesh?.geometry.dispose();
+    this.previewEdges?.geometry.dispose();
+
+    // Ghost model geometry comes from the loadBuildingGLTF cache — shared, must NOT dispose.
+    // Ghost model materials are fresh MeshBasicMaterial instances per preview — safe to dispose.
+    this.previewModelMeshes.forEach(mesh => {
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach(m => m.dispose());
+      } else {
+        (mesh.material as THREE.Material).dispose();
       }
     });
+
     this.previewGroup = null;
     this.previewFloorMesh = null;
     this.previewEdges = null;
