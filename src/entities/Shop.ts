@@ -91,11 +91,12 @@ export class Shop {
       const _hsl = { h: 0, s: 0, l: 0 };
       model.traverse(child => {
         if (!(child instanceof THREE.Mesh)) return;
-        child.castShadow = true;
-        child.receiveShadow = true;
+        child.castShadow = false;
+        child.receiveShadow = false;
         const mats = Array.isArray(child.material) ? child.material : [child.material];
         mats.forEach(mat => {
           if (!(mat instanceof THREE.MeshStandardMaterial) && !(mat instanceof THREE.MeshPhysicalMaterial)) return;
+          mat.side = THREE.FrontSide;
           mat.color.getHSL(_hsl);
           mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.12, 1.0), Math.min(_hsl.l, 0.72));
           mat.roughness = Math.min((mat.roughness ?? 0.5) + 0.08, 1.0);
@@ -129,18 +130,18 @@ export class Shop {
       : sharedFallbackMat.gift;
     const base = new THREE.Mesh(sharedFallbackGeo.base, baseMat);
     base.position.y = 1;
-    base.castShadow = true;
+    base.castShadow = false;
     this.mesh.add(base);
 
     const roof = new THREE.Mesh(sharedFallbackGeo.roof, sharedFallbackMat.roof);
     roof.position.y = 2.5;
     roof.rotation.y = Math.PI / 4;
-    roof.castShadow = true;
+    roof.castShadow = false;
     this.mesh.add(roof);
 
     const counter = new THREE.Mesh(sharedFallbackGeo.counter, sharedFallbackMat.counter);
     counter.position.set(0, 0.4, GRID_SIZE * 0.3);
-    counter.castShadow = true;
+    counter.castShadow = false;
     this.mesh.add(counter);
 
     this.addShopSpecificDetails(type);

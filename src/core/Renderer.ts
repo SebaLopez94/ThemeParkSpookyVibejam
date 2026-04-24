@@ -239,7 +239,7 @@ export class GameRenderer {
     });
   }
 
-  public initPostProcessing(_scene: THREE.Scene, _camera: THREE.Camera): void {
+  public initPostProcessing(): void {
     // Post-processing is intentionally disabled: keep the game render direct.
   }
 

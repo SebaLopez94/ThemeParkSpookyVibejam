@@ -7,4 +7,15 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          three: ['three'],
+          ui: ['lucide-react', 'canvas-confetti'],
+        },
+      },
+    },
+  },
 });

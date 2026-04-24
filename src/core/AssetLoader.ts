@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 
 /**
  * Single shared GLTFLoader for the whole application.
@@ -18,11 +19,23 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('/draco/');
 dracoLoader.preload();
 
+const ktx2Loader = new KTX2Loader(gameLoadingManager);
+ktx2Loader.setTranscoderPath('/basis/');
+
 export const sharedGLTFLoader = new GLTFLoader(gameLoadingManager);
 sharedGLTFLoader.setDRACOLoader(dracoLoader);
+sharedGLTFLoader.setKTX2Loader(ktx2Loader);
 
 export const sharedTextureLoader = new THREE.TextureLoader(gameLoadingManager);
 export const sharedAudioLoader = new THREE.AudioLoader(gameLoadingManager);
+
+let ktx2SupportDetected = false;
+
+export function configureTextureTranscoding(renderer: THREE.WebGLRenderer): void {
+  if (ktx2SupportDetected) return;
+  ktx2Loader.detectSupport(renderer);
+  ktx2SupportDetected = true;
+}
 
 // ---------------------------------------------------------------------------
 // Building GLTF cache

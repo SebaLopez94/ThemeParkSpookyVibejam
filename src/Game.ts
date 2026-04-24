@@ -14,7 +14,13 @@ import { disposeEmojiTextureCache, disposeVisitorModelCache } from './entities/V
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { isMobile } from './utils/platform';
 import { EventBus } from './utils/EventBus';
-import { disposeBuildingGLTFCache, loadBuildingGLTF, gameLoadingManager, sharedAudioLoader } from './core/AssetLoader';
+import {
+  configureTextureTranscoding,
+  disposeBuildingGLTFCache,
+  loadBuildingGLTF,
+  gameLoadingManager,
+  sharedAudioLoader
+} from './core/AssetLoader';
 import { lanternPool } from './utils/LanternPool';
 import {
   BUILDING_DISPLAY,
@@ -163,8 +169,14 @@ export class Game {
     shops: [] as ReturnType<BuildingSystem['getShops']>,
     services: [] as ReturnType<BuildingSystem['getServices']>,
     decorations: [] as ReturnType<BuildingSystem['getDecorations']>,
-    getLocalDecorationBonus: (_pos: GridPosition) => 0,
-    getLocalHygieneBonus: (_pos: GridPosition) => 0,
+    getLocalDecorationBonus: (pos: GridPosition) => {
+      void pos;
+      return 0;
+    },
+    getLocalHygieneBonus: (pos: GridPosition) => {
+      void pos;
+      return 0;
+    },
     isOpen: false,
     ticketPrice: 0,
     parkRating: 0,
@@ -195,11 +207,13 @@ export class Game {
   };
 
   constructor(container: HTMLElement) {
+    this.renderer = new GameRenderer(container);
+    configureTextureTranscoding(this.renderer.renderer);
+
     this.scene = new GameScene();
     // Init lantern pool immediately after scene so all 20 PointLights are added
     // before the first render — shader compiles once at startup, never again.
     lanternPool.init(this.scene.scene);
-    this.renderer = new GameRenderer(container);
     // Cap mobile to ~30 fps — halves simulation + render work without affecting
     // gameplay (all motion uses deltaTime).  Desktop runs uncapped.
     this.gameLoop = new GameLoop(

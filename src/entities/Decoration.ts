@@ -93,12 +93,13 @@ export class Decoration {
 
       model.traverse(child => {
         if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
+          child.castShadow = false;
+          child.receiveShadow = false;
 
           const materials = Array.isArray(child.material) ? child.material : [child.material];
           materials.forEach(material => {
             if (!(material instanceof THREE.MeshStandardMaterial) && !(material instanceof THREE.MeshPhysicalMaterial)) return;
+            material.side = THREE.FrontSide;
 
             if (options?.colorLift) {
               material.color.multiplyScalar(options.colorLift);
@@ -172,7 +173,7 @@ export class Decoration {
         const pumpkin = new THREE.Mesh(sharedPumpkinGeo.body, sharedPumpkinMat.body);
         pumpkin.scale.y = 0.8;
         pumpkin.position.y = 0.38;
-        pumpkin.castShadow = true;
+        pumpkin.castShadow = false;
         this.mesh.add(pumpkin);
 
         const stem = new THREE.Mesh(sharedPumpkinGeo.stem, sharedPumpkinMat.stem);

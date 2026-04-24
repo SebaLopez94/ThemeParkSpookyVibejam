@@ -180,6 +180,7 @@ export class Ride {
       materials.forEach(material => {
         if (!(material instanceof THREE.MeshStandardMaterial) && !(material instanceof THREE.MeshPhysicalMaterial)) return;
 
+        material.side = THREE.FrontSide;
         material.color.multiplyScalar(colorLift);
         if (whiteMix > 0) {
           material.color.lerp(new THREE.Color(0xffffff), whiteMix);
