@@ -101,12 +101,12 @@ export class Shop {
           if (!(mat instanceof THREE.MeshStandardMaterial) && !(mat instanceof THREE.MeshPhysicalMaterial)) return;
           mat.side = THREE.FrontSide;
           mat.color.getHSL(_hsl);
-          mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.12, 1.0), Math.min(_hsl.l, 0.72));
-          mat.roughness = Math.min((mat.roughness ?? 0.5) + 0.08, 1.0);
+          mat.color.setHSL(_hsl.h, Math.min(_hsl.s * 1.08, 1.0), Math.min(_hsl.l + 0.05, 0.78));
+          mat.roughness = Math.min((mat.roughness ?? 0.5) + 0.03, 1.0);
           mat.emissiveMap = null;
           mat.emissive.setHex(0x000000);
           mat.emissiveIntensity = 0;
-          mat.envMapIntensity = 0.25;
+          mat.envMapIntensity = 0.42;
           mat.needsUpdate = true;
         });
       });

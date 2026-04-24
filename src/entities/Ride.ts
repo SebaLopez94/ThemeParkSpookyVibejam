@@ -190,7 +190,7 @@ export class Ride {
           material.emissiveMap = material.map;
         }
         material.emissiveIntensity = emissiveIntensity;
-        material.envMapIntensity = 0.55;
+        material.envMapIntensity = 0.72;
         if (roughness !== undefined) material.roughness = roughness;
         if (metalness !== undefined) material.metalness = metalness;
         material.needsUpdate = true;

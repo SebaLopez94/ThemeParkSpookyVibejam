@@ -192,12 +192,12 @@ export class StaticBuildingInstancingSystem {
       ) {
         clone.side = THREE.FrontSide;
         clone.color.getHSL(hsl);
-        clone.color.setHSL(hsl.h, Math.min(hsl.s * 1.12, 1.0), Math.min(hsl.l, 0.72));
-        clone.roughness = Math.min((clone.roughness ?? 0.5) + 0.08, 1.0);
+        clone.color.setHSL(hsl.h, Math.min(hsl.s * 1.08, 1.0), Math.min(hsl.l + 0.05, 0.78));
+        clone.roughness = Math.min((clone.roughness ?? 0.5) + 0.03, 1.0);
         clone.emissiveMap = null;
         clone.emissive.setHex(0x000000);
         clone.emissiveIntensity = 0;
-        clone.envMapIntensity = 0.25;
+        clone.envMapIntensity = 0.42;
         clone.needsUpdate = true;
       }
       return clone;

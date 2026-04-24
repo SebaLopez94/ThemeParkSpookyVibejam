@@ -14,6 +14,8 @@ export class GameScene {
   public directionalLight: THREE.DirectionalLight;
   public hemisphereLight: THREE.HemisphereLight;
   private fillLight: THREE.DirectionalLight;
+  private rimLight: THREE.DirectionalLight;
+  private groundBounceLight: THREE.DirectionalLight;
   /** null on mobile — saves a fullscreen shader pass every frame. */
   private retroOverlay: RetroOverlay | null;
   /** Stores InstancedMesh objects (one per GLTF submesh per model type). */
@@ -38,6 +40,7 @@ export class GameScene {
   private rainUpdateAccumulator = 0;
   private exteriorMistGroup: THREE.Group | null = null;
   private exteriorMistMaterials: THREE.SpriteMaterial[] = [];
+  private exteriorGroundFogMaterials: THREE.MeshBasicMaterial[] = [];
   private lightningLight: THREE.PointLight | null = null;
   private lightningGeometry: THREE.BufferGeometry | null = null;
   private lightningMaterial: THREE.LineBasicMaterial | null = null;
@@ -55,8 +58,8 @@ export class GameScene {
     const mobile = this.mobile;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x11091b);
-    this.scene.fog = new THREE.Fog(0x171021, mobile ? 42 : 32, mobile ? 128 : 138);
+    this.scene.background = new THREE.Color(0x141022);
+    this.scene.fog = new THREE.Fog(0x14111f, mobile ? 46 : 36, mobile ? 136 : 150);
 
     this.camera = new THREE.PerspectiveCamera(
       45,
@@ -69,19 +72,19 @@ export class GameScene {
 
     // Dark global fill so the park stays readable without flattening all shadows.
     // Intensities boosted ~30% to compensate for ACESFilmicToneMapping mid-range compression.
-    this.ambientLight = new THREE.AmbientLight(0x5d6782, mobile ? 0.54 : 0.48);
+    this.ambientLight = new THREE.AmbientLight(0x73809f, mobile ? 0.68 : 0.58);
     this.baseAmbientIntensity = this.ambientLight.intensity;
     this.scene.add(this.ambientLight);
 
     // Subtle sky/ground split keeps tops cool and undersides slightly earthy.
-    this.hemisphereLight = new THREE.HemisphereLight(0x4c5e88, 0x20130f, mobile ? 0.64 : 0.72);
+    this.hemisphereLight = new THREE.HemisphereLight(0x6f86b9, 0x271923, mobile ? 0.82 : 0.92);
     this.baseHemisphereIntensity = this.hemisphereLight.intensity;
     this.scene.add(this.hemisphereLight);
 
     // Cool moon key light for silhouettes and shadow shape.
-    this.directionalLight = new THREE.DirectionalLight(0xbfd2ff, mobile ? 1.00 : 1.15);
+    this.directionalLight = new THREE.DirectionalLight(0xd6e4ff, mobile ? 1.12 : 1.38);
     this.baseDirectionalIntensity = this.directionalLight.intensity;
-    this.directionalLight.position.set(38, 92, 14);
+    this.directionalLight.position.set(46, 96, 24);
     this.directionalLight.castShadow = !mobile;
     // Tight frustum (±32 world units) centred on shadow target — 3× better texel density
     // than the old ±100. Target is updated each frame via updateShadowFrustum().
@@ -99,10 +102,20 @@ export class GameScene {
 
     // Soft purple fill from the opposite side — reduces harsh unlit faces without
     // flattening the scene. No shadow casting: zero cost.
-    this.fillLight = new THREE.DirectionalLight(0x5a2966, mobile ? 0.18 : 0.24);
-    this.fillLight.position.set(-38, 30, -14);
+    this.fillLight = new THREE.DirectionalLight(0x8a4c9f, mobile ? 0.26 : 0.36);
+    this.fillLight.position.set(-42, 34, -22);
     this.fillLight.castShadow = false;
     this.scene.add(this.fillLight);
+
+    this.rimLight = new THREE.DirectionalLight(0x95d9ff, mobile ? 0.20 : 0.32);
+    this.rimLight.position.set(-26, 42, 54);
+    this.rimLight.castShadow = false;
+    this.scene.add(this.rimLight);
+
+    this.groundBounceLight = new THREE.DirectionalLight(0xff9f5c, mobile ? 0.08 : 0.12);
+    this.groundBounceLight.position.set(14, 10, 28);
+    this.groundBounceLight.castShadow = false;
+    this.scene.add(this.groundBounceLight);
 
     this.createGround();
     this.createForestFloor();
@@ -443,17 +456,17 @@ export class GameScene {
       }
 
       const gradient = ctx.createRadialGradient(128, 156, 12, 128, 156, 112);
-      gradient.addColorStop(0, 'rgba(238,244,255,0.72)');
-      gradient.addColorStop(0.28, 'rgba(204,211,232,0.38)');
-      gradient.addColorStop(0.58, 'rgba(92,86,118,0.18)');
+      gradient.addColorStop(0, 'rgba(196,202,224,0.74)');
+      gradient.addColorStop(0.28, 'rgba(120,118,148,0.54)');
+      gradient.addColorStop(0.58, 'rgba(48,42,68,0.34)');
       gradient.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 256, 256);
 
       const haze = ctx.createLinearGradient(0, 0, 0, 256);
       haze.addColorStop(0, 'rgba(0,0,0,0)');
-      haze.addColorStop(0.48, 'rgba(255,255,255,0.10)');
-      haze.addColorStop(0.8, 'rgba(15,11,24,0.16)');
+      haze.addColorStop(0.48, 'rgba(166,172,202,0.12)');
+      haze.addColorStop(0.8, 'rgba(10,8,18,0.24)');
       haze.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.globalCompositeOperation = 'screen';
       ctx.fillStyle = haze;
@@ -505,7 +518,7 @@ export class GameScene {
       layers.forEach((layer, layerIndex) => {
         const material = new THREE.SpriteMaterial({
           map: mistTexture,
-          color: layerIndex === 0 ? 0xbfc8df : layerIndex === 1 ? 0x8d88a8 : 0x5e5877,
+          color: layerIndex === 0 ? 0x7e839e : layerIndex === 1 ? 0x5f5a7a : 0x39334f,
           transparent: true,
           opacity: layer.opacity * (index < 4 ? 1 : 0.92),
           depthWrite: false,
@@ -523,52 +536,83 @@ export class GameScene {
       });
     });
 
-    const beltLayers = this.mobile
+    const groundBanks = this.mobile
       ? [
-          { offset: 49, scale: [38, 12], y: 2.8, opacity: 0.14, step: 24 },
-          { offset: 56, scale: [48, 18], y: 4.2, opacity: 0.2, step: 28 },
+          { scale: [78, 12], opacity: 0.26, y: 3.2 },
+          { scale: [112, 16], opacity: 0.16, y: 4.6 },
         ]
       : [
-          { offset: 47, scale: [36, 12], y: 2.4, opacity: 0.13, step: 18 },
-          { offset: 53, scale: [54, 20], y: 4.2, opacity: 0.23, step: 22 },
-          { offset: 62, scale: [70, 26], y: 6.5, opacity: 0.18, step: 28 },
+          { scale: [92, 14], opacity: 0.32, y: 3.0 },
+          { scale: [132, 18], opacity: 0.22, y: 4.4 },
+          { scale: [164, 22], opacity: 0.12, y: 6.0 },
         ];
 
-    const addBeltSprite = (x: number, z: number, layer: typeof beltLayers[number], color: number, jitter: number): void => {
-      const material = new THREE.SpriteMaterial({
+    ringPositions.forEach((entry, index) => {
+      groundBanks.forEach((bank, bankIndex) => {
+        const material = new THREE.SpriteMaterial({
+          map: mistTexture,
+          color: bankIndex === 0 ? 0x62677f : bankIndex === 1 ? 0x48435f : 0x312b45,
+          transparent: true,
+          opacity: bank.opacity * (index < 4 ? 1 : 0.82),
+          depthWrite: false,
+          depthTest: true,
+          fog: true,
+        });
+        material.userData.baseOpacity = material.opacity;
+        this.exteriorMistMaterials.push(material);
+        const sprite = new THREE.Sprite(material);
+        sprite.position.set(entry.x * 0.68, bank.y, entry.z * 0.68);
+        sprite.scale.set(bank.scale[0], bank.scale[1], 1);
+        sprite.renderOrder = 3;
+        sprite.layers.enable(BACKGROUND_FOG_LAYER);
+        group.add(sprite);
+      });
+    });
+
+    const makeGroundFogMaterial = (color: number, opacity: number): THREE.MeshBasicMaterial => {
+      const material = new THREE.MeshBasicMaterial({
         map: mistTexture,
         color,
+        opacity,
         transparent: true,
-        opacity: layer.opacity * (0.78 + jitter * 0.32),
         depthWrite: false,
         depthTest: true,
+        side: THREE.DoubleSide,
         fog: true,
       });
-      material.userData.baseOpacity = material.opacity;
-      this.exteriorMistMaterials.push(material);
-      const sprite = new THREE.Sprite(material);
-      sprite.position.set(x, layer.y + jitter * 1.8, z);
-      sprite.scale.set(layer.scale[0] * (0.86 + jitter * 0.28), layer.scale[1] * (0.8 + jitter * 0.4), 1);
-      sprite.renderOrder = 2;
-      sprite.layers.enable(BACKGROUND_FOG_LAYER);
-      group.add(sprite);
+      this.exteriorGroundFogMaterials.push(material);
+      return material;
     };
 
-    beltLayers.forEach((layer, layerIndex) => {
-      const color = layerIndex === 0 ? 0xc4cbda : layerIndex === 1 ? 0x8d8aa5 : 0x615975;
-      for (let x = -44; x <= 44; x += layer.step) {
-        const jitterA = (Math.sin(x * 12.989 + layer.offset) * 43758.5453) % 1;
-        const jitterB = (Math.sin(x * 7.731 - layer.offset) * 23421.631) % 1;
-        addBeltSprite(x + jitterA * 5, -layer.offset, layer, color, Math.abs(jitterA));
-        addBeltSprite(x - jitterB * 5, layer.offset, layer, color, Math.abs(jitterB));
-      }
-      for (let z = -44; z <= 44; z += layer.step) {
-        const jitterA = (Math.sin(z * 9.173 + layer.offset) * 34511.21) % 1;
-        const jitterB = (Math.sin(z * 5.621 - layer.offset) * 15731.87) % 1;
-        addBeltSprite(-layer.offset, z + jitterA * 5, layer, color, Math.abs(jitterA));
-        addBeltSprite(layer.offset, z - jitterB * 5, layer, color, Math.abs(jitterB));
-      }
-    });
+    const addGroundFogPlane = (
+      width: number,
+      depth: number,
+      x: number,
+      z: number,
+      color: number,
+      opacity: number
+    ): void => {
+      const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
+      const material = makeGroundFogMaterial(color, opacity);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.16, z);
+      mesh.renderOrder = 2;
+      mesh.frustumCulled = false;
+      mesh.layers.enable(BACKGROUND_FOG_LAYER);
+      group.add(mesh);
+    };
+
+    const nearOpacity = this.mobile ? 0.34 : 0.42;
+    const farOpacity = this.mobile ? 0.22 : 0.30;
+    addGroundFogPlane(112, 24, 0, -55, 0x8e94ad, nearOpacity);
+    addGroundFogPlane(112, 24, 0, 55, 0x8e94ad, nearOpacity);
+    addGroundFogPlane(24, 112, -55, 0, 0x7f789d, nearOpacity * 0.9);
+    addGroundFogPlane(24, 112, 55, 0, 0x7f789d, nearOpacity * 0.9);
+    addGroundFogPlane(148, 34, 0, -70, 0x514a68, farOpacity);
+    addGroundFogPlane(148, 34, 0, 70, 0x514a68, farOpacity);
+    addGroundFogPlane(34, 148, -70, 0, 0x4b4562, farOpacity);
+    addGroundFogPlane(34, 148, 70, 0, 0x4b4562, farOpacity);
 
     this.enableBackgroundFogLayer(group);
     this.exteriorMistGroup = group;
@@ -594,8 +638,8 @@ export class GameScene {
           map: { value: terrainTexture },
           repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
           fade: { value: 0.12 },
-          tint: { value: new THREE.Color(0x3a3028) },
-          mistTint: { value: new THREE.Color(0x6c7288) },
+          tint: { value: new THREE.Color(0x453a35) },
+          mistTint: { value: new THREE.Color(0x737b96) },
         },
         vertexShader: /* glsl */`
           varying vec2 vUv;
@@ -630,11 +674,11 @@ export class GameScene {
           map:    { value: terrainTexture },
           repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
           fade:   { value: 0.13 },
-          moonTint: { value: new THREE.Color(0x58664f) },
-          shadowTint: { value: new THREE.Color(0x33272a) },
-          sickTint: { value: new THREE.Color(0x4b5532) },
-          earthTint: { value: new THREE.Color(0x7b684e) },
-          wetTint: { value: new THREE.Color(0x252b2d) }
+          moonTint: { value: new THREE.Color(0x657664) },
+          shadowTint: { value: new THREE.Color(0x3d3038) },
+          sickTint: { value: new THREE.Color(0x59633d) },
+          earthTint: { value: new THREE.Color(0x8b7658) },
+          wetTint: { value: new THREE.Color(0x303a3d) }
         },
         vertexShader: /* glsl */`
           varying vec2 vUv;
@@ -705,8 +749,8 @@ export class GameScene {
             color -= hoofMarks * vec3(0.032, 0.022, 0.015);
 
             float centerFalloff = distance(vUv, vec2(0.5));
-            color *= 0.97;
-            color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.14;
+            color *= 1.03;
+            color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.09;
             color = clamp(color, vec3(0.0), vec3(1.0));
 
             float edgeX = min(vUv.x, 1.0 - vUv.x);
@@ -738,7 +782,7 @@ export class GameScene {
     outsideTex.repeat.set(30, 30);
     const mat  = new THREE.MeshStandardMaterial({
       map: outsideTex,
-      color: 0x806044,
+      color: 0x8f7054,
       roughness: 1.0,
       metalness: 0.0,
     });
@@ -945,7 +989,11 @@ export class GameScene {
       this.exteriorMistGroup.position.z = Math.cos(now * 0.0001) * 1.0;
       this.exteriorMistMaterials.forEach((material, index) => {
         const baseOpacity = typeof material.userData.baseOpacity === 'number' ? material.userData.baseOpacity : material.opacity;
-        material.opacity = baseOpacity * (0.9 + Math.sin(now * 0.00022 + index * 0.71) * 0.1);
+        material.opacity = THREE.MathUtils.clamp(
+          baseOpacity * (0.96 + Math.sin(now * 0.00022 + index * 0.71) * 0.08),
+          0.08,
+          0.42
+        );
       });
     }
 
@@ -1063,8 +1111,16 @@ export class GameScene {
     this.lightningGeometry?.dispose();
     this.lightningMaterial?.dispose();
     this.exteriorMistTexture?.dispose();
-    if (this.exteriorMistGroup) this.scene.remove(this.exteriorMistGroup);
+    if (this.exteriorMistGroup) {
+      this.exteriorMistGroup.traverse(child => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+        }
+      });
+      this.scene.remove(this.exteriorMistGroup);
+    }
     this.exteriorMistMaterials.forEach(material => material.dispose());
+    this.exteriorGroundFogMaterials.forEach(material => material.dispose());
     this.rainGeometry = null;
     this.rainMaterial = null;
     this.rainLines = null;
@@ -1078,6 +1134,7 @@ export class GameScene {
     this.exteriorMistTexture = null;
     this.exteriorMistGroup = null;
     this.exteriorMistMaterials = [];
+    this.exteriorGroundFogMaterials = [];
 
     for (const obj of this.surroundingClones) {
       this.scene.remove(obj);

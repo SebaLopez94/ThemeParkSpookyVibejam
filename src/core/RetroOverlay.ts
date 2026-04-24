@@ -35,18 +35,18 @@ export class RetroOverlay {
 
           // Scanlines: one dark band every 3 px
           float scan     = step(0.66, mod(gl_FragCoord.y, 3.0) / 3.0);
-          float scanAlpha = (1.0 - scan) * 0.028;
+          float scanAlpha = (1.0 - scan) * 0.018;
 
           // Vignette from screen edges
           vec2 sv       = (uv - 0.5) * 2.0;
-          float vig     = smoothstep(0.78, 1.35, length(sv * vec2(0.88, 1.0)));
-          float vigAlpha = vig * 0.075;
+          float vig     = smoothstep(0.86, 1.45, length(sv * vec2(0.88, 1.0)));
+          float vigAlpha = vig * 0.045;
 
           // Film grain
           float noise    = rand(uv + vec2(fract(uTime * 7.3), fract(uTime * 13.1)));
-          float grainAlpha = noise * noise * 0.035;
+          float grainAlpha = noise * noise * 0.022;
 
-          float screenAlpha = clamp(scanAlpha + vigAlpha + grainAlpha, 0.0, 0.28);
+          float screenAlpha = clamp(scanAlpha + vigAlpha + grainAlpha, 0.0, 0.18);
 
           // Blend: bezel area → solid black; screen area → subtle effects
           gl_FragColor = vec4(0.0, 0.0, 0.0, screenAlpha);

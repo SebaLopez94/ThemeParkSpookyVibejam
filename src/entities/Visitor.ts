@@ -301,17 +301,17 @@ export class Visitor {
         };
 
         if (colorMat.color) {
-          colorMat.color.multiplyScalar(1.38);
-          colorMat.color.offsetHSL(0, -0.015, 0.13);
+          colorMat.color.multiplyScalar(1.48);
+          colorMat.color.offsetHSL(0, -0.01, 0.17);
         }
         if (typeof colorMat.roughness === 'number') {
-          colorMat.roughness = Math.max(colorMat.roughness, 0.72);
+          colorMat.roughness = Math.max(colorMat.roughness, 0.66);
         }
         if (typeof colorMat.metalness === 'number') {
           colorMat.metalness = 0;
         }
         if (typeof colorMat.envMapIntensity === 'number') {
-          colorMat.envMapIntensity = 0;
+          colorMat.envMapIntensity = 0.18;
         }
         if (colorMat.emissive) {
           colorMat.emissive.setRGB(0, 0, 0);
