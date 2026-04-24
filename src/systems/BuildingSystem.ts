@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Decoration } from '../entities/Decoration';
+import { DecorationInstancingSystem } from './DecorationInstancingSystem';
+import { StaticBuildingInstancingSystem } from './StaticBuildingInstancingSystem';
 import { Path } from '../entities/Path';
 import { Ride } from '../entities/Ride';
 import { Service } from '../entities/Service';
@@ -52,6 +54,8 @@ export class BuildingSystem {
   private shops: Map<number, Shop> = new Map();
   private services: Map<number, Service> = new Map();
   private decorations: Map<number, Decoration> = new Map();
+  private decorationInstancing: DecorationInstancingSystem;
+  private staticBuildingInstancing: StaticBuildingInstancingSystem;
   private occupiedCells: Map<number, number> = new Map();
   private buildingIdCounter = 0;
 
@@ -81,6 +85,8 @@ export class BuildingSystem {
   constructor(scene: THREE.Scene, pathfinding: PathfindingSystem) {
     this.scene = scene;
     this.pathfinding = pathfinding;
+    this.decorationInstancing = new DecorationInstancingSystem(scene);
+    this.staticBuildingInstancing = new StaticBuildingInstancingSystem(scene);
   }
 
   /**
@@ -232,12 +238,17 @@ export class BuildingSystem {
 
     const accessCell = GridHelper.getAdjacentPositions(position).find(neighbor => this.pathfinding.hasPath(neighbor))!;
     const id = `shop_${this.buildingIdCounter++}`;
-    const shop = new Shop(position, shopType, id, accessCell);
+    const useInstancedVisual = this.staticBuildingInstancing.supports(shopType);
+    const shop = new Shop(position, shopType, id, accessCell, !useInstancedVisual);
     const key = GridHelper.getGridKey(position);
 
     this.shops.set(key, shop);
     this.occupiedCells.set(key, key);
-    this.scene.add(shop.mesh);
+    if (useInstancedVisual) {
+      this.staticBuildingInstancing.add(shop);
+    } else {
+      this.scene.add(shop.mesh);
+    }
     this.shopsCache = null;
     this.maintenanceCache = null;
 
@@ -249,12 +260,17 @@ export class BuildingSystem {
 
     const accessCell = GridHelper.getAdjacentPositions(position).find(neighbor => this.pathfinding.hasPath(neighbor))!;
     const id = `service_${this.buildingIdCounter++}`;
-    const service = new Service(position, serviceType, id, accessCell);
+    const useInstancedVisual = this.staticBuildingInstancing.supports(serviceType);
+    const service = new Service(position, serviceType, id, accessCell, !useInstancedVisual);
     const key = GridHelper.getGridKey(position);
 
     this.services.set(key, service);
     this.occupiedCells.set(key, key);
-    this.scene.add(service.mesh);
+    if (useInstancedVisual) {
+      this.staticBuildingInstancing.add(service);
+    } else {
+      this.scene.add(service.mesh);
+    }
     this.servicesCache = null;
     this.maintenanceCache = null;
 
@@ -265,12 +281,17 @@ export class BuildingSystem {
     if (!this.canPlaceBuilding(position, BuildingType.DECORATION, decorationType)) return null;
 
     const id = `decoration_${this.buildingIdCounter++}`;
-    const decoration = new Decoration(position, decorationType, id);
+    const useInstancedVisual = this.decorationInstancing.supports(decorationType);
+    const decoration = new Decoration(position, decorationType, id, !useInstancedVisual);
     const key = GridHelper.getGridKey(position);
 
     this.decorations.set(key, decoration);
     this.occupiedCells.set(key, key);
-    this.scene.add(decoration.mesh);
+    if (useInstancedVisual) {
+      this.decorationInstancing.add(decoration);
+    } else {
+      this.scene.add(decoration.mesh);
+    }
     this.decorationsCache = null;
     this.maintenanceCache = null;
     this.decorationAppealCache = null;
@@ -278,6 +299,17 @@ export class BuildingSystem {
     this.hygienesBonusCache.clear();
 
     return decoration;
+  }
+
+  public refreshDecorationVisual(decoration: Decoration): void {
+    if (!this.decorationInstancing.supports(decoration.data.decorationType)) return;
+    this.decorationInstancing.update(decoration);
+  }
+
+  public refreshStaticBuildingVisual(entity: Shop | Service): void {
+    const kind = entity instanceof Shop ? entity.data.shopType : entity.data.serviceType;
+    if (!this.staticBuildingInstancing.supports(kind)) return;
+    this.staticBuildingInstancing.update(entity);
   }
 
   public removeBuilding(position: GridPosition): boolean {
@@ -314,7 +346,11 @@ export class BuildingSystem {
     if (this.shops.has(anchorKey)) {
       const shop = this.shops.get(anchorKey)!;
       this.occupiedCells.delete(anchorKey);
-      this.scene.remove(shop.mesh);
+      if (this.staticBuildingInstancing.supports(shop.data.shopType)) {
+        this.staticBuildingInstancing.remove(shop);
+      } else {
+        this.scene.remove(shop.mesh);
+      }
       shop.dispose();
       this.shops.delete(anchorKey);
       this.shopsCache = null;
@@ -325,7 +361,11 @@ export class BuildingSystem {
     if (this.services.has(anchorKey)) {
       const service = this.services.get(anchorKey)!;
       this.occupiedCells.delete(anchorKey);
-      this.scene.remove(service.mesh);
+      if (this.staticBuildingInstancing.supports(service.data.serviceType)) {
+        this.staticBuildingInstancing.remove(service);
+      } else {
+        this.scene.remove(service.mesh);
+      }
       service.dispose();
       this.services.delete(anchorKey);
       this.servicesCache = null;
@@ -336,7 +376,11 @@ export class BuildingSystem {
     if (this.decorations.has(anchorKey)) {
       const decoration = this.decorations.get(anchorKey)!;
       this.occupiedCells.delete(anchorKey);
-      this.scene.remove(decoration.mesh);
+      if (this.decorationInstancing.supports(decoration.data.decorationType)) {
+        this.decorationInstancing.remove(decoration);
+      } else {
+        this.scene.remove(decoration.mesh);
+      }
       decoration.dispose();
       this.decorations.delete(anchorKey);
       this.decorationsCache = null;
@@ -540,23 +584,37 @@ export class BuildingSystem {
     this.ridesCache = null;
 
     this.shops.forEach(shop => {
-      this.scene.remove(shop.mesh);
+      if (this.staticBuildingInstancing.supports(shop.data.shopType)) {
+        this.staticBuildingInstancing.remove(shop);
+      } else {
+        this.scene.remove(shop.mesh);
+      }
       shop.dispose();
     });
     this.shops.clear();
     this.shopsCache = null;
 
     this.services.forEach(service => {
-      this.scene.remove(service.mesh);
+      if (this.staticBuildingInstancing.supports(service.data.serviceType)) {
+        this.staticBuildingInstancing.remove(service);
+      } else {
+        this.scene.remove(service.mesh);
+      }
       service.dispose();
     });
     this.services.clear();
     this.servicesCache = null;
 
     this.decorations.forEach(decoration => {
-      this.scene.remove(decoration.mesh);
+      if (this.decorationInstancing.supports(decoration.data.decorationType)) {
+        this.decorationInstancing.remove(decoration);
+      } else {
+        this.scene.remove(decoration.mesh);
+      }
       decoration.dispose();
     });
+    this.decorationInstancing.dispose();
+    this.staticBuildingInstancing.dispose();
     this.decorations.clear();
     this.decorationsCache = null;
     this.maintenanceCache = null;

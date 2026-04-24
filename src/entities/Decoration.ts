@@ -35,7 +35,7 @@ export class Decoration {
   public data: DecorationData;
   private pooledLight: THREE.PointLight | null = null;
 
-  constructor(position: GridPosition, decorationType: DecorationType, id: string) {
+  constructor(position: GridPosition, decorationType: DecorationType, id: string, createVisual = true) {
     const config = getBuildingCatalogItem(decorationType);
     const [appealRadius, appealBonus] = APPEAL[decorationType];
     const hygieneSupport = HYGIENE_SUPPORT[decorationType];
@@ -56,10 +56,13 @@ export class Decoration {
     };
 
     this.mesh = new THREE.Group();
-    this.createMesh(decorationType);
 
     const worldPos = GridHelper.gridToWorld(position);
     this.mesh.position.set(worldPos.x, 0, worldPos.z);
+
+    if (createVisual) {
+      this.createMesh(decorationType);
+    }
 
     // Claim a pooled lantern light (world coords, no scene add = no shader recompile)
     if (decorationType === DecorationType.LANTERN) {

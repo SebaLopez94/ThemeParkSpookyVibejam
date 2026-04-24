@@ -28,7 +28,7 @@ export class Shop {
   public mesh: THREE.Group;
   public data: ShopData;
 
-  constructor(position: GridPosition, shopType: ShopType, id: string, accessCell: GridPosition) {
+  constructor(position: GridPosition, shopType: ShopType, id: string, accessCell: GridPosition, createVisual = true) {
     const config = getBuildingCatalogItem(shopType);
 
     this.data = {
@@ -46,10 +46,13 @@ export class Shop {
     };
 
     this.mesh = new THREE.Group();
-    this.createShopMesh(shopType);
 
     const worldPos = GridHelper.gridToWorld(position);
     this.mesh.position.set(worldPos.x, 0, worldPos.z);
+
+    if (createVisual) {
+      this.createShopMesh(shopType);
+    }
   }
 
   private getShopPrice(type: ShopType): number {

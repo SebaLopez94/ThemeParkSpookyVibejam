@@ -10,6 +10,9 @@ import { EconomySystem } from './systems/EconomySystem';
 import { PathfindingSystem } from './systems/PathfindingSystem';
 import { ResearchSystem } from './systems/ResearchSystem';
 import { VisitorSystem } from './systems/VisitorSystem';
+import { Decoration } from './entities/Decoration';
+import { Service } from './entities/Service';
+import { Shop } from './entities/Shop';
 import { disposeEmojiTextureCache, disposeVisitorModelCache } from './entities/Visitor';
 import { GridHelper, GRID_SIZE } from './utils/GridHelper';
 import { isMobile } from './utils/platform';
@@ -606,11 +609,16 @@ export class Game {
 
   private placeTypedBuilding<T extends PlaceableBuildingKind>(
     type: T,
-    place: (kind: T) => { mesh: THREE.Object3D } | null
+    place: (kind: T) => { mesh: THREE.Object3D; data?: { type?: BuildingType } } | null
   ): boolean {
     const placed = place(type);
     if (!placed) return false;
     placed.mesh.rotation.y = this.buildRotation;
+    if (placed.data?.type === BuildingType.DECORATION) {
+      this.buildingSystem.refreshDecorationVisual(placed as Decoration);
+    } else if (placed.data?.type === BuildingType.SHOP || placed.data?.type === BuildingType.SERVICE) {
+      this.buildingSystem.refreshStaticBuildingVisual(placed as Shop | Service);
+    }
     return true;
   }
 
@@ -1024,6 +1032,11 @@ export class Game {
 
     if (restored) {
       restored.mesh.rotation.y = info.rotationY;
+      if (info.buildingType === BuildingType.DECORATION) {
+        this.buildingSystem.refreshDecorationVisual(restored as Decoration);
+      } else if (info.buildingType === BuildingType.SHOP || info.buildingType === BuildingType.SERVICE) {
+        this.buildingSystem.refreshStaticBuildingVisual(restored as Shop | Service);
+      }
       if (info.currentPrice !== null) {
         this.buildingSystem.updateBuildingPrice(info.position, info.currentPrice);
       }

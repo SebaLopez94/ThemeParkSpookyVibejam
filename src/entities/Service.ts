@@ -8,7 +8,7 @@ export class Service {
   public mesh: THREE.Group;
   public data: ServiceData;
 
-  constructor(position: GridPosition, serviceType: ServiceType, id: string, accessCell: GridPosition) {
+  constructor(position: GridPosition, serviceType: ServiceType, id: string, accessCell: GridPosition, createVisual = true) {
     const config = getBuildingCatalogItem(serviceType);
 
     this.data = {
@@ -26,10 +26,13 @@ export class Service {
     };
 
     this.mesh = new THREE.Group();
-    this.loadGlb('/models/wc.glb');
 
     const worldPos = GridHelper.gridToWorld(position);
     this.mesh.position.set(worldPos.x, 0, worldPos.z);
+
+    if (createVisual) {
+      this.loadGlb('/models/wc.glb');
+    }
   }
 
   private loadGlb(path: string): void {
