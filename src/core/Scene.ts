@@ -36,6 +36,8 @@ export class GameScene {
   private rainDrift: Float32Array | null = null;
   private rainCenter = new THREE.Vector3();
   private rainUpdateAccumulator = 0;
+  private exteriorMistGroup: THREE.Group | null = null;
+  private exteriorMistMaterials: THREE.SpriteMaterial[] = [];
   private lightningLight: THREE.PointLight | null = null;
   private lightningGeometry: THREE.BufferGeometry | null = null;
   private lightningMaterial: THREE.LineBasicMaterial | null = null;
@@ -441,12 +443,30 @@ export class GameScene {
       }
 
       const gradient = ctx.createRadialGradient(128, 156, 12, 128, 156, 112);
-      gradient.addColorStop(0, 'rgba(255,255,255,0.65)');
-      gradient.addColorStop(0.32, 'rgba(230,225,255,0.34)');
-      gradient.addColorStop(0.68, 'rgba(120,110,150,0.12)');
+      gradient.addColorStop(0, 'rgba(238,244,255,0.72)');
+      gradient.addColorStop(0.28, 'rgba(204,211,232,0.38)');
+      gradient.addColorStop(0.58, 'rgba(92,86,118,0.18)');
       gradient.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 256, 256);
+
+      const haze = ctx.createLinearGradient(0, 0, 0, 256);
+      haze.addColorStop(0, 'rgba(0,0,0,0)');
+      haze.addColorStop(0.48, 'rgba(255,255,255,0.10)');
+      haze.addColorStop(0.8, 'rgba(15,11,24,0.16)');
+      haze.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.globalCompositeOperation = 'source-over';
+
+      for (let i = 0; i < 900; i++) {
+        const x = Math.random() * 256;
+        const y = 82 + Math.random() * 112;
+        const a = Math.random() * 0.035;
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fillRect(x, y, 1 + Math.random() * 2, 1);
+      }
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -485,13 +505,15 @@ export class GameScene {
       layers.forEach((layer, layerIndex) => {
         const material = new THREE.SpriteMaterial({
           map: mistTexture,
-          color: layerIndex === 0 ? 0xddd4ef : 0x9f93b5,
+          color: layerIndex === 0 ? 0xbfc8df : layerIndex === 1 ? 0x8d88a8 : 0x5e5877,
           transparent: true,
           opacity: layer.opacity * (index < 4 ? 1 : 0.92),
           depthWrite: false,
           depthTest: true,
           fog: true,
         });
+        material.userData.baseOpacity = material.opacity;
+        this.exteriorMistMaterials.push(material);
         const sprite = new THREE.Sprite(material);
         sprite.position.set(entry.x, layer.y, entry.z);
         sprite.scale.set(layer.scale[0], layer.scale[1], 1);
@@ -501,7 +523,55 @@ export class GameScene {
       });
     });
 
+    const beltLayers = this.mobile
+      ? [
+          { offset: 49, scale: [38, 12], y: 2.8, opacity: 0.14, step: 24 },
+          { offset: 56, scale: [48, 18], y: 4.2, opacity: 0.2, step: 28 },
+        ]
+      : [
+          { offset: 47, scale: [36, 12], y: 2.4, opacity: 0.13, step: 18 },
+          { offset: 53, scale: [54, 20], y: 4.2, opacity: 0.23, step: 22 },
+          { offset: 62, scale: [70, 26], y: 6.5, opacity: 0.18, step: 28 },
+        ];
+
+    const addBeltSprite = (x: number, z: number, layer: typeof beltLayers[number], color: number, jitter: number): void => {
+      const material = new THREE.SpriteMaterial({
+        map: mistTexture,
+        color,
+        transparent: true,
+        opacity: layer.opacity * (0.78 + jitter * 0.32),
+        depthWrite: false,
+        depthTest: true,
+        fog: true,
+      });
+      material.userData.baseOpacity = material.opacity;
+      this.exteriorMistMaterials.push(material);
+      const sprite = new THREE.Sprite(material);
+      sprite.position.set(x, layer.y + jitter * 1.8, z);
+      sprite.scale.set(layer.scale[0] * (0.86 + jitter * 0.28), layer.scale[1] * (0.8 + jitter * 0.4), 1);
+      sprite.renderOrder = 2;
+      sprite.layers.enable(BACKGROUND_FOG_LAYER);
+      group.add(sprite);
+    };
+
+    beltLayers.forEach((layer, layerIndex) => {
+      const color = layerIndex === 0 ? 0xc4cbda : layerIndex === 1 ? 0x8d8aa5 : 0x615975;
+      for (let x = -44; x <= 44; x += layer.step) {
+        const jitterA = (Math.sin(x * 12.989 + layer.offset) * 43758.5453) % 1;
+        const jitterB = (Math.sin(x * 7.731 - layer.offset) * 23421.631) % 1;
+        addBeltSprite(x + jitterA * 5, -layer.offset, layer, color, Math.abs(jitterA));
+        addBeltSprite(x - jitterB * 5, layer.offset, layer, color, Math.abs(jitterB));
+      }
+      for (let z = -44; z <= 44; z += layer.step) {
+        const jitterA = (Math.sin(z * 9.173 + layer.offset) * 34511.21) % 1;
+        const jitterB = (Math.sin(z * 5.621 - layer.offset) * 15731.87) % 1;
+        addBeltSprite(-layer.offset, z + jitterA * 5, layer, color, Math.abs(jitterA));
+        addBeltSprite(layer.offset, z - jitterB * 5, layer, color, Math.abs(jitterB));
+      }
+    });
+
     this.enableBackgroundFogLayer(group);
+    this.exteriorMistGroup = group;
     this.scene.add(group);
   }
 
@@ -516,13 +586,41 @@ export class GameScene {
     let parkMat: THREE.Material;
     if (this.mobile) {
       // Mobile: skip the expensive shader (4 texture samples + 7 noise() calls per fragment).
-      // A plain MeshStandardMaterial with the same texture cuts fragment cost by ~80%.
+      // Keep one texture sample plus a broad alpha feather so fog does not hit
+      // the park border as a hard wall.
       terrainTexture.repeat.set(GRID_WIDTH / 4, GRID_HEIGHT / 4);
-      parkMat = new THREE.MeshStandardMaterial({
-        map: terrainTexture,
-        color: 0x3a3028,
-        roughness: 1.0,
-        metalness: 0.0,
+      parkMat = new THREE.ShaderMaterial({
+        uniforms: {
+          map: { value: terrainTexture },
+          repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
+          fade: { value: 0.12 },
+          tint: { value: new THREE.Color(0x3a3028) },
+          mistTint: { value: new THREE.Color(0x6c7288) },
+        },
+        vertexShader: /* glsl */`
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */`
+          uniform sampler2D map;
+          uniform vec2 repeat;
+          uniform float fade;
+          uniform vec3 tint;
+          uniform vec3 mistTint;
+          varying vec2 vUv;
+
+          void main() {
+            vec3 color = texture2D(map, vUv * repeat).rgb * tint;
+            float edge = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
+            float feather = smoothstep(0.0, fade, edge);
+            float mistStain = 1.0 - feather;
+            color = mix(color, mistTint, mistStain * 0.16);
+            gl_FragColor = vec4(color, feather);
+          }
+        `,
         transparent: true,
         depthWrite: false,
       });
@@ -531,7 +629,7 @@ export class GameScene {
         uniforms: {
           map:    { value: terrainTexture },
           repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
-          fade:   { value: 0.03 },
+          fade:   { value: 0.13 },
           moonTint: { value: new THREE.Color(0x58664f) },
           shadowTint: { value: new THREE.Color(0x33272a) },
           sickTint: { value: new THREE.Color(0x4b5532) },
@@ -611,9 +709,14 @@ export class GameScene {
             color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.14;
             color = clamp(color, vec3(0.0), vec3(1.0));
 
-            float fx = smoothstep(0.0, fade, vUv.x) * smoothstep(1.0, 1.0 - fade, vUv.x);
-            float fz = smoothstep(0.0, fade, vUv.y) * smoothstep(1.0, 1.0 - fade, vUv.y);
-            gl_FragColor = vec4(color, fx * fz);
+            float edgeX = min(vUv.x, 1.0 - vUv.x);
+            float edgeZ = min(vUv.y, 1.0 - vUv.y);
+            float edge = min(edgeX, edgeZ);
+            float feather = smoothstep(0.0, fade, edge);
+            float mistStain = 1.0 - feather;
+            color = mix(color, vec3(0.42, 0.45, 0.54), mistStain * 0.16);
+            color *= 1.0 - mistStain * 0.08;
+            gl_FragColor = vec4(color, feather);
           }
         `,
         transparent: true,
@@ -835,6 +938,17 @@ export class GameScene {
 
   public updateWeather(deltaTime: number): void {
     const mobile = this.mobile;
+    if (this.exteriorMistGroup) {
+      const now = performance.now();
+      const sway = Math.sin(now * 0.00012) * 1.4;
+      this.exteriorMistGroup.position.x = sway;
+      this.exteriorMistGroup.position.z = Math.cos(now * 0.0001) * 1.0;
+      this.exteriorMistMaterials.forEach((material, index) => {
+        const baseOpacity = typeof material.userData.baseOpacity === 'number' ? material.userData.baseOpacity : material.opacity;
+        material.opacity = baseOpacity * (0.9 + Math.sin(now * 0.00022 + index * 0.71) * 0.1);
+      });
+    }
+
     if (this.rainGeometry && this.rainPositions && this.rainSpeeds && this.rainDrift) {
       const areaRadius = mobile ? 46 : 72;
       const topY = mobile ? 34 : 42;
@@ -949,6 +1063,8 @@ export class GameScene {
     this.lightningGeometry?.dispose();
     this.lightningMaterial?.dispose();
     this.exteriorMistTexture?.dispose();
+    if (this.exteriorMistGroup) this.scene.remove(this.exteriorMistGroup);
+    this.exteriorMistMaterials.forEach(material => material.dispose());
     this.rainGeometry = null;
     this.rainMaterial = null;
     this.rainLines = null;
@@ -960,6 +1076,8 @@ export class GameScene {
     this.lightningBolt = null;
     this.lightningLight = null;
     this.exteriorMistTexture = null;
+    this.exteriorMistGroup = null;
+    this.exteriorMistMaterials = [];
 
     for (const obj of this.surroundingClones) {
       this.scene.remove(obj);
