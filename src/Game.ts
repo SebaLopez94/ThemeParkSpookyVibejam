@@ -144,8 +144,13 @@ export class Game {
   };
 
   private static readonly PREVIEW_TARGET_SIZES: Partial<Record<string, number>> = {
+    [RideType.CAROUSEL]: GRID_SIZE * 2 * 0.9,
     [RideType.FERRIS_WHEEL]: GRID_SIZE * 3 * 0.68,
     [RideType.ROLLER_COASTER]: GRID_SIZE * 4 * 0.66,
+    [RideType.HAUNTED_HOUSE]: GRID_SIZE * 3 * 0.65,
+    [RideType.PIRATE_SHIP]: GRID_SIZE * 3 * 0.72,
+    [RideType.KRAKEN_RIDE]: GRID_SIZE * 3 * 0.74,
+    [RideType.INFERNAL_TOWER]: GRID_SIZE * 3 * 0.68,
     [DecorationType.SPOOKY_TREE]: GRID_SIZE * 1.35,
     [DecorationType.STONE]: GRID_SIZE * 0.9,
     [DecorationType.PUMPKIN]: GRID_SIZE * 0.7,
@@ -882,13 +887,14 @@ export class Game {
       const size = box.getSize(new THREE.Vector3());
       const isHauntedHousePreview = path === '/models/house.glb';
       const previewTargetSize = subType ? Game.PREVIEW_TARGET_SIZES[subType] : undefined;
-      const usesFootprintTarget = subType === RideType.FERRIS_WHEEL || subType === RideType.ROLLER_COASTER || isHauntedHousePreview;
+      const usesFootprintTarget = subType ? (Object.values(RideType) as string[]).includes(subType) : false;
       const maxDim = !previewTargetSize || usesFootprintTarget
         ? Math.max(size.x, size.z)
         : Math.max(size.x, size.y, size.z);
-      const targetSize = isHauntedHousePreview
-        ? GRID_SIZE * 3 * 0.65
-        : previewTargetSize ?? Math.max(footprintW, footprintH) * GRID_SIZE * 0.88;
+      const ridePreviewScale = usesFootprintTarget && subType
+        ? (RIDE_SIZES[subType as RideType]?.width ?? 2) / 2
+        : 1;
+      const targetSize = (previewTargetSize ?? Math.max(footprintW, footprintH) * GRID_SIZE * 0.88) * ridePreviewScale;
       const scale = maxDim > 0.01 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -898,7 +904,7 @@ export class Game {
       model.position.x -= center.x;
       model.position.z -= center.z;
       model.position.y -= scaled.min.y;
-      if (isHauntedHousePreview) model.position.y -= 0.5;
+      if (isHauntedHousePreview) model.position.y -= 0.5 * ridePreviewScale;
 
       // Ghost tinted material — all meshes share the same persistent material.
       // Validity tint is changed by updating previewModelMat.color once, not per-mesh.

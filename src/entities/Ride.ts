@@ -328,7 +328,7 @@ export class Ride {
       model.position.x -= center.x;
       model.position.z -= center.z;
       model.position.y -= scaledBox.min.y;
-      model.position.y -= 0.5;
+      model.position.y -= 0.4;
 
       this.applyRidePresentation(model, {
         colorLift: 1.52,

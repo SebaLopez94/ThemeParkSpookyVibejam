@@ -521,7 +521,7 @@ export class Visitor {
 
   private updateNeeds(deltaTime: number, hygieneDecayMultiplier: number, moodDecay: number): void {
     // funMult/hungerMult/thirstMult are baked at construction — no string comparisons per frame.
-    this.data.needs.fun    = Math.max(0, this.data.needs.fun    - deltaTime * 0.45 * this.funMult);
+    this.data.needs.fun    = Math.max(0, this.data.needs.fun    - deltaTime * 0.70 * this.funMult);
     this.data.needs.hunger = Math.max(0, this.data.needs.hunger - deltaTime * 0.50 * this.hungerMult);
     this.data.needs.thirst = Math.max(0, this.data.needs.thirst - deltaTime * 0.60 * this.thirstMult);
     // hygieneDecayMultiplier arrives already clamped [0.35, 1] from VisitorSystem — no re-clamp needed.
@@ -538,14 +538,15 @@ export class Visitor {
 
     const base = fun * 0.4 + hunger * 0.2 + thirst * 0.2 + hygiene * 0.2;
 
-    // Critical-need penalties: being very hungry, thirsty or dirty actively drags
-    // down happiness regardless of fun — fun shouldn't mask basic discomfort.
-    // Each penalty ramps up linearly below its threshold to a max of −24.
-    const hungerPenalty  = hunger  < 30 ? (30 - hunger)  * 0.8 : 0; // up to −24
-    const thirstPenalty  = thirst  < 30 ? (30 - thirst)  * 0.8 : 0; // up to −24
-    const hygienePenalty = hygiene < 30 ? (30 - hygiene) * 0.8 : 0; // up to −24
+    // Critical-need penalties: being bored, hungry, thirsty or dirty actively drags
+    // down happiness — no single need should mask the others.
+    // Each ramps up linearly below its threshold to a max of −24.
+    const funPenalty     = fun     < 35 ? (35 - fun)     * 0.80 : 0; // up to −28
+    const hungerPenalty  = hunger  < 40 ? (40 - hunger)  * 1.20 : 0; // up to −48
+    const thirstPenalty  = thirst  < 40 ? (40 - thirst)  * 1.20 : 0; // up to −48
+    const hygienePenalty = hygiene < 30 ? (30 - hygiene) * 0.80 : 0; // up to −24
 
-    return Math.max(0, base - hungerPenalty - thirstPenalty - hygienePenalty);
+    return Math.max(0, base - funPenalty - hungerPenalty - thirstPenalty - hygienePenalty);
   }
 
   private updateMoodSprite(now: number): void {
