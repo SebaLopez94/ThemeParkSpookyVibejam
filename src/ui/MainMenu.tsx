@@ -21,6 +21,7 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
   const loadInputRef = useRef<HTMLInputElement>(null);
   const newGameBtnRef = useRef<HTMLButtonElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hoveredBtn, setHoveredBtn] = useState<'new' | 'load' | null>(null);
 
   useEffect(() => {
     newGameBtnRef.current?.focus();
@@ -70,13 +71,13 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
         }}
       />
 
-      {/* Overlay — darkens edges, keeps center visible */}
+      {/* Overlay */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         background: 'linear-gradient(180deg, rgba(4,1,12,0.78) 0%, rgba(4,1,12,0.42) 35%, rgba(4,1,12,0.48) 65%, rgba(4,1,12,0.85) 100%)',
       }} />
 
-      {/* Content */}
+      {/* Main content — logo + buttons */}
       <div style={{
         position: 'relative', zIndex: 1,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -86,7 +87,10 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
       }}>
 
         {/* Logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+          animation: 'px-menu-logo-enter 0.6s cubic-bezier(0.34,1.2,0.64,1) both',
+        }}>
           <img
             src="/models/logo.png"
             alt="Theme Park Vibes"
@@ -99,12 +103,17 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
             }}
             draggable={false}
           />
+          {/* Subtitle with dark band for legibility */}
           <p style={{
             fontFamily: "'Press Start 2P', monospace",
             fontSize: isMobile ? 8 : 9,
             color: '#e9d5ff',
-            margin: 0, marginBottom: isMobile ? 12 : 16, letterSpacing: 2,
-            textShadow: '2px 2px 0 #000, -1px -1px 0 #000, 0 0 12px rgba(168,85,247,0.8)',
+            margin: 0,
+            marginBottom: isMobile ? 12 : 16,
+            letterSpacing: 2,
+            padding: '5px 12px',
+            background: 'rgba(4,1,14,0.62)',
+            textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 0 0 14px rgba(168,85,247,0.9)',
           }}>
             BUILD YOUR HAUNTED PARK
           </p>
@@ -112,29 +121,45 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
 
         {/* Buttons */}
         <div style={{
-          width: '100%', maxWidth: isMobile ? 300 : 320,
+          width: '100%', maxWidth: isMobile ? 300 : 340,
           display: 'flex', flexDirection: 'column',
           gap: isMobile ? 14 : 16,
         }}>
+          {/* NEW GAME — primary CTA */}
           <button
             ref={newGameBtnRef}
             className="px-btn px-btn--lg"
             style={{
-              width: '100%', justifyContent: 'center', fontSize: isMobile ? 13 : 14,
+              width: '100%', justifyContent: 'center',
+              fontSize: isMobile ? 13 : 15,
+              padding: isMobile ? '16px 20px' : '18px 24px',
               borderTopColor: '#d4c0ec', borderLeftColor: '#c4aee0',
-              animation: 'px-menu-pulse 2.2s ease-in-out infinite',
+              animation: 'px-menu-pulse 2.2s ease-in-out infinite, px-menu-btn-enter 0.45s 0.25s cubic-bezier(0.34,1.2,0.64,1) both',
+              opacity: hoveredBtn === 'load' ? 0.55 : 1,
+              transition: 'opacity 0.18s ease',
             }}
             onClick={onNewGame}
+            onMouseEnter={() => setHoveredBtn('new')}
+            onMouseLeave={() => setHoveredBtn(null)}
             aria-label="Start a new game"
           >
             <Play />
             NEW GAME
           </button>
 
+          {/* LOAD GAME */}
           <button
             className="px-btn px-btn--lg"
-            style={{ width: '100%', justifyContent: 'center', fontSize: isMobile ? 13 : 14 }}
+            style={{
+              width: '100%', justifyContent: 'center',
+              fontSize: isMobile ? 13 : 14,
+              animation: 'px-menu-btn-enter 0.45s 0.38s cubic-bezier(0.34,1.2,0.64,1) both',
+              opacity: hoveredBtn === 'new' ? 0.55 : 1,
+              transition: 'opacity 0.18s ease',
+            }}
             onClick={handleLoadClick}
+            onMouseEnter={() => setHoveredBtn('load')}
+            onMouseLeave={() => setHoveredBtn(null)}
             aria-label="Load a saved game"
           >
             <FolderOpen />
@@ -151,29 +176,30 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
             </p>
           )}
         </div>
+      </div>
 
-        {/* Footer */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          fontFamily: "'Press Start 2P', monospace",
-          fontSize: isMobile ? 7 : 8,
-          color: 'rgba(180,160,220,0.65)',
-          letterSpacing: 1,
-        }}>
-          <span>v1.0.0</span>
-          <span style={{ opacity: 0.4 }}>·</span>
-          <span>by Seba Lopez</span>
-          <span style={{ opacity: 0.4 }}>·</span>
-          <a
-            href="https://x.com/Sebalg_tech"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'rgba(180,160,220,0.7)', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
-            aria-label="Follow on X"
-          >
-            <XLogo size={isMobile ? 22 : 26} />
-          </a>
-        </div>
+      {/* Footer — fixed to bottom */}
+      <div style={{
+        position: 'absolute', bottom: isMobile ? 16 : 20, left: 0, right: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 12, zIndex: 1,
+        animation: 'px-menu-footer-enter 0.6s 0.55s ease both',
+      }}>
+        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(180,160,220,0.55)', letterSpacing: 1 }}>v1.0.0</span>
+        <span style={{ color: 'rgba(180,160,220,0.3)', fontSize: 10 }}>·</span>
+        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(180,160,220,0.55)', letterSpacing: 1 }}>by Seba Lopez</span>
+        <span style={{ color: 'rgba(180,160,220,0.3)', fontSize: 10 }}>·</span>
+        <a
+          href="https://x.com/Sebalg_tech"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'rgba(180,160,220,0.6)', textDecoration: 'none', display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(220,200,255,0.9)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(180,160,220,0.6)')}
+          aria-label="Follow on X"
+        >
+          <XLogo size={isMobile ? 22 : 26} />
+        </a>
       </div>
 
       <input
