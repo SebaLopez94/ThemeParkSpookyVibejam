@@ -602,7 +602,7 @@ function App() {
                     >
                       <Trash2 size={14} />
                     </button>
-                  ) : (
+                  ) : activeBuildDefinition.type !== BuildingType.DELETE ? (
                     /* Tap to rotate 90 degrees CW - shows current angle */
                     <button
                       type="button"
@@ -620,7 +620,7 @@ function App() {
                         {buildRotation}&deg;
                       </span>
                     </button>
-                  )}
+                  ) : null}
 
                   <button
                     className="px-btn"
@@ -660,8 +660,16 @@ function App() {
               </div>
               <div style={{ padding: '12px 16px 16px' }}>
                 <div className="px-chip-row">
-                  <div className="px-chip">Cost ${activeBuildDefinition.cost}</div>
-                  <div className="px-chip"><RotateCw size={12} /> R to rotate â€” {buildRotation}Â°</div>
+                  {activeBuildDefinition.type !== BuildingType.PATH && activeBuildDefinition.type !== BuildingType.DELETE ? (
+                    <>
+                      <div className="px-chip">Cost ${activeBuildDefinition.cost}</div>
+                      <div className="px-chip"><RotateCw size={12} /> R to rotate â€” {buildRotation}Â°</div>
+                    </>
+                  ) : (
+                    <div className="px-chip">
+                      {activeBuildDefinition.type === BuildingType.DELETE ? 'Click paths to delete' : 'Draw paths with click and drag'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

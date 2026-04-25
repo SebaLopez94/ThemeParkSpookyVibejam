@@ -27,11 +27,6 @@ function formatMoney(value: number): string {
   return `$${Math.round(value).toLocaleString()}`;
 }
 
-function getJoyImpact(effectSummary: string): number | null {
-  const match = effectSummary.match(/Joy \+(\d+)/i);
-  return match ? Number(match[1]) : null;
-}
-
 export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChange }: BuildingPanelProps) {
   const [localPrice, setLocalPrice] = useState(building.currentPrice ?? MIN_PRICE);
   const [confirmSell, setConfirmSell] = useState(false);
@@ -53,12 +48,8 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
   const recommendedPrice = building.currentPrice === null ? null : getRecommendedPrice(building.valueScore, building.quality);
   const previewPrice = building.currentPrice === null ? null : Math.max(MIN_PRICE, Math.min(MAX_PRICE, Math.round(localPrice || 0)));
   const priceStatus = getPriceStatus(previewPrice, recommendedPrice);
-  const breakEvenVisits = previewPrice && previewPrice > 0
-    ? Math.ceil(building.maintenancePerMinute / previewPrice)
-    : null;
   const isDecoration = building.buildingType === BuildingType.DECORATION;
   const priceLabel = building.buildingType === BuildingType.RIDE ? 'Admission Price' : 'Service Price';
-  const joyImpact = getJoyImpact(building.effectSummary);
 
   const panelStyle = isMobile
     ? {
@@ -69,7 +60,7 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
         zIndex: 46,
         maxHeight: 'calc(100dvh - 120px - var(--safe-bottom))',
       }
-    : { position: 'fixed' as const, bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 40 };
+    : { position: 'fixed' as const, bottom: 16, left: 16, zIndex: 40 };
 
   return (
     <div style={panelStyle}>
@@ -83,9 +74,10 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
         }}
       >
         <div className="px-titlebar px-titlebar--manage">
-          <span className="px-titlebar__label">
+          <span className="px-titlebar__label px-building-title-label">
             <Settings2 className="px-icon-sm" />
             <span style={{ fontSize: isMobile ? 10 : 13 }}>{building.name.toUpperCase()}</span>
+            <span className="px-building-type-tag px-building-type-tag--title">{building.buildingType}</span>
           </span>
           <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose}>
             <X size={14} />
@@ -101,19 +93,11 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
         >
           <div className="px-building-summary">
             <div className="px-building-summary__copy">
-              <span className="px-building-type-tag">{building.buildingType}</span>
-              {joyImpact !== null ? (
-                <JoyImpactBar value={joyImpact} />
-              ) : (
-                <strong>{building.effectSummary}</strong>
-              )}
-            </div>
-            <div className={`px-building-status px-building-status--${priceStatus.tone}`}>
-              {priceStatus.label}
+              <strong>{building.effectSummary}</strong>
             </div>
           </div>
 
-          <div className="px-building-metrics">
+          <div className="px-building-metrics" aria-label="Building quick stats">
             <Metric
               label="Upkeep"
               value={building.maintenancePerMinute > 0 ? `${formatMoney(building.maintenancePerMinute)} / min` : '$0 / min'}
@@ -121,26 +105,24 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
             />
             {isDecoration ? (
               <Metric label="Effect" value={building.effectSummary} tone="good" />
-            ) : (
-              <Metric
-                label="Break-even"
-                value={breakEvenVisits === null ? 'Needs price' : `${breakEvenVisits} guests / min`}
-                tone={breakEvenVisits !== null && breakEvenVisits <= 4 ? 'good' : 'warn'}
-              />
-            )}
-            <Metric label="Refund" value={formatMoney(refundAmount)} tone="neutral" />
+            ) : null}
           </div>
 
           {building.currentPrice !== null ? (
             <div className="px-building-price" style={{ marginBottom: isMobile ? 12 : 16 }}>
-              <label
-                htmlFor="building-price"
-                className="px-label"
-                style={{ display: 'block', marginBottom: 8, fontSize: isMobile ? 9 : undefined }}
-              >
-                {priceLabel}
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="px-building-price__head">
+                <label
+                  htmlFor="building-price"
+                  className="px-label"
+                  style={{ fontSize: isMobile ? 9 : undefined }}
+                >
+                  {priceLabel}
+                </label>
+                <div className={`px-building-status px-building-status--${priceStatus.tone}`}>
+                  {priceStatus.label}
+                </div>
+              </div>
+              <div className="px-building-price__control">
                 <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 12 : 14, color: 'var(--px-gold)' }}>$</span>
                 <input
                   id="building-price"
@@ -227,23 +209,6 @@ function Metric({
     <div className={`px-building-metric px-building-metric--${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
-    </div>
-  );
-}
-
-function JoyImpactBar({ value }: { value: number }) {
-  const percent = Math.max(0, Math.min(100, (value / 40) * 100));
-  const tone = value >= 32 ? 'high' : value >= 22 ? 'mid' : 'low';
-
-  return (
-    <div className="px-building-impact">
-      <div className="px-building-impact__head">
-        <span>Joy impact</span>
-        <strong>+{value}</strong>
-      </div>
-      <div className={`px-building-impact__bar px-building-impact__bar--${tone}`} aria-hidden="true">
-        <span style={{ width: `${percent}%` }} />
-      </div>
     </div>
   );
 }

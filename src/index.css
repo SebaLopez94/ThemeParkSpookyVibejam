@@ -2671,26 +2671,23 @@ button {
 }
 
 /* Selected building panel */
+.px-building-title-label {
+  min-width: 0;
+}
+
+.px-building-title-label > span:not(.px-building-type-tag) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .px-building-summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 10px 11px;
-  background:
-    linear-gradient(90deg, rgba(167,139,250,0.12), transparent 60%),
-    rgba(0,0,0,0.24);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
-}
-
-.px-building-summary__icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  background: rgba(0,0,0,0.28);
-  border: 1px solid rgba(255,255,255,0.1);
+  padding: 2px 0 8px;
 }
 
 .px-building-summary__copy {
@@ -2700,15 +2697,22 @@ button {
 }
 
 .px-building-type-tag {
-  justify-self: start;
-  padding: 5px 8px;
-  color: var(--px-muted);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.09);
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 4px 7px;
+  color: #ddd6fe;
+  background: rgba(167,139,250,0.08);
+  border: 1px solid rgba(221,214,254,0.13);
   font-family: 'Press Start 2P', monospace;
   font-size: 8px;
   line-height: 1.2;
   text-transform: uppercase;
+}
+
+.px-building-type-tag--title {
+  font-size: 7px;
+  transform: translateY(-1px);
 }
 
 .px-building-summary__copy strong {
@@ -2719,17 +2723,18 @@ button {
 }
 
 .px-building-status {
-  grid-column: 1 / -1;
   display: inline-flex;
+  align-items: center;
   justify-content: center;
-  min-height: 26px;
-  padding: 7px 8px;
+  min-height: 22px;
+  padding: 4px 0;
   font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
+  font-size: 7px;
   line-height: 1.4;
   text-align: center;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: transparent;
+  border: none;
+  white-space: nowrap;
 }
 
 .px-building-status--good {
@@ -2746,78 +2751,22 @@ button {
   color: var(--px-muted);
 }
 
-.px-building-impact {
-  display: grid;
-  gap: 7px;
-}
-
-.px-building-impact__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.px-building-impact__head span {
-  color: var(--px-muted);
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  line-height: 1.35;
-  text-transform: uppercase;
-}
-
-.px-building-impact__head strong {
-  color: var(--px-green-hi);
-  font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  line-height: 1.2;
-  text-shadow: 1px 1px 0 #000;
-}
-
-.px-building-impact__bar {
-  position: relative;
-  height: 10px;
-  overflow: hidden;
-  background: rgba(0,0,0,0.38);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-.px-building-impact__bar span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  min-width: 6px;
-  transition: width 0.18s ease;
-}
-
-.px-building-impact__bar--low span {
-  background: linear-gradient(90deg, #84cc16, #bef264);
-  box-shadow: 0 0 10px rgba(190,242,100,0.24);
-}
-
-.px-building-impact__bar--mid span {
-  background: linear-gradient(90deg, #22c55e, #67e8f9);
-  box-shadow: 0 0 10px rgba(103,232,249,0.24);
-}
-
-.px-building-impact__bar--high span {
-  background: linear-gradient(90deg, #fbbf24, #fb7185);
-  box-shadow: 0 0 12px rgba(251,113,133,0.3);
-}
-
 .px-building-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 10px 0;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 6px 0 12px;
 }
 
 .px-building-metric {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   min-width: 0;
-  padding: 9px 8px;
-  background: rgba(0,0,0,0.24);
-  border: 1px solid rgba(255,255,255,0.08);
+  padding: 6px 0;
+  background: transparent;
+  border: none;
 }
 
 .px-building-metric span {
@@ -2833,6 +2782,7 @@ button {
   font-family: ui-monospace, 'Consolas', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.3;
+  text-align: right;
 }
 
 .px-building-metric--good strong {
@@ -2844,9 +2794,23 @@ button {
 }
 
 .px-building-price {
-  padding: 10px 11px 11px;
-  background: rgba(0,0,0,0.18);
-  border: 1px solid rgba(255,255,255,0.07);
+  padding: 6px 0 0;
+  background: transparent;
+  border: none;
+}
+
+.px-building-price__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.px-building-price__control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .px-building-hint,
@@ -2868,16 +2832,61 @@ button {
 @media (max-width: 640px) {
   .px-building-metrics {
     grid-template-columns: 1fr;
-    gap: 7px;
   }
 
   .px-building-metric {
-    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
-    align-items: center;
+    display: flex;
   }
 
   .px-building-summary__copy strong,
   .px-building-metric strong {
     font-size: 12px;
+  }
+
+  .px-building-status {
+    white-space: normal;
+  }
+
+  .px-building-price__head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+}
+
+/* ── Custom pixel cursors (desktop only) ─────────────────────────────────
+   Requiere que los PNG estén a ≤128 px (recomendado: altura 48 px).
+   Archivos: public/ui/pointer-arrow.png  pointer-hand.png  pointer-no.png
+   ────────────────────────────────────────────────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  /* Flecha por defecto en todo */
+  *,
+  *::before,
+  *::after {
+    cursor: url('/ui/pointer-arrow.png') 2 2, auto !important;
+  }
+
+  /* Mano en elementos interactivos y TODO su contenido interior */
+  a, a *,
+  button, button *,
+  [role="button"], [role="button"] *,
+  [role="tab"], [role="tab"] *,
+  [role="menuitem"], [role="menuitem"] *,
+  label[for], label[for] *,
+  select, select *,
+  summary, summary *,
+  .px-btn, .px-btn *,
+  .px-card--hover, .px-card--hover * {
+    cursor: url('/ui/pointer-hand.png') 8 2, pointer !important;
+  }
+
+  /* No-drop en elementos deshabilitados y su contenido */
+  button:disabled, button:disabled *,
+  .px-btn:disabled, .px-btn:disabled *,
+  input:disabled,
+  select:disabled,
+  [aria-disabled="true"], [aria-disabled="true"] *,
+  .px-card--disabled, .px-card--disabled * {
+    cursor: url('/ui/pointer-no.png') 12 12, not-allowed !important;
   }
 }

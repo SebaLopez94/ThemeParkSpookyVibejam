@@ -150,7 +150,6 @@ export class Game {
   private hoveredGridPosition: GridPosition | null = null;
   private selectedBuilding: BuildingDefinition | null = null;
   /** Last grid cell placed during a path drag — used to fill gaps on mobile. */
-  private lastPathDragPos: GridPosition | null = null;
   private movingBuilding: SelectedBuildingInfo | null = null;
   private buildRotation = 0;
   private ratingUpdateTimer = 0;
@@ -420,20 +419,15 @@ export class Game {
     };
     this.mouseController.onGridHover = position => {
       this.hoveredGridPosition = position;
-      // Null hover = drag ended; reset gap-fill tracker for next stroke.
-      if (position === null) this.lastPathDragPos = null;
       this.updatePreview();
     };
     this.mouseController.onGridClick = position => this.handleGridClick(position);
     this.mouseController.onGridDrag = position => {
-      if (this.selectedBuilding?.type === BuildingType.PATH) {
-        // Fill gaps when the finger moves faster than touchmove fires (mobile).
-        if (this.lastPathDragPos) {
-          this.bresenhamPath(this.lastPathDragPos, position);
-        } else {
-          this.handleGridClick(position);
-        }
-        this.lastPathDragPos = { x: position.x, z: position.z };
+      if (
+        this.selectedBuilding?.type === BuildingType.PATH ||
+        this.selectedBuilding?.type === BuildingType.DELETE
+      ) {
+        this.handleGridClick(position);
       }
     };
     this.mouseController.onBuildTouchRelease = position => this.handleMobileBuildTouchRelease(position);
@@ -1045,30 +1039,9 @@ export class Game {
       this.restoreMovedBuilding();
     }
     this.selectedBuilding = null;
-    this.lastPathDragPos = null;
     this.mouseController.onBuildRotate = null;
     this.mouseController.touchRotateMode = false;
     this.disposePreview();
-  }
-
-  /**
-   * Walk a Bresenham line from `from` to `to` and place a path tile on every
-   * cell along the way. Fills gaps that appear when touchmove events are sparse
-   * (finger moves faster than the event rate on mobile).
-   */
-  private bresenhamPath(from: GridPosition, to: GridPosition): void {
-    let x0 = from.x, z0 = from.z;
-    const x1 = to.x, z1 = to.z;
-    const dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    const dz = Math.abs(z1 - z0), sz = z0 < z1 ? 1 : -1;
-    let err = dx - dz;
-    for (;;) {
-      this.handleGridClick({ x: x0, z: z0 });
-      if (x0 === x1 && z0 === z1) break;
-      const e2 = 2 * err;
-      if (e2 > -dz) { err -= dz; x0 += sx; }
-      if (e2 < dx)  { err += dx; z0 += sz; }
-    }
   }
 
   private restoreMovedBuilding(): void {
