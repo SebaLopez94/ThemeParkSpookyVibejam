@@ -254,11 +254,11 @@ export class MouseController {
       }
       this.lastPinchCenter.set(cx, cy);
 
-      // Two-finger twist (camera orbit rotation)
+      // Two-finger twist (camera orbit rotation) — 0.55 damping keeps it comfortable
       const newAngle = Math.atan2(dy, dx);
       const angleDelta = Math.atan2(Math.sin(newAngle - this.lastTwistAngle), Math.cos(newAngle - this.lastTwistAngle));
       if (Math.abs(angleDelta) > 0.01) {
-        this.onCameraRotate?.(angleDelta);
+        this.onCameraRotate?.(angleDelta * 0.55);
         this.lastTwistAngle = newAngle;
       }
     }
