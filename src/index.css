@@ -2420,8 +2420,33 @@ button {
 
 /* ── Main menu: primary button pulse ─────────────────────────────────── */
 @keyframes px-menu-pulse {
-  0%, 100% { box-shadow: 3px 3px 0 #000, 0 0 18px rgba(251,191,36,0.35); }
-  50%      { box-shadow: 3px 3px 0 #000, 0 0 28px rgba(251,191,36,0.60); }
+  0%, 100% { box-shadow: 3px 3px 0 #000, 0 0 16px rgba(189,168,216,0.35), inset 0 -5px 0 rgba(0,0,0,0.25); }
+  50%      { box-shadow: 3px 3px 0 #000, 0 0 34px rgba(189,168,216,0.72), inset 0 -5px 0 rgba(0,0,0,0.25); }
+}
+
+.px-btn--primary {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.02) 22%, transparent 23%),
+    linear-gradient(180deg, #2e1f42 0%, #1c1130 55%, #100a1e 100%);
+  color: #bda8d8;
+  border-top-color: #bda8d8;
+  border-left-color: #9e88be;
+  border-right-color: #1c1130;
+  border-bottom-color: #0e0919;
+  text-shadow: 0 0 10px rgba(189,168,216,0.55), 1px 1px 0 #000;
+  animation: px-menu-pulse 2.2s ease-in-out infinite;
+}
+
+.px-btn--primary:hover {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.05) 22%, transparent 23%),
+    linear-gradient(180deg, #3d2858 0%, #26173e 55%, #160e28 100%);
+  color: #f0e8ff;
+  border-top-color: #e2d0f5;
+  border-left-color: #c9b2e8;
+  text-shadow: 0 0 18px rgba(240,232,255,0.95), 1px 1px 0 #000;
+  box-shadow: 3px 3px 0 #000, 0 0 28px rgba(189,168,216,0.65), inset 0 -5px 0 rgba(0,0,0,0.22);
+  animation: none;
 }
 
 /* ── Challenge celebration ───────────────────────────────────────────── */
@@ -2628,4 +2653,216 @@ button {
 }
 .px-loading--done {
   animation: px-loading-fade 0.4s ease forwards;
+}
+
+/* Selected building panel */
+.px-building-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 11px;
+  background:
+    linear-gradient(90deg, rgba(167,139,250,0.12), transparent 60%),
+    rgba(0,0,0,0.24);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.px-building-summary__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.px-building-summary__copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.px-building-type-tag {
+  justify-self: start;
+  padding: 5px 8px;
+  color: var(--px-muted);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.px-building-summary__copy strong {
+  color: var(--px-text);
+  font-family: ui-monospace, 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.px-building-status {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 26px;
+  padding: 7px 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.4;
+  text-align: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.px-building-status--good {
+  color: var(--px-green-hi);
+  border-color: rgba(217,249,157,0.2);
+}
+
+.px-building-status--warn {
+  color: var(--px-gold);
+  border-color: rgba(251,191,36,0.24);
+}
+
+.px-building-status--neutral {
+  color: var(--px-muted);
+}
+
+.px-building-impact {
+  display: grid;
+  gap: 7px;
+}
+
+.px-building-impact__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.px-building-impact__head span {
+  color: var(--px-muted);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.px-building-impact__head strong {
+  color: var(--px-green-hi);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  line-height: 1.2;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.px-building-impact__bar {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.38);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.px-building-impact__bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 6px;
+  transition: width 0.18s ease;
+}
+
+.px-building-impact__bar--low span {
+  background: linear-gradient(90deg, #84cc16, #bef264);
+  box-shadow: 0 0 10px rgba(190,242,100,0.24);
+}
+
+.px-building-impact__bar--mid span {
+  background: linear-gradient(90deg, #22c55e, #67e8f9);
+  box-shadow: 0 0 10px rgba(103,232,249,0.24);
+}
+
+.px-building-impact__bar--high span {
+  background: linear-gradient(90deg, #fbbf24, #fb7185);
+  box-shadow: 0 0 12px rgba(251,113,133,0.3);
+}
+
+.px-building-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.px-building-metric {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 9px 8px;
+  background: rgba(0,0,0,0.24);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.px-building-metric span {
+  color: var(--px-muted);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.px-building-metric strong {
+  color: var(--px-text);
+  font-family: ui-monospace, 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.px-building-metric--good strong {
+  color: var(--px-green-hi);
+}
+
+.px-building-metric--warn strong {
+  color: var(--px-gold);
+}
+
+.px-building-price {
+  padding: 10px 11px 11px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.px-building-hint,
+.px-building-hint-card {
+  margin-top: 8px;
+  color: var(--px-muted);
+  font-family: ui-monospace, 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.px-building-hint-card {
+  margin-top: 10px;
+  padding: 10px 11px;
+  background: rgba(217,249,157,0.06);
+  border: 1px solid rgba(217,249,157,0.12);
+}
+
+@media (max-width: 640px) {
+  .px-building-metrics {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .px-building-metric {
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .px-building-summary__copy strong,
+  .px-building-metric strong {
+    font-size: 12px;
+  }
 }

@@ -25,6 +25,7 @@ import {
   sharedAudioLoader
 } from './core/AssetLoader';
 import { lanternPool } from './utils/LanternPool';
+import { getMaintenancePerMinute } from './data/buildingEconomy';
 import {
   BUILDING_DISPLAY,
   BuildingDefinition,
@@ -484,7 +485,7 @@ export class Game {
     }
 
     if ('ride' in result) {
-      const { id, rideType, price, cost, position: buildingPosition } = result.ride.data;
+      const { id, rideType, price, cost, position: buildingPosition, quality, valueScore, funFactor, capacity } = result.ride.data;
       const display = BUILDING_DISPLAY[rideType];
       const size = RIDE_SIZES[rideType];
       this.showSelectionHighlight(buildingPosition, size.width, size.height);
@@ -497,14 +498,22 @@ export class Game {
         position: buildingPosition,
         currentPrice: price,
         buildCost: cost,
-        rotationY: result.ride.mesh.rotation.y
+        rotationY: result.ride.mesh.rotation.y,
+        quality,
+        valueScore,
+        maintenancePerMinute: getMaintenancePerMinute(BuildingType.RIDE, rideType),
+        effectSummary: `Joy +${funFactor}`,
+        capacity
       });
       return;
     }
 
     if ('shop' in result) {
-      const { id, shopType, price, cost, position: buildingPosition } = result.shop.data;
+      const { id, shopType, price, cost, position: buildingPosition, quality, valueScore, satisfactionEffects } = result.shop.data;
       const display = BUILDING_DISPLAY[shopType];
+      const effectSummary = Object.entries(satisfactionEffects)
+        .map(([need, value]) => `${need} +${value}`)
+        .join(', ');
       this.showSelectionHighlight(buildingPosition, 1, 1);
       this.events.emit('buildingSelected', {
         id,
@@ -515,14 +524,21 @@ export class Game {
         position: buildingPosition,
         currentPrice: price,
         buildCost: cost,
-        rotationY: result.shop.mesh.rotation.y
+        rotationY: result.shop.mesh.rotation.y,
+        quality,
+        valueScore,
+        maintenancePerMinute: getMaintenancePerMinute(BuildingType.SHOP, shopType),
+        effectSummary
       });
       return;
     }
 
     if ('service' in result) {
-      const { id, serviceType, price, cost, position: buildingPosition } = result.service.data;
+      const { id, serviceType, price, cost, position: buildingPosition, quality, valueScore, satisfactionEffects } = result.service.data;
       const display = BUILDING_DISPLAY[serviceType];
+      const effectSummary = Object.entries(satisfactionEffects)
+        .map(([need, value]) => `${need} +${value}`)
+        .join(', ');
       this.showSelectionHighlight(buildingPosition, 1, 1);
       this.events.emit('buildingSelected', {
         id,
@@ -533,13 +549,20 @@ export class Game {
         position: buildingPosition,
         currentPrice: price,
         buildCost: cost,
-        rotationY: result.service.mesh.rotation.y
+        rotationY: result.service.mesh.rotation.y,
+        quality,
+        valueScore,
+        maintenancePerMinute: getMaintenancePerMinute(BuildingType.SERVICE, serviceType),
+        effectSummary
       });
       return;
     }
 
-    const { id, decorationType, cost, position: buildingPosition } = result.decoration.data;
+    const { id, decorationType, cost, position: buildingPosition, quality, valueScore, appealBonus, appealRadius, hygieneBonus, hygieneRadius } = result.decoration.data;
     const display = BUILDING_DISPLAY[decorationType];
+    const effectSummary = hygieneBonus
+      ? `Appeal +${appealBonus}, hygiene +${hygieneBonus}`
+      : `Appeal +${appealBonus} within ${appealRadius} tiles`;
     this.showSelectionHighlight(buildingPosition, 1, 1);
     this.events.emit('buildingSelected', {
       id,
@@ -550,7 +573,11 @@ export class Game {
       position: buildingPosition,
       currentPrice: null,
       buildCost: cost,
-      rotationY: result.decoration.mesh.rotation.y
+      rotationY: result.decoration.mesh.rotation.y,
+      quality,
+      valueScore,
+      maintenancePerMinute: getMaintenancePerMinute(BuildingType.DECORATION, decorationType),
+      effectSummary: hygieneRadius ? `${effectSummary} within ${hygieneRadius} tiles` : effectSummary
     });
   }
 

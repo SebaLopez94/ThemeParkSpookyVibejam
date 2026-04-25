@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ArrowRightLeft, Coins, Settings2, Trash2, X } from 'lucide-react';
-import { GridPosition, SelectedBuildingInfo } from '../types';
+import { ArrowRightLeft, Settings2, Trash2, X } from 'lucide-react';
+import { BuildingType, GridPosition, SelectedBuildingInfo } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { BuildingIcon } from './BuildingIcon';
+import { getRecommendedPrice } from '../data/buildingEconomy';
 
 interface BuildingPanelProps {
   building: SelectedBuildingInfo;
@@ -14,6 +14,23 @@ interface BuildingPanelProps {
 
 const MIN_PRICE = 1;
 const MAX_PRICE = 999;
+
+function getPriceStatus(currentPrice: number | null, recommendedPrice: number | null): { label: string; tone: 'good' | 'warn' | 'neutral' } {
+  if (currentPrice === null || recommendedPrice === null) return { label: 'Ambience support', tone: 'neutral' };
+  if (currentPrice <= 0) return { label: 'Free entry', tone: 'warn' };
+  if (currentPrice > recommendedPrice * 1.35) return { label: 'Price may slow demand', tone: 'warn' };
+  if (currentPrice < recommendedPrice * 0.7) return { label: 'Room to raise price', tone: 'good' };
+  return { label: 'Fair price', tone: 'good' };
+}
+
+function formatMoney(value: number): string {
+  return `$${Math.round(value).toLocaleString()}`;
+}
+
+function getJoyImpact(effectSummary: string): number | null {
+  const match = effectSummary.match(/Joy \+(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
 
 export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChange }: BuildingPanelProps) {
   const [localPrice, setLocalPrice] = useState(building.currentPrice ?? MIN_PRICE);
@@ -33,6 +50,15 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
   };
 
   const refundAmount = Math.floor(building.buildCost * 0.5);
+  const recommendedPrice = building.currentPrice === null ? null : getRecommendedPrice(building.valueScore, building.quality);
+  const previewPrice = building.currentPrice === null ? null : Math.max(MIN_PRICE, Math.min(MAX_PRICE, Math.round(localPrice || 0)));
+  const priceStatus = getPriceStatus(previewPrice, recommendedPrice);
+  const breakEvenVisits = previewPrice && previewPrice > 0
+    ? Math.ceil(building.maintenancePerMinute / previewPrice)
+    : null;
+  const isDecoration = building.buildingType === BuildingType.DECORATION;
+  const priceLabel = building.buildingType === BuildingType.RIDE ? 'Admission Price' : 'Service Price';
+  const joyImpact = getJoyImpact(building.effectSummary);
 
   const panelStyle = isMobile
     ? {
@@ -73,26 +99,46 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
             overflowY: isMobile ? 'auto' : undefined,
           }}
         >
-          <div className="px-chip-row">
-            <div className="px-chip" style={{ fontSize: isMobile ? 9 : 11 }}>
-              <BuildingIcon type={building.buildingType} subType={building.subType} className="px-icon-sm" />
-              {building.buildingType}
+          <div className="px-building-summary">
+            <div className="px-building-summary__copy">
+              <span className="px-building-type-tag">{building.buildingType}</span>
+              {joyImpact !== null ? (
+                <JoyImpactBar value={joyImpact} />
+              ) : (
+                <strong>{building.effectSummary}</strong>
+              )}
             </div>
-            <div className="px-chip" style={{ fontSize: isMobile ? 9 : 11 }}>
-              <Coins className="px-icon-sm" /> Build ${building.buildCost}
+            <div className={`px-building-status px-building-status--${priceStatus.tone}`}>
+              {priceStatus.label}
             </div>
           </div>
 
-          <hr className="px-divider" />
+          <div className="px-building-metrics">
+            <Metric
+              label="Upkeep"
+              value={building.maintenancePerMinute > 0 ? `${formatMoney(building.maintenancePerMinute)} / min` : '$0 / min'}
+              tone={building.maintenancePerMinute > 0 ? 'warn' : 'good'}
+            />
+            {isDecoration ? (
+              <Metric label="Effect" value={building.effectSummary} tone="good" />
+            ) : (
+              <Metric
+                label="Break-even"
+                value={breakEvenVisits === null ? 'Needs price' : `${breakEvenVisits} guests / min`}
+                tone={breakEvenVisits !== null && breakEvenVisits <= 4 ? 'good' : 'warn'}
+              />
+            )}
+            <Metric label="Refund" value={formatMoney(refundAmount)} tone="neutral" />
+          </div>
 
           {building.currentPrice !== null ? (
-            <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <div className="px-building-price" style={{ marginBottom: isMobile ? 12 : 16 }}>
               <label
                 htmlFor="building-price"
                 className="px-label"
                 style={{ display: 'block', marginBottom: 8, fontSize: isMobile ? 9 : undefined }}
               >
-                {building.buildingType === 'ride' ? 'Admission Price' : 'Service Price'}
+                {priceLabel}
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 12 : 14, color: 'var(--px-gold)' }}>$</span>
@@ -110,13 +156,15 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
                   onKeyDown={e => e.key === 'Enter' && commitPrice()}
                 />
               </div>
+              {recommendedPrice !== null && (
+                <div className="px-building-hint">
+                  Recommended around {formatMoney(recommendedPrice)} for this value/quality.
+                </div>
+              )}
             </div>
           ) : (
-            <div className="px-stat" style={{ marginBottom: isMobile ? 12 : 16 }}>
-              <div className="px-label" style={{ fontSize: isMobile ? 9 : undefined }}>Decor Effect</div>
-              <div className="px-stat__value" style={{ fontSize: isMobile ? 9 : 11, color: 'var(--px-green-hi)', lineHeight: 1.9 }}>
-                Boosts nearby appeal and visitor happiness.
-              </div>
+            <div className="px-building-hint-card" style={{ marginBottom: isMobile ? 12 : 16 }}>
+              Decorations do not charge guests. Use them near paths and busy areas to improve park appeal.
             </div>
           )}
 
@@ -161,6 +209,40 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: 'good' | 'warn' | 'neutral';
+}) {
+  return (
+    <div className={`px-building-metric px-building-metric--${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function JoyImpactBar({ value }: { value: number }) {
+  const percent = Math.max(0, Math.min(100, (value / 40) * 100));
+  const tone = value >= 32 ? 'high' : value >= 22 ? 'mid' : 'low';
+
+  return (
+    <div className="px-building-impact">
+      <div className="px-building-impact__head">
+        <span>Joy impact</span>
+        <strong>+{value}</strong>
+      </div>
+      <div className={`px-building-impact__bar px-building-impact__bar--${tone}`} aria-hidden="true">
+        <span style={{ width: `${percent}%` }} />
       </div>
     </div>
   );

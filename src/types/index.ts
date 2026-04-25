@@ -99,6 +99,11 @@ export interface SelectedBuildingInfo {
   currentPrice: number | null;
   buildCost: number;
   rotationY: number;
+  quality: number;
+  valueScore: number;
+  maintenancePerMinute: number;
+  effectSummary: string;
+  capacity?: number;
 }
 
 export interface BuildingData {
