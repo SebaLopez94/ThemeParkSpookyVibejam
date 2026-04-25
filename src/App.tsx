@@ -673,130 +673,189 @@ function App() {
 
       {showHelp && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
           onClick={() => setShowHelp(false)}
         >
-          <div className="px-panel px-scroll-hidden" style={{ maxWidth: 600, width: isMobile ? '100%' : '94%', padding: 0, maxHeight: isMobile ? '100dvh' : '90vh', overflowY: 'auto', overflowX: 'hidden', borderRadius: isMobile ? 0 : undefined }} onClick={e => e.stopPropagation()}>
-            <div className="px-titlebar" style={{ fontSize: isMobile ? 10 : undefined }}>HOW TO PLAY</div>
-            <div style={{ padding: isMobile ? '12px 14px' : '18px 22px' }}>
+          {isMobile ? (
+            /* ── MOBILE HELP ───────────────────────────────────────────── */
+            <div className="px-panel px-scroll-hidden" style={{ width: '100%', padding: 0, maxHeight: '100dvh', overflowY: 'auto', overflowX: 'hidden', borderRadius: 0 }} onClick={e => e.stopPropagation()}>
+              <div className="px-titlebar" style={{ fontSize: 10 }}>HOW TO PLAY</div>
+              <div style={{ padding: '14px 14px 20px' }}>
 
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>CONTROLS</div>
-              {isMobile ? (
-                <div style={{ display: 'grid', gap: 4 }}>
-                  {[
-                    ['1 FINGER DRAG', 'Move camera'],
-                    ['PINCH', 'Zoom in or out'],
-                    ['TAP', 'Build or select'],
+                {/* Controls */}
+                <div className="px-label" style={{ fontSize: 9, marginBottom: 6 }}>CONTROLS</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, marginBottom: 14 }}>
+                  {([
+                    ['👆 DRAG', 'Pan camera'],
+                    ['🤏 PINCH', 'Zoom'],
+                    ['🔄 2 FINGERS', 'Rotate camera'],
+                    ['TAP', 'Place / select'],
                     ['TAP + DRAG', 'Draw paths'],
                     ['TAP BUILDING', 'Manage it'],
-                    ['ROTATE BUTTON', 'Turn placement'],
-                  ].map(([key, desc]) => (
-                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 6px', background: 'rgba(0,0,0,0.25)' }}>
-                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)', flexShrink: 0 }}>{key}</span>
-                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-text)', textAlign: 'right' }}>{desc}</span>
+                  ] as [string, string][]).map(([key, desc]) => (
+                    <div key={key} style={{ padding: '6px 7px', background: 'rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)' }}>{key}</span>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-text)' }}>{desc}</span>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'Press Start 2P', monospace", fontSize: 11, tableLayout: 'fixed' }}>
-                  <colgroup>
-                    <col style={{ width: '52%' }} />
-                    <col style={{ width: '48%' }} />
-                  </colgroup>
-                  <tbody>
-                    {[
-                      ['RMB DRAG / 1 FINGER', 'Move camera'],
-                      ['SCROLL / PINCH', 'Zoom in or out'],
-                      ['LMB / TAP', 'Build or select'],
-                      ['LMB DRAG', 'Draw paths'],
-                      ['R', 'Rotate building'],
-                      ['RMB / ESC', 'Cancel build mode'],
-                      ['CLICK BUILDING', 'Manage, move, or delete'],
-                    ].map(([key, desc]) => (
-                      <tr key={key}>
-                        <td style={{ padding: '6px 8px', color: 'var(--px-green-hi)', textShadow: '1px 1px 0 #000', wordBreak: 'break-word' }}>{key}</td>
-                        <td style={{ padding: '6px 8px', color: 'var(--px-text)', wordBreak: 'break-word' }}>{desc}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
 
-              <hr className="px-divider" />
+                {/* First steps */}
+                <div className="px-label" style={{ fontSize: 9, marginBottom: 6 }}>FIRST STEPS</div>
+                <div style={{ display: 'grid', gap: 3, marginBottom: 14 }}>
+                  {([
+                    ['1', 'Draw PATHS from the entrance gate'],
+                    ['2', 'Place a RIDE connected to the path'],
+                    ['3', 'Add FOOD, DRINKS & TOILETS nearby'],
+                    ['4', 'OPEN the park and watch income grow'],
+                  ] as [string, string][]).map(([n, text]) => (
+                    <div key={n} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '6px 8px', background: 'rgba(0,0,0,0.25)' }}>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', flexShrink: 0, lineHeight: 1.6 }}>{n}</span>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-text)', lineHeight: 1.7 }}>{text}</span>
+                    </div>
+                  ))}
+                </div>
 
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>START HERE</div>
-              <div style={{ display: 'grid', gap: 6 }}>
-                {[
-                  'Build paths from the entrance so guests can reach your park.',
-                  'Place one ride first, then add food, drinks, and toilets nearby.',
-                  'Open the park and expand only when income feels stable.',
-                ].map(step => (
-                  <div key={step} className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.75 : undefined, padding: '7px 9px', background: 'rgba(0,0,0,0.22)' }}>
-                    {step}
-                  </div>
-                ))}
+                {/* Guest needs */}
+                <div className="px-label" style={{ fontSize: 9, marginBottom: 6 }}>KEEP GUESTS HAPPY</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, marginBottom: 6 }}>
+                  {([
+                    ['🎢 FUN', 'Rides'],
+                    ['🍔 HUNGER', 'Burger stalls'],
+                    ['🥤 THIRST', 'Drink stands'],
+                    ['🚽 HYGIENE', 'Toilets & bins'],
+                  ] as [string, string][]).map(([need, fix]) => (
+                    <div key={need} style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)' }}>{need}</span>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-text)' }}>{fix}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-text)', lineHeight: 1.8, padding: '6px 8px', background: 'rgba(0,0,0,0.2)', marginBottom: 6 }}>
+                  Unhappy guests leave and your rating drops.
+                </div>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-text)', lineHeight: 1.8, padding: '6px 8px', background: 'rgba(0,0,0,0.2)', marginBottom: 6 }}>
+                  <span style={{ color: 'var(--px-green-hi)' }}>PRICIER rides = more FUN</span> per visit. Upgrade attractions to satisfy guests faster.
+                </div>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-text)', lineHeight: 1.8, padding: '6px 8px', background: 'rgba(0,0,0,0.2)', marginBottom: 14 }}>
+                  Every building has a <span style={{ color: 'var(--px-green-hi)' }}>maintenance cost per minute</span>. Don't overbuild — check expenses before expanding.
+                </div>
+
+                {/* Goal */}
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', lineHeight: 1.9, padding: '8px 10px', background: 'rgba(255,220,0,0.07)', border: '1px solid rgba(255,220,0,0.2)', marginBottom: 14 }}>
+                  GOAL: reach 5 stars ⭐ by keeping guests happy and growing your park.
+                </div>
+
+                <button className="px-btn" style={{ width: '100%', justifyContent: 'center', fontSize: 10 }} onClick={() => setShowHelp(false)}>
+                  OK, LET'S BUILD
+                </button>
               </div>
-
-              <hr className="px-divider" />
-
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>KEEP GUESTS HAPPY</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 8 }}>
-                {[
-                  ['FUN', 'Build more rides'],
-                  ['HUNGER', 'Add burger stalls'],
-                  ['THIRST', 'Add drink stands'],
-                  ['HYGIENE', 'Add toilets'],
-                ].map(([need, desc]) => (
-                  <div key={need} style={{ padding: '5px 7px', background: 'rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-green-hi)' }}>{need}</span>
-                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-text)' }}>{desc}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Guests spend money when they find what they need. If their needs stay low for too long, they leave and your rating drops.
-              </div>
-
-              <hr className="px-divider" />
-
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>BUILD SMART</div>
-              <div style={{ display: 'grid', gap: 4, marginBottom: 8 }}>
-                {[
-                  'Rides need path access or guests will ignore them.',
-                  'Stronger rides support higher prices and satisfy fun faster.',
-                  'Decorations near rides improve guest mood and park appeal.',
-                ].map(item => (
-                  <div key={item} style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.25)' }}>
-                    <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'var(--px-text)', lineHeight: 1.7 }}>
-                      {item}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <hr className="px-divider" />
-
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>MONEY</div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Money comes from entry tickets, rides, and shops. Expenses come from maintenance, so avoid building too much too early.
-              </div>
-
-              <hr className="px-divider" />
-
-              <div className="px-label" style={{ marginBottom: 6, fontSize: isMobile ? 9 : undefined }}>PROGRESSION</div>
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined }}>
-                Use Research to unlock stronger buildings. Use Challenges for direction and bonus money.
-              </div>
-
-              <div className="px-body" style={{ fontSize: isMobile ? 10 : undefined, lineHeight: isMobile ? 1.8 : undefined, marginTop: 14, color: 'var(--px-green-hi)' }}>
-                Goal: keep guests happy, grow your park, and reach 5 stars.
-              </div>
-
-              <button className="px-btn" style={{ marginTop: 16, width: '100%', justifyContent: 'center', fontSize: isMobile ? 10 : undefined }} onClick={() => setShowHelp(false)}>
-                OK, LET'S BUILD
-              </button>
             </div>
-          </div>
+          ) : (
+            /* ── DESKTOP HELP ──────────────────────────────────────────── */
+            <div className="px-panel px-scroll-hidden" style={{ maxWidth: 640, width: '94%', padding: 0, maxHeight: '90vh', overflowY: 'auto', overflowX: 'hidden' }} onClick={e => e.stopPropagation()}>
+              <div className="px-titlebar">HOW TO PLAY</div>
+              <div style={{ padding: '20px 24px 24px' }}>
+
+                {/* Two-column layout: controls + first steps */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+
+                  {/* Controls */}
+                  <div>
+                    <div className="px-label" style={{ marginBottom: 8 }}>CONTROLS</div>
+                    <div style={{ display: 'grid', gap: 2 }}>
+                      {([
+                        ['RMB DRAG', 'Pan camera'],
+                        ['SCROLL', 'Zoom'],
+                        ['Z / X', 'Rotate camera'],
+                        ['LMB', 'Place / select'],
+                        ['LMB DRAG', 'Draw paths'],
+                        ['R', 'Rotate building'],
+                        ['RMB / ESC', 'Cancel placement'],
+                      ] as [string, string][]).map(([key, desc]) => (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', gap: 6, padding: '5px 7px', background: 'rgba(0,0,0,0.28)' }}>
+                          <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', flexShrink: 0 }}>{key}</span>
+                          <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-text)', textAlign: 'right' }}>{desc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* First steps */}
+                  <div>
+                    <div className="px-label" style={{ marginBottom: 8 }}>FIRST STEPS</div>
+                    <div style={{ display: 'grid', gap: 2 }}>
+                      {([
+                        ['1', 'Draw PATHS from the entrance gate'],
+                        ['2', 'Place a RIDE connected to the path'],
+                        ['3', 'Add FOOD, DRINKS & TOILETS nearby'],
+                        ['4', 'OPEN the park — watch income grow'],
+                        ['5', 'Use RESEARCH to unlock stronger rides'],
+                        ['6', 'Complete CHALLENGES for bonus cash'],
+                      ] as [string, string][]).map(([n, text]) => (
+                        <div key={n} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '5px 7px', background: 'rgba(0,0,0,0.28)' }}>
+                          <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 10, color: 'var(--px-green-hi)', flexShrink: 0 }}>{n}</span>
+                          <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-text)', lineHeight: 1.65 }}>{text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="px-divider" />
+
+                {/* Guest needs */}
+                <div className="px-label" style={{ marginBottom: 8 }}>KEEP GUESTS HAPPY</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginBottom: 10 }}>
+                  {([
+                    ['🎢', 'FUN', 'Build rides'],
+                    ['🍔', 'HUNGER', 'Burger stalls'],
+                    ['🥤', 'THIRST', 'Drink stands'],
+                    ['🚽', 'HYGIENE', 'Toilets & bins'],
+                  ] as [string, string, string][]).map(([icon, need, fix]) => (
+                    <div key={need} style={{ padding: '8px 10px', background: 'rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', textAlign: 'center' }}>
+                      <span style={{ fontSize: 18 }}>{icon}</span>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-green-hi)' }}>{need}</span>
+                      <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 7, color: 'var(--px-text)', lineHeight: 1.6 }}>{fix}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-text)', lineHeight: 1.8, padding: '7px 10px', background: 'rgba(0,0,0,0.2)' }}>
+                  Guests <span style={{ color: 'var(--px-green-hi)' }}>spend money</span> when their needs are met. If needs stay unmet, guests leave and your <span style={{ color: 'var(--px-green-hi)' }}>rating drops</span>.
+                </div>
+
+                <hr className="px-divider" />
+
+                {/* Tips + goal */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <div className="px-label" style={{ marginBottom: 8 }}>TIPS</div>
+                    <div style={{ display: 'grid', gap: 3 }}>
+                      {[
+                        'Rides must touch a path — or guests ignore them.',
+                        'Pricier rides give MORE FUN per visit — upgrade to satisfy guests faster.',
+                        'Every building has a maintenance cost per minute — check expenses before expanding.',
+                        'Decorations near rides boost mood & appeal.',
+                      ].map(tip => (
+                        <div key={tip} style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.25)', fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-text)', lineHeight: 1.7 }}>
+                          {tip}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-green-hi)', lineHeight: 1.9, padding: '10px 12px', background: 'rgba(255,220,0,0.07)', border: '1px solid rgba(255,220,0,0.2)', flex: 1 }}>
+                      GOAL: reach 5 stars ⭐ by keeping guests happy and growing your park.
+                    </div>
+                    <button className="px-btn" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setShowHelp(false)}>
+                      OK, LET'S BUILD
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
         </div>
       )}
 

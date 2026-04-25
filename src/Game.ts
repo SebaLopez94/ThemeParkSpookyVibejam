@@ -432,6 +432,12 @@ export class Game {
     if ((event.key === 'r' || event.key === 'R') && this.selectedBuilding) {
       this.rotateBuild(1);
     }
+    if (event.key === 'z' || event.key === 'Z') {
+      this.cameraController.rotate(-Math.PI / 4);
+    }
+    if (event.key === 'x' || event.key === 'X') {
+      this.cameraController.rotate(Math.PI / 4);
+    }
   };
 
   private rotateBuild(direction: number): void {
