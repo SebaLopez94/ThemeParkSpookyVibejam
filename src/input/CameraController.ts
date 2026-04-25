@@ -18,6 +18,9 @@ export class CameraController {
    * Two-finger twist gesture changes this via rotate().
    */
   private azimuth = Math.PI / 4;
+  /** Lerp targets — actual values ease toward these each update(). */
+  private targetDistance = 38;
+  private targetAzimuth = Math.PI / 4;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
@@ -29,6 +32,7 @@ export class CameraController {
     if (isMobile) {
       this.target = new THREE.Vector3(0, 0, 22);
       this.currentDistance = 44; // Slightly further back for mobile to fit the entrance
+      this.targetDistance = 44;
     } else {
       this.target = new THREE.Vector3(0, 0, 18);
     }
@@ -57,16 +61,33 @@ export class CameraController {
   /**
    * Rotate the camera orbit by angleDelta radians around the look-at target.
    * Called by MouseController when a two-finger twist gesture is detected.
+   * The change eases in via update() rather than snapping immediately.
    */
   public rotate(angleDelta: number): void {
-    this.azimuth += angleDelta;
-    this.updateCameraPosition();
+    this.targetAzimuth += angleDelta;
   }
 
   public zoom(delta: number): void {
-    this.currentDistance += delta * this.zoomStep;
-    this.currentDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.currentDistance));
-    this.updateCameraPosition();
+    this.targetDistance += delta * this.zoomStep;
+    this.targetDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.targetDistance));
+  }
+
+  /**
+   * Smooth-step zoom and azimuth toward their targets.
+   * Must be called once per frame from the game loop.
+   */
+  public update(dt: number): void {
+    // exp-decay lerp — independent of frame rate, ~20 steps/sec response
+    const k = 1 - Math.exp(-20 * dt);
+
+    const distDelta = (this.targetDistance - this.currentDistance) * k;
+    const azDelta   = (this.targetAzimuth  - this.azimuth)         * k;
+
+    if (Math.abs(distDelta) > 0.0001 || Math.abs(azDelta) > 0.00001) {
+      this.currentDistance += distDelta;
+      this.azimuth         += azDelta;
+      this.updateCameraPosition();
+    }
   }
 
   private updateCameraPosition(): void {

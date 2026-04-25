@@ -885,57 +885,26 @@ export class GameScene {
 
   private createMoon(): void {
     const moonGroup = new THREE.Group();
-    const moonPos = new THREE.Vector3(-66, 30, -42);
+    const moonPos = new THREE.Vector3(-76, 33, -52);
 
-    const moonCanvas = document.createElement('canvas');
-    moonCanvas.width = 256;
-    moonCanvas.height = 256;
-    const ctx = moonCanvas.getContext('2d');
-    if (ctx) {
-      const base = ctx.createRadialGradient(104, 88, 8, 128, 128, 128);
-      base.addColorStop(0, '#ffffff');
-      base.addColorStop(0.45, '#eef3ff');
-      base.addColorStop(0.78, '#cbd5ea');
-      base.addColorStop(1, '#98a3bd');
-      ctx.fillStyle = base;
-      ctx.beginPath();
-      ctx.arc(128, 128, 126, 0, Math.PI * 2);
-      ctx.fill();
-
-      const craters = [
-        [86, 78, 20, 0.16], [156, 82, 14, 0.12], [132, 130, 26, 0.10],
-        [184, 148, 18, 0.12], [86, 164, 15, 0.10], [116, 198, 10, 0.09],
-        [190, 104, 8, 0.10], [66, 124, 9, 0.10],
-      ];
-      craters.forEach(([x, y, r, a]) => {
-        const crater = ctx.createRadialGradient(x - r * 0.3, y - r * 0.35, 1, x, y, r);
-        crater.addColorStop(0, `rgba(255,255,255,${a * 0.6})`);
-        crater.addColorStop(0.45, `rgba(132,142,166,${a})`);
-        crater.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = crater;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      const limb = ctx.createRadialGradient(98, 88, 40, 128, 128, 128);
-      limb.addColorStop(0, 'rgba(255,255,255,0)');
-      limb.addColorStop(0.72, 'rgba(255,255,255,0)');
-      limb.addColorStop(1, 'rgba(38,42,66,0.34)');
-      ctx.fillStyle = limb;
-      ctx.beginPath();
-      ctx.arc(128, 128, 126, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    const moonTexture = new THREE.CanvasTexture(moonCanvas);
+    const moonTexture = sharedTextureLoader.load('/texture/moon1.png');
     moonTexture.colorSpace = THREE.SRGBColorSpace;
-    moonTexture.needsUpdate = true;
+    const moonReliefTexture = sharedTextureLoader.load('/texture/moon2.png');
+    moonReliefTexture.colorSpace = THREE.NoColorSpace;
 
     // Main moon body
-    const moonGeo = new THREE.SphereGeometry(8.5, 40, 32);
-    const moonMat = new THREE.MeshBasicMaterial({ 
+    const moonGeo = new THREE.SphereGeometry(9.5, this.mobile ? 40 : 60, this.mobile ? 32 : 60);
+    const moonMat = new THREE.MeshPhongMaterial({
       map: moonTexture,
-      color: 0xf7f9ff,
+      displacementMap: moonReliefTexture,
+      displacementScale: 0.08,
+      bumpMap: moonReliefTexture,
+      bumpScale: 0.045,
+      color: 0xffffff,
+      emissive: 0x54607f,
+      emissiveIntensity: 0.52,
+      shininess: 0,
+      reflectivity: 0,
       fog: false,
     });
     const moon = new THREE.Mesh(moonGeo, moonMat);
@@ -979,9 +948,9 @@ export class GameScene {
 
     const glowTexture = makeMoonGlowTexture();
     const glowLayers = [
-      { scale: [34, 24], opacity: 0.22, color: 0xdce8ff, z: -0.2 },
-      { scale: [82, 52], opacity: 0.14, color: 0xb9cbff, z: -0.4 },
-      { scale: [142, 82], opacity: 0.06, color: 0x8fa2de, z: -0.6 },
+      { scale: [38, 27], opacity: 0.24, color: 0xdce8ff, z: -0.2 },
+      { scale: [92, 58], opacity: 0.13, color: 0xb9cbff, z: -0.4 },
+      { scale: [156, 90], opacity: 0.05, color: 0x8fa2de, z: -0.6 },
     ];
     glowLayers.forEach(layer => {
       const material = new THREE.SpriteMaterial({
@@ -1001,8 +970,12 @@ export class GameScene {
     });
 
     // Very subtle local glow; the main moonlight is the directional light.
-    const moonLight = new THREE.PointLight(0xc5d7ff, 0.08, 760);
-    moonLight.position.set(0, 0, 0); 
+    const moonSurfaceLight = new THREE.DirectionalLight(0xffffff, 0.92);
+    moonSurfaceLight.position.set(-10, 6, 10);
+    moonGroup.add(moonSurfaceLight);
+
+    const moonLight = new THREE.PointLight(0xc5d7ff, 0.04, 680);
+    moonLight.position.set(0, 0, 0);
     moonGroup.add(moonLight);
 
     moonGroup.position.copy(moonPos);

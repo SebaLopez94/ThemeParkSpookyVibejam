@@ -1360,6 +1360,7 @@ export class Game {
       this.selectionFillMat.opacity = pulse;
     }
 
+    this.cameraController.update(deltaTime);
     const camTarget = this.cameraController.getTarget();
     const shadowTargetChanged = this.scene.updateShadowFrustum(camTarget.x, camTarget.z);
     this.scene.updateRetroOverlay(deltaTime);

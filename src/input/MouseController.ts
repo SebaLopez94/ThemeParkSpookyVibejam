@@ -238,10 +238,10 @@ export class MouseController {
       const dy = event.touches[0].clientY - event.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Pinch zoom
+      // Pinch zoom — proportional, no threshold so movement is continuous
       const pinchDelta = this.lastPinchDistance - dist;
-      if (Math.abs(pinchDelta) > 8) {
-        this.onCameraZoom?.(Math.sign(pinchDelta));
+      if (pinchDelta !== 0) {
+        this.onCameraZoom?.(pinchDelta / 55);
         this.lastPinchDistance = dist;
       }
 
@@ -267,6 +267,15 @@ export class MouseController {
   private onTouchEnd = (event: TouchEvent): void => {
     event.preventDefault();
     this.isLeftDragging = false;
+
+    // When dropping from 2 fingers back to 1, sync lastTouchPos so the
+    // first single-finger pan delta doesn't compute from a stale position.
+    if (event.touches.length === 1) {
+      const remaining = event.touches[0];
+      this.lastTouchPos.set(remaining.clientX, remaining.clientY);
+      this.lastDragGridPosition = null;
+      return;
+    }
 
     if (event.changedTouches.length === 1 && event.touches.length === 0) {
       const t = event.changedTouches[0];
