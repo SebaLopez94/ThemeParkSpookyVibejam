@@ -397,6 +397,29 @@ export class GameScene {
     montainTex.wrapT = THREE.RepeatWrapping;
     montainTex.repeat.set(2, 2);
 
+    // Patch mountain materials: fade alpha based on local-space Y so the base
+    // dissolves into the ground instead of cutting against it with a hard edge.
+    // Uses position.y (0 = base, ~1 = peak) passed as a varying — avoids any
+    // dependency on vUv naming or depthWrite order issues.
+    const patchMountainBaseFade = (mat: THREE.MeshStandardMaterial): void => {
+      mat.transparent = true;
+      const originalKey = mat.customProgramCacheKey.bind(mat);
+      mat.customProgramCacheKey = () => `${originalKey()}|mountain-base-fade`;
+      mat.onBeforeCompile = (shader) => {
+        shader.vertexShader = `varying float vMountainY;\n${shader.vertexShader}`;
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          vMountainY = position.y;`
+        );
+        shader.fragmentShader = `varying float vMountainY;\n${shader.fragmentShader}`;
+        shader.fragmentShader = shader.fragmentShader.replace(
+          'vec4 diffuseColor = vec4( diffuse, opacity );',
+          `vec4 diffuseColor = vec4( diffuse, opacity * smoothstep(0.0, 0.36, vMountainY) );`
+        );
+      };
+    };
+
     const matNear = new THREE.MeshStandardMaterial({
       map: montainTex,
       color: 0x4a3d55,
@@ -409,6 +432,8 @@ export class GameScene {
       roughness: 1.0,
       metalness: 0.0,
     });
+    patchMountainBaseFade(matNear);
+    patchMountainBaseFade(matFar);
 
     // Instanced cones — 1 draw call per layer
     const createMountainGeometry = (variantSeed: number): THREE.BufferGeometry => {
@@ -801,7 +826,7 @@ export class GameScene {
             float hoofMarks = smoothstep(0.58, 0.9, noise(vUv * 26.0 + fineDetail.rg * 4.0));
 
             vec3 terrain = mix(base, altBase, smoothstep(0.3, 0.72, macroBreakup) * 0.45);
-            vec3 color = mix(terrain, terrain * moonTint, 0.48);
+            vec3 color = mix(terrain, terrain * moonTint, 0.24);
             color = mix(color, color * 0.78 + earthTint * 0.22, dryPatches * 0.22);
             color = mix(color, color * 0.62 + shadowTint * 0.38, mudBands * 0.5);
             color = mix(color, wetTint, wetPatches * 0.28);
@@ -812,7 +837,7 @@ export class GameScene {
             color -= hoofMarks * vec3(0.032, 0.022, 0.015);
 
             float centerFalloff = distance(vUv, vec2(0.5));
-            color *= 1.03;
+            color *= 1.42;
             color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.09;
             color = clamp(color, vec3(0.0), vec3(1.0));
 
@@ -845,7 +870,7 @@ export class GameScene {
     outsideTex.repeat.set(30, 30);
     const mat  = new THREE.MeshStandardMaterial({
       map: outsideTex,
-      color: 0x8f7054,
+      color: 0xb08a65,
       roughness: 1.0,
       metalness: 0.0,
     });
