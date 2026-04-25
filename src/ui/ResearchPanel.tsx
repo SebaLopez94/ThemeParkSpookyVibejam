@@ -2,7 +2,7 @@ import { CSSProperties } from 'react';
 import { Clock3, FlaskConical, LockKeyhole, Play, Sparkles, X } from 'lucide-react';
 import { BUILDING_DISPLAY, BuildingType, DecorationType, PlaceableBuildingKind, ResearchNode, ResearchState, RideType, ServiceType, ShopType } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { BuildingIcon } from './BuildingIcon';
+import { BuildAssetPreview } from './BuildAssetPreview';
 
 interface ResearchPanelProps {
   nodes: ResearchNode[];
@@ -25,6 +25,15 @@ function getBuildingTypeFromUnlock(kind: PlaceableBuildingKind): BuildingType {
   if ((Object.values(ServiceType) as string[]).includes(kind)) return BuildingType.SERVICE;
   if ((Object.values(DecorationType) as string[]).includes(kind)) return BuildingType.DECORATION;
   return BuildingType.DECORATION;
+}
+
+function getUnlockPreviewItem(kind: PlaceableBuildingKind) {
+  const display = BUILDING_DISPLAY[kind];
+  return {
+    type: getBuildingTypeFromUnlock(kind),
+    subType: kind,
+    name: display.name,
+  };
 }
 
 export function ResearchPanel({
@@ -163,42 +172,15 @@ export function ResearchPanel({
                       cursor: 'default',
                     }}
                   >
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto', gap: isMobile ? 10 : 12, alignItems: 'center' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, minWidth: 0 }}>
-                          <div
-                            className="px-soft-block"
-                            style={{
-                              width: isMobile ? 36 : 48,
-                              height: isMobile ? 36 : 48,
-                              display: 'grid',
-                              placeItems: 'center',
-                              flexShrink: 0,
-                              background: 'rgba(103,232,249,0.06)',
-                            }}
-                          >
-                            <BuildingIcon
-                              type={unlockItem === undefined ? undefined as never : getBuildingTypeFromUnlock(unlockItem)}
-                              subType={unlockItem}
-                              size={isMobile ? 18 : 24}
-                            />
-                          </div>
+                    <div className="px-research-project">
+                      <BuildAssetPreview item={getUnlockPreviewItem(unlockItem)} variant="research" />
 
-                          <div style={{ minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontFamily: "'Press Start 2P', monospace",
-                                fontSize: isMobile ? 8 : 11,
-                                color: 'var(--px-text)',
-                                lineHeight: isMobile ? 1.55 : 1.7
-                              }}
-                            >
-                              {unlockDisplay.name}
-                            </div>
-                          </div>
+                      <div className="px-research-project__content">
+                        <div className="px-research-project__name">
+                          {unlockDisplay.name}
                         </div>
 
-                        <div className="px-chip-row" style={{ marginTop: isMobile ? 8 : 10, gap: isMobile ? 6 : 8 }}>
+                        <div className="px-chip-row px-research-project__meta">
                           <div className="px-soft-chip">
                             <FlaskConical className="px-icon-sm" />
                             ${node.cost}
@@ -206,10 +188,6 @@ export function ResearchPanel({
                           <div className="px-soft-chip">
                             <Clock3 className="px-icon-sm" />
                             {node.duration}s
-                          </div>
-                          <div className="px-soft-chip">
-                            <BuildingIcon type={getBuildingTypeFromUnlock(unlockItem)} subType={unlockItem} className="px-icon-sm" />
-                            UNLOCKS
                           </div>
                           {!affordable && (
                             <div className="px-soft-chip" style={{ color: 'var(--px-red)' }}>
@@ -219,14 +197,12 @@ export function ResearchPanel({
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
+                      <div className="px-research-project__action">
                         <button
                           className="px-btn px-btn--sm"
                           style={{
-                            minWidth: isMobile ? '100%' : 132,
                             opacity: disabled ? 0.55 : 1,
                             color: active ? 'var(--px-cyan)' : undefined,
-                            ...(isMobile ? { padding: '8px 10px', minHeight: 38 } : {})
                           }}
                           disabled={disabled}
                           onClick={() => onStartResearch(node.id)}
@@ -270,35 +246,17 @@ export function ResearchPanel({
                       opacity: 0.78,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 8 : 10 }}>
-                      <div
-                        className="px-soft-block"
-                        style={{
-                          width: isMobile ? 32 : 42,
-                          height: isMobile ? 32 : 42,
-                          display: 'grid',
-                          placeItems: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <LockKeyhole className="px-icon-sm" color="var(--px-muted)" />
-                      </div>
-
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontFamily: "'Press Start 2P', monospace",
-                            fontSize: isMobile ? 8 : 10,
-                            color: 'var(--px-text)',
-                            lineHeight: isMobile ? 1.55 : 1.7
-                          }}
-                        >
+                    <div className="px-research-project px-research-project--locked">
+                      <BuildAssetPreview item={getUnlockPreviewItem(unlockItem)} variant="research" locked />
+                      <div className="px-research-project__content">
+                        <div className="px-research-project__name">
                           {unlockDisplay.name}
                         </div>
-                        <div className="px-body" style={{ marginTop: 3, fontSize: isMobile ? 11 : undefined, lineHeight: isMobile ? 1.45 : undefined }}>
+                        <div className="px-body px-research-project__requires">
                           Requires: {missing.join(' + ')}
                         </div>
                       </div>
+                      <LockKeyhole className="px-research-project__lock" color="var(--px-muted)" />
                     </div>
                   </div>
                 );

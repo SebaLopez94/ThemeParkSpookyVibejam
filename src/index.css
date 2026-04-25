@@ -1991,6 +1991,189 @@ button {
   position: relative;
 }
 
+.px-research-project {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.px-research-project__content {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.px-research-project__name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--px-text);
+  line-height: 1.6;
+  min-width: 0;
+}
+
+.px-research-project__meta {
+  margin-top: 0;
+  gap: 7px;
+}
+
+.px-research-project__action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.px-research-project__action .px-btn {
+  min-width: 124px;
+}
+
+.px-research-project--locked {
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  opacity: 0.82;
+}
+
+.px-research-project__requires {
+  margin: 0;
+}
+
+.px-research-project__lock {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.px-build-asset--research {
+  height: 66px;
+  min-width: 0;
+  background:
+    radial-gradient(ellipse at 50% 76%, rgba(0,0,0,0.56) 0%, rgba(0,0,0,0.22) 38%, transparent 64%),
+    linear-gradient(180deg, rgba(103,232,249,0.07), rgba(255,255,255,0.012));
+  border-color: rgba(103,232,249,0.12);
+}
+
+.px-build-asset--research .px-build-asset__image {
+  width: 74%;
+  height: 74%;
+  object-position: center 34%;
+}
+
+.px-build-asset--research.px-build-asset--wide .px-build-asset__image {
+  width: 88%;
+  height: 62%;
+}
+
+.px-build-asset--research.px-build-asset--tall .px-build-asset__image {
+  width: 58%;
+  height: 82%;
+}
+
+.px-build-asset--research.px-build-asset--decor {
+  height: 70px;
+}
+
+.px-build-asset--research.px-build-asset--decor .px-build-asset__image {
+  width: 58%;
+  height: 82%;
+  object-position: center 26%;
+}
+
+.px-build-asset--research .px-build-asset__fallback {
+  width: 34px;
+  height: 34px;
+}
+
+.px-build-asset--locked {
+  border-color: rgba(148,163,184,0.12);
+}
+
+.px-build-asset--locked .px-build-asset__image,
+.px-build-asset--locked .px-build-asset__fallback {
+  filter: grayscale(0.75) brightness(0.62);
+}
+
+@media (max-width: 640px) {
+  .px-research-project {
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 9px;
+    align-items: center;
+  }
+
+  .px-research-project__name {
+    font-size: 8px;
+    line-height: 1.55;
+  }
+
+  .px-research-project__meta {
+    gap: 6px;
+  }
+
+  .px-research-project__meta .px-soft-chip {
+    font-size: 8px;
+    padding: 5px 6px;
+  }
+
+  .px-research-project__action {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .px-research-project__action .px-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px 10px;
+  }
+
+  .px-research-project--locked {
+    grid-template-columns: 58px minmax(0, 1fr) auto;
+  }
+
+  .px-research-project__requires {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .px-research-project__lock {
+    width: 16px;
+    height: 16px;
+  }
+
+  .px-build-asset--research {
+    height: 58px;
+  }
+
+  .px-build-asset--research .px-build-asset__image {
+    width: 70%;
+    height: 70%;
+    object-position: center 24%;
+  }
+
+  .px-build-asset--research.px-build-asset--wide .px-build-asset__image {
+    width: 88%;
+    height: 58%;
+  }
+
+  .px-build-asset--research.px-build-asset--tall .px-build-asset__image {
+    width: 54%;
+    height: 78%;
+  }
+
+  .px-build-asset--research.px-build-asset--decor {
+    height: 62px;
+  }
+
+  .px-build-asset--research.px-build-asset--decor .px-build-asset__image {
+    width: 56%;
+    height: 78%;
+    object-position: center 18%;
+  }
+
+  .px-build-asset--research .px-build-asset__fallback {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 .px-challenge-board {
   color: #fee2c0;
   background:

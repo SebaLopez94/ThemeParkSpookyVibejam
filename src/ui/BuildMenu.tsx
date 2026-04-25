@@ -3,8 +3,7 @@ import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'l
 import { getAllCatalogItems } from '../data/buildings';
 import { BuildingCatalogItem, BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { BuildingIcon } from './BuildingIcon';
-import { getBuildAssetCategoryClass, getBuildAssetFitClass, getBuildAssetImageSrc, getBuildAssetPositionClass } from './buildAssetImages';
+import { BuildAssetPreview } from './BuildAssetPreview';
 
 interface BuildMenuProps {
   onSelectBuilding: (definition: BuildingDefinition) => void;
@@ -62,40 +61,6 @@ function groupByTab(items: BuildingCatalogItem[], unlockedBuildings: PlaceableBu
 function findBestTab(groups: Record<Tab, BuildingCatalogItem[]>, preferred: Tab): Tab {
   if (groups[preferred].length > 0) return preferred;
   return TABS.find(tab => groups[tab.id].length > 0)?.id ?? preferred;
-}
-
-function BuildAssetPreview({
-  item,
-  variant = 'card',
-}: {
-  item: BuildingCatalogItem;
-  variant?: 'card' | 'selection';
-}) {
-  const imageSrc = getBuildAssetImageSrc(item.subType);
-  const fitClass = getBuildAssetFitClass(item.subType);
-  const categoryClass = getBuildAssetCategoryClass(item.subType);
-  const positionClass = getBuildAssetPositionClass(item.subType);
-
-  return (
-    <div className={`px-build-asset px-build-asset--${variant} ${fitClass} ${categoryClass} ${positionClass}`}>
-      {imageSrc ? (
-        <img
-          className="px-build-asset__image"
-          src={imageSrc}
-          alt={item.name}
-          loading={variant === 'selection' ? 'eager' : 'lazy'}
-          decoding="async"
-        />
-      ) : (
-        <BuildingIcon
-          type={item.type}
-          subType={item.subType}
-          className="px-build-asset__fallback"
-          aria-label={item.name}
-        />
-      )}
-    </div>
-  );
 }
 
 export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuildings, bottom }: BuildMenuProps) {
