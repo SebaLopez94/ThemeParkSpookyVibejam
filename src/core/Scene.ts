@@ -84,7 +84,7 @@ export class GameScene {
     // Cool moon key light for silhouettes and shadow shape.
     this.directionalLight = new THREE.DirectionalLight(0xd6e4ff, mobile ? 1.12 : 1.38);
     this.baseDirectionalIntensity = this.directionalLight.intensity;
-    this.directionalLight.position.set(46, 96, 24);
+    this.directionalLight.position.set(-52, 96, -28);
     this.directionalLight.castShadow = !mobile;
     // Tight frustum (±32 world units) centred on shadow target — 3× better texel density
     // than the old ±100. Target is updated each frame via updateShadowFrustum().
@@ -402,14 +402,12 @@ export class GameScene {
       color: 0x4a3d55,
       roughness: 1.0,
       metalness: 0.0,
-      side: THREE.DoubleSide,
     });
     const matFar = new THREE.MeshStandardMaterial({
       map: montainTex,
       color: 0x6a5a78,
       roughness: 1.0,
       metalness: 0.0,
-      side: THREE.DoubleSide,
     });
 
     // Instanced cones — 1 draw call per layer
@@ -421,34 +419,64 @@ export class GameScene {
       };
 
       const segments = 14;
+      const rings = [
+        { y: 0.00, radius: 1.00, wobble: 0.12 },
+        { y: 0.18, radius: 0.96, wobble: 0.11 },
+        { y: 0.40, radius: 0.76, wobble: 0.12 },
+        { y: 0.62, radius: 0.55, wobble: 0.10 },
+        { y: 0.80, radius: 0.36, wobble: 0.08 },
+        { y: 0.93, radius: 0.22, wobble: 0.05 },
+      ];
       const positions: number[] = [];
       const uvs: number[] = [];
       const indices: number[] = [];
 
-      const ridgeHeights = Array.from({ length: segments + 1 }, (_, i) => {
+      const angleOffsets = Array.from({ length: segments }, (_, i) => {
         const t = i / segments;
-        const broadPeak = Math.sin(t * Math.PI) * 0.34;
-        const secondary = Math.sin(t * Math.PI * 3.0 + variantSeed * 0.013) * 0.10;
-        const broken = (localRng() - 0.5) * 0.10;
-        return THREE.MathUtils.clamp(0.45 + broadPeak + secondary + broken, 0.32, 0.90);
+        const broad = Math.sin(t * Math.PI * 2 + variantSeed * 0.017) * 0.08;
+        return 0.92 + localRng() * 0.18 + broad;
+      });
+      const summitOffset = new THREE.Vector2((localRng() - 0.5) * 0.12, (localRng() - 0.5) * 0.12);
+
+      rings.forEach((ring, ringIndex) => {
+        const ringT = ringIndex / (rings.length - 1);
+        for (let i = 0; i < segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          const roughness = 1 + (localRng() - 0.5) * ring.wobble;
+          const radius = ring.radius * angleOffsets[i] * roughness;
+          const shoulder = Math.sin(angle * 2.0 + variantSeed * 0.01) * 0.025 * (1 - ringT);
+          const x = Math.cos(angle) * radius + summitOffset.x * ringT;
+          const y = ring.y + shoulder + (localRng() - 0.5) * 0.012 * (1 - ringT);
+          const z = Math.sin(angle) * radius + summitOffset.y * ringT;
+          positions.push(x, y, z);
+          uvs.push(i / segments, ringT * 0.9);
+        }
       });
 
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        const x = (t - 0.5) * 2.0;
-        const baseY = -0.03 + (localRng() - 0.5) * 0.025;
-        const ridgeY = ridgeHeights[i];
-        const topZ = (localRng() - 0.5) * 0.06;
-        positions.push(x, baseY, 0, x, ridgeY, topZ);
-        uvs.push(t, 0, t, 0.88);
+      for (let ring = 0; ring < rings.length - 1; ring++) {
+        const current = ring * segments;
+        const next = (ring + 1) * segments;
+        for (let i = 0; i < segments; i++) {
+          const a = current + i;
+          const b = current + ((i + 1) % segments);
+          const c = next + i;
+          const d = next + ((i + 1) % segments);
+          indices.push(a, c, b, b, c, d);
+        }
       }
 
+      const topRing = (rings.length - 1) * segments;
+      let topY = 0;
       for (let i = 0; i < segments; i++) {
-        const a = i * 2;
-        const b = a + 1;
-        const c = a + 2;
-        const d = a + 3;
-        indices.push(a, c, b, b, c, d);
+        topY += positions[(topRing + i) * 3 + 1];
+      }
+      topY /= segments;
+
+      const capCenterIndex = positions.length / 3;
+      positions.push(summitOffset.x, topY - 0.006, summitOffset.y);
+      uvs.push(0.5, 0.86);
+      for (let i = 0; i < segments; i++) {
+        indices.push(topRing + i, capCenterIndex, topRing + ((i + 1) % segments));
       }
 
       const geo = new THREE.BufferGeometry();
@@ -481,11 +509,14 @@ export class GameScene {
         const z = Math.sin(angle) * dist;
         const h = minH + rng() * (maxH - minH);
         const r = minR + rng() * (maxR - minR);
-        const width = r * (1.3 + rng() * 0.65);
+        const stretchX = 0.82 + rng() * 0.42;
+        const stretchZ = 0.82 + rng() * 0.42;
+        const leanX = (rng() - 0.5) * 0.025;
+        const leanZ = (rng() - 0.5) * 0.025;
 
         dummy.position.set(x, -1, z);
-        dummy.scale.set(width, h, 1);
-        dummy.rotation.set(0, -angle - Math.PI / 2 + (rng() - 0.5) * 0.25, 0);
+        dummy.scale.set(r * stretchX, h, r * stretchZ);
+        dummy.rotation.set(leanX, rng() * Math.PI * 2, leanZ);
         dummy.updateMatrix();
         perVariant[i % mountainVariants.length].push(dummy.matrix.clone());
       }
@@ -854,38 +885,127 @@ export class GameScene {
 
   private createMoon(): void {
     const moonGroup = new THREE.Group();
-    const moonPos = new THREE.Vector3(-88, 30, -32);
+    const moonPos = new THREE.Vector3(-66, 30, -42);
+
+    const moonCanvas = document.createElement('canvas');
+    moonCanvas.width = 256;
+    moonCanvas.height = 256;
+    const ctx = moonCanvas.getContext('2d');
+    if (ctx) {
+      const base = ctx.createRadialGradient(104, 88, 8, 128, 128, 128);
+      base.addColorStop(0, '#ffffff');
+      base.addColorStop(0.45, '#eef3ff');
+      base.addColorStop(0.78, '#cbd5ea');
+      base.addColorStop(1, '#98a3bd');
+      ctx.fillStyle = base;
+      ctx.beginPath();
+      ctx.arc(128, 128, 126, 0, Math.PI * 2);
+      ctx.fill();
+
+      const craters = [
+        [86, 78, 20, 0.16], [156, 82, 14, 0.12], [132, 130, 26, 0.10],
+        [184, 148, 18, 0.12], [86, 164, 15, 0.10], [116, 198, 10, 0.09],
+        [190, 104, 8, 0.10], [66, 124, 9, 0.10],
+      ];
+      craters.forEach(([x, y, r, a]) => {
+        const crater = ctx.createRadialGradient(x - r * 0.3, y - r * 0.35, 1, x, y, r);
+        crater.addColorStop(0, `rgba(255,255,255,${a * 0.6})`);
+        crater.addColorStop(0.45, `rgba(132,142,166,${a})`);
+        crater.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = crater;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const limb = ctx.createRadialGradient(98, 88, 40, 128, 128, 128);
+      limb.addColorStop(0, 'rgba(255,255,255,0)');
+      limb.addColorStop(0.72, 'rgba(255,255,255,0)');
+      limb.addColorStop(1, 'rgba(38,42,66,0.34)');
+      ctx.fillStyle = limb;
+      ctx.beginPath();
+      ctx.arc(128, 128, 126, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const moonTexture = new THREE.CanvasTexture(moonCanvas);
+    moonTexture.colorSpace = THREE.SRGBColorSpace;
+    moonTexture.needsUpdate = true;
 
     // Main moon body
-    const moonGeo = new THREE.SphereGeometry(7, 32, 32);
+    const moonGeo = new THREE.SphereGeometry(8.5, 40, 32);
     const moonMat = new THREE.MeshBasicMaterial({ 
-      color: 0xf3f6ff,
+      map: moonTexture,
+      color: 0xf7f9ff,
+      fog: false,
     });
     const moon = new THREE.Mesh(moonGeo, moonMat);
     moonGroup.add(moon);
 
-    // Three layers of halo for a very diffuse look
-    const haloSizes = [11, 26, 54];
-    const haloOpacities = [0.1, 0.045, 0.018];
-    haloSizes.forEach((size, i) => {
-      const geo = new THREE.SphereGeometry(size, 32, 32);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0xc7dcff,
+    const makeMoonGlowTexture = (): THREE.CanvasTexture => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const glowCtx = canvas.getContext('2d');
+      if (glowCtx) {
+        const glow = glowCtx.createRadialGradient(238, 224, 8, 256, 256, 250);
+        glow.addColorStop(0, 'rgba(236,244,255,0.34)');
+        glow.addColorStop(0.14, 'rgba(194,215,255,0.20)');
+        glow.addColorStop(0.42, 'rgba(136,158,220,0.075)');
+        glow.addColorStop(0.72, 'rgba(78,86,140,0.026)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        glowCtx.fillStyle = glow;
+        glowCtx.fillRect(0, 0, 512, 512);
+
+        for (let i = 0; i < 140; i++) {
+          const x = 256 + (Math.random() - 0.5) * 360;
+          const y = 256 + (Math.random() - 0.5) * 300;
+          const r = 18 + Math.random() * 76;
+          const a = Math.random() * 0.018;
+          const smudge = glowCtx.createRadialGradient(x, y, 1, x, y, r);
+          smudge.addColorStop(0, `rgba(210,222,255,${a})`);
+          smudge.addColorStop(1, 'rgba(0,0,0,0)');
+          glowCtx.fillStyle = smudge;
+          glowCtx.beginPath();
+          glowCtx.arc(x, y, r, 0, Math.PI * 2);
+          glowCtx.fill();
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.needsUpdate = true;
+      return texture;
+    };
+
+    const glowTexture = makeMoonGlowTexture();
+    const glowLayers = [
+      { scale: [34, 24], opacity: 0.22, color: 0xdce8ff, z: -0.2 },
+      { scale: [82, 52], opacity: 0.14, color: 0xb9cbff, z: -0.4 },
+      { scale: [142, 82], opacity: 0.06, color: 0x8fa2de, z: -0.6 },
+    ];
+    glowLayers.forEach(layer => {
+      const material = new THREE.SpriteMaterial({
+        map: glowTexture,
+        color: layer.color,
         transparent: true,
-        opacity: haloOpacities[i],
-        depthWrite: false
+        opacity: layer.opacity,
+        depthWrite: false,
+        depthTest: false,
+        fog: false,
       });
-      moonGroup.add(new THREE.Mesh(geo, mat));
+      const sprite = new THREE.Sprite(material);
+      sprite.position.set(0, 0, layer.z);
+      sprite.scale.set(layer.scale[0], layer.scale[1], 1);
+      sprite.renderOrder = -3;
+      moonGroup.add(sprite);
     });
 
-    // Extremely diffuse and subtle light source
-    const moonLight = new THREE.PointLight(0xb9ccff, 0.14, 900);
+    // Very subtle local glow; the main moonlight is the directional light.
+    const moonLight = new THREE.PointLight(0xc5d7ff, 0.08, 760);
     moonLight.position.set(0, 0, 0); 
-    moonLight.layers.enable(BACKGROUND_FOG_LAYER);
     moonGroup.add(moonLight);
 
     moonGroup.position.copy(moonPos);
-    this.enableBackgroundFogLayer(moonGroup);
     this.scene.add(moonGroup);
   }
 

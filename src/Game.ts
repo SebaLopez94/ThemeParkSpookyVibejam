@@ -408,6 +408,7 @@ export class Game {
   private setupMouseControls(): void {
     this.mouseController.onCameraMove = delta => this.cameraController.pan(delta);
     this.mouseController.onCameraZoom = delta => this.cameraController.zoom(delta);
+    this.mouseController.onCameraRotate = angleDelta => this.cameraController.rotate(angleDelta);
     this.mouseController.onRightClick = () => {
       if (!this.selectedBuilding) return false;
       this.cancelBuildMode();

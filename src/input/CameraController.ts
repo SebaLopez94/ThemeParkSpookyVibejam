@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 
-const PAN_RIGHT = new THREE.Vector3(1, 0, -1).normalize();
-const PAN_FORWARD = new THREE.Vector3(-1, 0, -1).normalize();
 const WORLD_BOUNDARY = 50;
 
 export class CameraController {
@@ -13,6 +11,13 @@ export class CameraController {
   private panSpeed = 0.34;
   private readonly zoomStep = 3.2;
   private readonly verticalRatio = 0.95;
+
+  /**
+   * Horizontal orbit angle in radians.
+   * PI/4 = 45° NE — matches the original hardcoded camera position.
+   * Two-finger twist gesture changes this via rotate().
+   */
+  private azimuth = Math.PI / 4;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
@@ -33,13 +38,28 @@ export class CameraController {
 
   public pan(delta: THREE.Vector2): void {
     const scale = this.panSpeed * (this.currentDistance / 54) * 0.1;
+    const cosAz = Math.cos(this.azimuth);
+    const sinAz = Math.sin(this.azimuth);
 
-    this.target.addScaledVector(PAN_RIGHT, -delta.x * scale);
-    this.target.addScaledVector(PAN_FORWARD, delta.y * scale);
+    // Pan axes follow the current azimuth so dragging always moves the scene
+    // in the expected direction regardless of how much the camera has been rotated.
+    // right  = ( sin(az), 0, -cos(az))
+    // forward= (-cos(az), 0, -sin(az))
+    this.target.x += scale * (-delta.x * sinAz  + delta.y * (-cosAz));
+    this.target.z += scale * ( delta.x * cosAz  + delta.y * (-sinAz));
 
     this.target.x = Math.max(-WORLD_BOUNDARY, Math.min(WORLD_BOUNDARY, this.target.x));
     this.target.z = Math.max(-WORLD_BOUNDARY, Math.min(WORLD_BOUNDARY, this.target.z));
 
+    this.updateCameraPosition();
+  }
+
+  /**
+   * Rotate the camera orbit by angleDelta radians around the look-at target.
+   * Called by MouseController when a two-finger twist gesture is detected.
+   */
+  public rotate(angleDelta: number): void {
+    this.azimuth += angleDelta;
     this.updateCameraPosition();
   }
 
@@ -50,14 +70,17 @@ export class CameraController {
   }
 
   private updateCameraPosition(): void {
-    const angle = Math.PI / 4.6;
-    const horizontalDistance = this.currentDistance * Math.cos(angle);
-    const verticalDistance = this.currentDistance * Math.sin(angle) * this.verticalRatio;
+    const elevation = Math.PI / 4.6;
+    // Orbit radius in the horizontal plane. Multiply by sqrt(2) so that at the
+    // default azimuth of PI/4 the X and Z offsets each equal horizontalDistance,
+    // preserving the original camera position exactly.
+    const orbitRadius = this.currentDistance * Math.cos(elevation) * Math.SQRT2;
+    const verticalDistance = this.currentDistance * Math.sin(elevation) * this.verticalRatio;
 
     this.camera.position.set(
-      this.target.x + horizontalDistance,
+      this.target.x + orbitRadius * Math.cos(this.azimuth),
       verticalDistance,
-      this.target.z + horizontalDistance
+      this.target.z + orbitRadius * Math.sin(this.azimuth)
     );
 
     this.camera.lookAt(this.target);

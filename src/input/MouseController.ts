@@ -24,12 +24,16 @@ export class MouseController {
   private lastTouchPos: THREE.Vector2 = new THREE.Vector2();
   private lastPinchDistance = 0;
   private lastPinchCenter: THREE.Vector2 = new THREE.Vector2();
+  /** Angle (radians) between the two touch points at the start of the gesture. */
+  private lastTwistAngle = 0;
 
   /** When true, single-finger drag in build mode moves the placement preview. */
   public touchRotateMode = false;
 
   public onCameraMove: ((delta: THREE.Vector2) => void) | null = null;
   public onCameraZoom: ((delta: number) => void) | null = null;
+  /** Fired when a two-finger twist gesture is detected. Receives radians delta. */
+  public onCameraRotate: ((angleDelta: number) => void) | null = null;
   public onGridHover: ((position: GridPosition | null) => void) | null = null;
   public onGridClick: ((position: GridPosition) => void) | null = null;
   public onGridDrag: ((position: GridPosition) => void) | null = null;
@@ -194,6 +198,7 @@ export class MouseController {
       const cx = (event.touches[0].clientX + event.touches[1].clientX) / 2;
       const cy = (event.touches[0].clientY + event.touches[1].clientY) / 2;
       this.lastPinchCenter.set(cx, cy);
+      this.lastTwistAngle = Math.atan2(dy, dx);
     }
   };
 
@@ -248,6 +253,14 @@ export class MouseController {
         this.onCameraMove?.(this._delta);
       }
       this.lastPinchCenter.set(cx, cy);
+
+      // Two-finger twist (camera orbit rotation)
+      const newAngle = Math.atan2(dy, dx);
+      const angleDelta = Math.atan2(Math.sin(newAngle - this.lastTwistAngle), Math.cos(newAngle - this.lastTwistAngle));
+      if (Math.abs(angleDelta) > 0.01) {
+        this.onCameraRotate?.(angleDelta);
+        this.lastTwistAngle = newAngle;
+      }
     }
   };
 
