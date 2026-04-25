@@ -4,6 +4,7 @@ import { getAllCatalogItems } from '../data/buildings';
 import { BuildingCatalogItem, BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { BuildingIcon } from './BuildingIcon';
+import { getBuildAssetCategoryClass, getBuildAssetFitClass, getBuildAssetImageSrc, getBuildAssetPositionClass } from './buildAssetImages';
 
 interface BuildMenuProps {
   onSelectBuilding: (definition: BuildingDefinition) => void;
@@ -34,6 +35,10 @@ function getSizeLabel(def: BuildingDefinition): string {
   return '1x1';
 }
 
+function getFunDots(quality: number): number {
+  return Math.max(1, Math.min(10, Math.round(quality / 10)));
+}
+
 function groupByTab(items: BuildingCatalogItem[], unlockedBuildings: PlaceableBuildingKind[]): Record<Tab, BuildingCatalogItem[]> {
   const unlockedSet = new Set(unlockedBuildings);
   const groups: Record<Tab, BuildingCatalogItem[]> = {
@@ -57,6 +62,40 @@ function groupByTab(items: BuildingCatalogItem[], unlockedBuildings: PlaceableBu
 function findBestTab(groups: Record<Tab, BuildingCatalogItem[]>, preferred: Tab): Tab {
   if (groups[preferred].length > 0) return preferred;
   return TABS.find(tab => groups[tab.id].length > 0)?.id ?? preferred;
+}
+
+function BuildAssetPreview({
+  item,
+  variant = 'card',
+}: {
+  item: BuildingCatalogItem;
+  variant?: 'card' | 'selection';
+}) {
+  const imageSrc = getBuildAssetImageSrc(item.subType);
+  const fitClass = getBuildAssetFitClass(item.subType);
+  const categoryClass = getBuildAssetCategoryClass(item.subType);
+  const positionClass = getBuildAssetPositionClass(item.subType);
+
+  return (
+    <div className={`px-build-asset px-build-asset--${variant} ${fitClass} ${categoryClass} ${positionClass}`}>
+      {imageSrc ? (
+        <img
+          className="px-build-asset__image"
+          src={imageSrc}
+          alt={item.name}
+          loading={variant === 'selection' ? 'eager' : 'lazy'}
+          decoding="async"
+        />
+      ) : (
+        <BuildingIcon
+          type={item.type}
+          subType={item.subType}
+          className="px-build-asset__fallback"
+          aria-label={item.name}
+        />
+      )}
+    </div>
+  );
 }
 
 export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuildings, bottom }: BuildMenuProps) {
@@ -99,10 +138,10 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
   const shellStyle = isMobile
     ? {
         position: 'fixed' as const,
-        bottom: bottom ?? 90,
+        inset: 0,
         left: 0,
         right: 0,
-        zIndex: 40,
+        zIndex: 80,
       }
     : {
         position: 'fixed' as const,
@@ -119,9 +158,10 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
         style={{
           width: isMobile ? undefined : 920,
           maxWidth: isMobile ? undefined : '96vw',
-          margin: isMobile ? '0 8px' : undefined,
+          height: isMobile ? '100dvh' : undefined,
+          margin: isMobile ? 0 : undefined,
           padding: 0,
-          maxHeight: isMobile ? 'calc(100dvh - 76px - var(--safe-bottom))' : 'min(78vh, 760px)',
+          maxHeight: isMobile ? '100dvh' : 'min(78vh, 760px)',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -240,9 +280,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
                         if (affordable) onSelectBuilding(item);
                       }}
                     >
-                      <div className="px-build-item__thumb">
-                        <BuildingIcon type={item.type} subType={item.subType} className="px-build-item__emoji" />
-                      </div>
+                      <BuildAssetPreview item={item} />
 
                       <div className="px-build-item__body">
                         <div className="px-build-item__name">{item.name}</div>
@@ -296,21 +334,35 @@ function BuildSelectionCard({
     );
   }
 
+  const funDots = getFunDots(item.quality);
+
   return (
     <div className={`px-build-selection ${compact ? 'px-build-selection--compact' : ''}`}>
-      <div className="px-build-selection__top">
-        <div className="px-build-selection__identity">
-          <BuildingIcon type={item.type} subType={item.subType} className="px-build-selection__emoji" />
-          <div className="px-build-selection__copy">
-            <div className="px-build-selection__name">{item.name}</div>
-            <p className="px-body px-build-selection__description">{item.description}</p>
-          </div>
-        </div>
+      <div className="px-build-selection__copy">
+        <div className="px-build-selection__name">{item.name}</div>
+        <p className="px-body px-build-selection__description">{item.description}</p>
       </div>
 
+      {item.type === BuildingType.RIDE && (
+        <div className="px-build-selection__fun">
+          <div className="px-build-selection__fun-head">
+            <span>FUN</span>
+            <span>{funDots}/10</span>
+          </div>
+          <div className="px-build-selection__fun-dots" aria-label={`Fun ${funDots} out of 10`}>
+            {Array.from({ length: 10 }).map((_, index) => (
+              <span
+                key={index}
+                className={`px-build-selection__fun-dot${index < funDots ? ' px-build-selection__fun-dot--filled' : ''}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="px-build-selection__facts">
-        <div className="px-chip">${item.cost}</div>
-        <div className="px-chip">{getSizeLabel(item)}</div>
+        <span>${item.cost}</span>
+        <span>{getSizeLabel(item)}</span>
       </div>
       {!canAfford && (
         <div className="px-build-selection__status px-build-selection__status--locked">

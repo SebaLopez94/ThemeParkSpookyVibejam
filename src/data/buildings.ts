@@ -26,16 +26,16 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     subType: RideType.CAROUSEL,
     ...BUILDING_DISPLAY[RideType.CAROUSEL],
     cost: 450,
-    quality: 58,
-    valueScore: 5
+    quality: 48,   // funBoost ≈  8  (10 × 48/60)
+    valueScore: 4
   },
   [RideType.FERRIS_WHEEL]: {
     type: BuildingType.RIDE,
     subType: RideType.FERRIS_WHEEL,
     ...BUILDING_DISPLAY[RideType.FERRIS_WHEEL],
     cost: 850,
-    quality: 68,
-    valueScore: 8,
+    quality: 63,   // funBoost ≈ 21  (20 × 63/60)
+    valueScore: 7,
     unlockRequirement: 'research_eye_of_doom'
   },
   [RideType.ROLLER_COASTER]: {
@@ -43,8 +43,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     subType: RideType.ROLLER_COASTER,
     ...BUILDING_DISPLAY[RideType.ROLLER_COASTER],
     cost: 1700,
-    quality: 82,
-    valueScore: 12,
+    quality: 86,   // funBoost ≈ 80  (56 × 86/60)
+    valueScore: 14,
     unlockRequirement: 'research_terror_coaster'
   },
   [RideType.HAUNTED_HOUSE]: {
@@ -52,7 +52,7 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     subType: RideType.HAUNTED_HOUSE,
     ...BUILDING_DISPLAY[RideType.HAUNTED_HOUSE],
     cost: 1050,
-    quality: 74,
+    quality: 74,   // funBoost ≈ 40  (32 × 74/60)
     valueScore: 10,
     unlockRequirement: 'research_haunted_house'
   },
@@ -60,24 +60,24 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     type: BuildingType.RIDE,
     subType: RideType.PIRATE_SHIP,
     ...BUILDING_DISPLAY[RideType.PIRATE_SHIP],
-    cost: 900,
-    quality: 72,
+    cost: 1100,
+    quality: 70,   // funBoost ≈ 33  (28 × 70/60)
     valueScore: 9
   },
   [RideType.KRAKEN_RIDE]: {
     type: BuildingType.RIDE,
     subType: RideType.KRAKEN_RIDE,
     ...BUILDING_DISPLAY[RideType.KRAKEN_RIDE],
-    cost: 1450,
-    quality: 79,
-    valueScore: 11
+    cost: 900,
+    quality: 66,   // funBoost ≈ 27  (24 × 66/60)
+    valueScore: 8
   },
   [RideType.INFERNAL_TOWER]: {
     type: BuildingType.RIDE,
     subType: RideType.INFERNAL_TOWER,
     ...BUILDING_DISPLAY[RideType.INFERNAL_TOWER],
     cost: 1250,
-    quality: 76,
+    quality: 78,   // funBoost ≈ 49  (38 × 78/60)
     valueScore: 10
   },
   [ShopType.FOOD_STALL]: {

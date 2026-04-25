@@ -315,6 +315,7 @@ function App() {
 
   const canAfford = (cost: number): boolean => gameRef.current?.canAfford(cost) ?? false;
   const isBuildMenuVisible = showBuildMenu && !selectedBuilding;
+  const shouldShowHud = !(isMobile && isBuildMenuVisible);
   const activeResearchLabel = useMemo(
     () => researchNodes.find(node => node.id === researchState.activeResearchId)?.name ?? 'Idle',
     [researchNodes, researchState.activeResearchId]
@@ -363,7 +364,7 @@ function App() {
       {isLoadingSave && <LoadingScreen mode="transition" onDone={() => setIsLoadingSave(false)} />}
       <ToastStack items={toasts} />
 
-      <HUD economy={economy} />
+      {shouldShowHud && <HUD economy={economy} />}
 
       {/* â”€â”€ Desktop side tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="px-side-tabs">

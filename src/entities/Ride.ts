@@ -85,14 +85,19 @@ export class Ride {
   }
 
   private getHappinessBoost(type: RideType): number {
+    // funBoost = funFactor × (quality / 60)
+    // Tier 1 – Entry (450):   Carousel  → ~8
+    // Tier 2 – Standard:      Ferris/Pirate → ~21 / ~27
+    // Tier 3 – Mid:           Haunted/Infernal → ~40 / ~50
+    // Tier 4 – Premium:       Kraken/Coaster → ~63 / ~80
     const boosts: Record<RideType, number> = {
-      [RideType.CAROUSEL]: 15,
-      [RideType.FERRIS_WHEEL]: 25,
-      [RideType.ROLLER_COASTER]: 40,
-      [RideType.HAUNTED_HOUSE]: 30,
-      [RideType.PIRATE_SHIP]: 28,
-      [RideType.KRAKEN_RIDE]: 36,
-      [RideType.INFERNAL_TOWER]: 32
+      [RideType.CAROUSEL]:      10,  // 900  → ~8
+      [RideType.FERRIS_WHEEL]:  20,  // 850  → ~21
+      [RideType.KRAKEN_RIDE]:   26,  // 900  → ~29
+      [RideType.PIRATE_SHIP]:   32,  // 1100 → ~37
+      [RideType.HAUNTED_HOUSE]: 32,  // 1050 → ~40  (research needed)
+      [RideType.INFERNAL_TOWER]:38,  // 1250 → ~49
+      [RideType.ROLLER_COASTER]:56,  // 1700 → ~80
     };
     return boosts[type];
   }
