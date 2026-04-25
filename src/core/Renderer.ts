@@ -92,7 +92,7 @@ export class GameRenderer {
     });
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 0.85 : 1.5));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.0 : 1.5));
     this.renderer.shadowMap.enabled = !mobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
@@ -118,7 +118,7 @@ export class GameRenderer {
       shader.uniforms.uFogColor = { value: new THREE.Color(0x79819f) };
       shader.uniforms.uFogTop = { value: this.mobile ? 7.2 : 8.4 };
       shader.uniforms.uFogDepth = { value: this.mobile ? 6.2 : 7.4 };
-      shader.uniforms.uFogOpacity = { value: this.mobile ? 0.24 : 0.40 };
+      shader.uniforms.uFogOpacity = { value: this.mobile ? 0.24 : 0.50 };
       shader.uniforms.uFogExponent = { value: 0.95 };
       shader.uniforms.uNoiseScale = { value: this.mobile ? 0.085 : 0.14 };
       shader.uniforms.uNoiseStrength = { value: this.mobile ? 0.018 : 0.028 };

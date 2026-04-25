@@ -111,6 +111,13 @@ export class VisitorSystem {
   private readonly visitorStuckTimers = new Map<string, number>();
   private static readonly STUCK_TIMEOUT = 8; // seconds before forced despawn
 
+  /**
+   * Current frame timestamp (performance.now()/1000), set once at the top of
+   * update() and reused by all methods called within the same tick.
+   * Eliminates canUseRide() calling performance.now() up to 7×200=1400 times/sec.
+   */
+  private frameNow = 0;
+
   public onVisitorSpawn: (() => void) | null = null;
   public onVisitorRestoreSpawn: (() => void) | null = null;
   public onVisitorLeave: (() => void) | null = null;
@@ -170,8 +177,9 @@ export class VisitorSystem {
     const densityMap = this.densityMapCache;
     this.toRemoveBuffer.length = 0;
     const toRemove = this.toRemoveBuffer;
-    // Compute once per frame — passed into every visitor to eliminate per-visitor system calls.
+    // Compute once per frame — reused by all visitor methods called this tick.
     const now = performance.now() / 1000;
+    this.frameNow = now;
     // Math.pow(0.995, deltaTime*60) computed once — eliminates 200 Math.pow calls/frame.
     const moodDecay = Math.pow(0.995, deltaTime * 60);
 
@@ -267,7 +275,7 @@ export class VisitorSystem {
         const decorBonus = Math.min(entities.getLocalDecorationBonus(ride.data.accessCell), 20);
         const funBoost = Math.min(100, ride.data.funFactor * (ride.data.quality / 60) + decorBonus);
         visitor.boostFun(funBoost);
-        visitor.markRideUsed(ride.data.id);
+        visitor.markRideUsed(ride.data.id, this.frameNow);
         visitor.startActivity('ride', ride.data.duration);
         if (fairness < 0.45) visitor.adjustHappiness(-6);
         else visitor.adjustHappiness(3); // positive memory from a fair ride
@@ -298,7 +306,7 @@ export class VisitorSystem {
           emoji: this.getShopActivityEmoji(shop.data.shopType),
           message: 'Buying something.',
           duration: 10,
-        }, { force: true, cooldownSeconds: 2 });
+        }, { force: true, cooldownSeconds: 2 }, this.frameNow);
         visitor.startActivity('shop', 10);
       }
       return;
@@ -322,7 +330,7 @@ export class VisitorSystem {
           emoji: '🚻',
           message: 'Using the restroom.',
           duration: 8,
-        }, { force: true, cooldownSeconds: 2 });
+        }, { force: true, cooldownSeconds: 2 }, this.frameNow);
         visitor.startActivity('service', 8);
       }
       return;
@@ -437,7 +445,7 @@ export class VisitorSystem {
     const rideCandidates = this._rideCandidates;
     rideCandidates.length = 0;
     for (const ride of rides) {
-      if (!visitor.canUseRide(ride.data.id)) continue;
+      if (!visitor.canUseRide(ride.data.id, this.frameNow)) continue;
       const useCount = visitor.data.rideUseCounts[ride.data.id] ?? 0;
       const varietyPenalty = Math.min(useCount * 0.12, 0.4);
       const idx = rideCandidates.length;

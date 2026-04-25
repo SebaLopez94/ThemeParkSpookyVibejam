@@ -88,14 +88,14 @@ export class GameScene {
     this.directionalLight.castShadow = !mobile;
     // Tight frustum (±32 world units) centred on shadow target — 3× better texel density
     // than the old ±100. Target is updated each frame via updateShadowFrustum().
-    this.directionalLight.shadow.camera.left = -32;
-    this.directionalLight.shadow.camera.right = 32;
-    this.directionalLight.shadow.camera.top = 32;
-    this.directionalLight.shadow.camera.bottom = -32;
-    this.directionalLight.shadow.mapSize.width = mobile ? 256 : 1024;
-    this.directionalLight.shadow.mapSize.height = mobile ? 256 : 1024;
-    this.directionalLight.shadow.bias = -0.00015;
-    this.directionalLight.shadow.normalBias = 0.03;
+    this.directionalLight.shadow.camera.left = -58;
+    this.directionalLight.shadow.camera.right = 58;
+    this.directionalLight.shadow.camera.top = 58;
+    this.directionalLight.shadow.camera.bottom = -58;
+    this.directionalLight.shadow.mapSize.width = mobile ? 256 : 2048;
+    this.directionalLight.shadow.mapSize.height = mobile ? 256 : 2048;
+    this.directionalLight.shadow.bias = -0.00008;
+    this.directionalLight.shadow.normalBias = 0.045;
     // Target must be in the scene for position updates to take effect.
     this.scene.add(this.directionalLight);
     this.scene.add(this.directionalLight.target);
@@ -392,14 +392,79 @@ export class GameScene {
 
     // Two mountain materials — far peaks slightly lighter so they read against the sky
     const montainTex = sharedTextureLoader.load('/models/montain.png');
+    montainTex.colorSpace = THREE.SRGBColorSpace;
     montainTex.wrapS = THREE.RepeatWrapping;
     montainTex.wrapT = THREE.RepeatWrapping;
     montainTex.repeat.set(2, 2);
 
-    const matNear = new THREE.MeshStandardMaterial({ map: montainTex, color: 0x4a3d55, roughness: 1.0, metalness: 0.0, flatShading: true });
-    const matFar  = new THREE.MeshStandardMaterial({ map: montainTex, color: 0x6a5a78, roughness: 1.0, metalness: 0.0, flatShading: true });
+    const matNear = new THREE.MeshStandardMaterial({
+      map: montainTex,
+      color: 0x4a3d55,
+      roughness: 1.0,
+      metalness: 0.0,
+      side: THREE.DoubleSide,
+    });
+    const matFar = new THREE.MeshStandardMaterial({
+      map: montainTex,
+      color: 0x6a5a78,
+      roughness: 1.0,
+      metalness: 0.0,
+      side: THREE.DoubleSide,
+    });
 
     // Instanced cones — 1 draw call per layer
+    const createMountainGeometry = (variantSeed: number): THREE.BufferGeometry => {
+      let localSeed = variantSeed;
+      const localRng = () => {
+        localSeed = (localSeed * 16807) % 2147483647;
+        return (localSeed - 1) / 2147483646;
+      };
+
+      const segments = 14;
+      const positions: number[] = [];
+      const uvs: number[] = [];
+      const indices: number[] = [];
+
+      const ridgeHeights = Array.from({ length: segments + 1 }, (_, i) => {
+        const t = i / segments;
+        const broadPeak = Math.sin(t * Math.PI) * 0.34;
+        const secondary = Math.sin(t * Math.PI * 3.0 + variantSeed * 0.013) * 0.10;
+        const broken = (localRng() - 0.5) * 0.10;
+        return THREE.MathUtils.clamp(0.45 + broadPeak + secondary + broken, 0.32, 0.90);
+      });
+
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const x = (t - 0.5) * 2.0;
+        const baseY = -0.03 + (localRng() - 0.5) * 0.025;
+        const ridgeY = ridgeHeights[i];
+        const topZ = (localRng() - 0.5) * 0.06;
+        positions.push(x, baseY, 0, x, ridgeY, topZ);
+        uvs.push(t, 0, t, 0.88);
+      }
+
+      for (let i = 0; i < segments; i++) {
+        const a = i * 2;
+        const b = a + 1;
+        const c = a + 2;
+        const d = a + 3;
+        indices.push(a, c, b, b, c, d);
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    };
+
+    const mountainVariants = [
+      createMountainGeometry(701),
+      createMountainGeometry(907),
+      createMountainGeometry(1301),
+    ];
+
     const buildLayer = (
       count: number,
       minDist: number, maxDist: number,
@@ -407,29 +472,37 @@ export class GameScene {
       minR: number, maxR: number,
       mat: THREE.MeshStandardMaterial
     ) => {
-      const geo  = new THREE.CylinderGeometry(0.05, 1, 1, 6); // unit cylinder (truncated cone)
-      const inst = new THREE.InstancedMesh(geo, mat, count);
-      inst.castShadow = false;
-      inst.receiveShadow = false;
-
+      const perVariant = mountainVariants.map(() => [] as THREE.Matrix4[]);
       const dummy = new THREE.Object3D();
       for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2 + rng() * 0.4;
-        const dist  = minDist + rng() * (maxDist - minDist);
-        const x     = Math.cos(angle) * dist;
-        const z     = Math.sin(angle) * dist;
-        const h     = minH + rng() * (maxH - minH);
-        const r     = minR + rng() * (maxR - minR);
+        const angle = (i / count) * Math.PI * 2 + (rng() - 0.5) * 0.65;
+        const dist = minDist + rng() * (maxDist - minDist);
+        const x = Math.cos(angle) * dist;
+        const z = Math.sin(angle) * dist;
+        const h = minH + rng() * (maxH - minH);
+        const r = minR + rng() * (maxR - minR);
+        const width = r * (1.3 + rng() * 0.65);
 
-        dummy.position.set(x, h * 0.5 - 1, z);
-        dummy.scale.set(r, h, r);
-        dummy.rotation.set(0, rng() * Math.PI, 0);
+        dummy.position.set(x, -1, z);
+        dummy.scale.set(width, h, 1);
+        dummy.rotation.set(0, -angle - Math.PI / 2 + (rng() - 0.5) * 0.25, 0);
         dummy.updateMatrix();
-        inst.setMatrixAt(i, dummy.matrix);
+        perVariant[i % mountainVariants.length].push(dummy.matrix.clone());
       }
-      inst.instanceMatrix.needsUpdate = true;
-      inst.layers.enable(BACKGROUND_FOG_LAYER);
-      this.scene.add(inst);
+
+      mountainVariants.forEach((geo, variantIndex) => {
+        const matrices = perVariant[variantIndex];
+        if (matrices.length === 0) return;
+
+        const inst = new THREE.InstancedMesh(geo, mat, matrices.length);
+        inst.castShadow = false;
+        inst.receiveShadow = false;
+        inst.frustumCulled = true;
+        matrices.forEach((matrix, idx) => inst.setMatrixAt(idx, matrix));
+        inst.instanceMatrix.needsUpdate = true;
+        inst.layers.enable(BACKGROUND_FOG_LAYER);
+        this.scene.add(inst);
+      });
     };
 
     // Close foothills — shorter, dense
@@ -627,49 +700,8 @@ export class GameScene {
     terrainTexture.wrapS = THREE.RepeatWrapping;
     terrainTexture.wrapT = THREE.RepeatWrapping;
 
-    let parkMat: THREE.Material;
-    if (this.mobile) {
-      // Mobile: skip the expensive shader (4 texture samples + 7 noise() calls per fragment).
-      // Keep one texture sample plus a broad alpha feather so fog does not hit
-      // the park border as a hard wall.
-      terrainTexture.repeat.set(GRID_WIDTH / 4, GRID_HEIGHT / 4);
-      parkMat = new THREE.ShaderMaterial({
-        uniforms: {
-          map: { value: terrainTexture },
-          repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
-          fade: { value: 0.12 },
-          tint: { value: new THREE.Color(0x453a35) },
-          mistTint: { value: new THREE.Color(0x737b96) },
-        },
-        vertexShader: /* glsl */`
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: /* glsl */`
-          uniform sampler2D map;
-          uniform vec2 repeat;
-          uniform float fade;
-          uniform vec3 tint;
-          uniform vec3 mistTint;
-          varying vec2 vUv;
-
-          void main() {
-            vec3 color = texture2D(map, vUv * repeat).rgb * tint;
-            float edge = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
-            float feather = smoothstep(0.0, fade, edge);
-            float mistStain = 1.0 - feather;
-            color = mix(color, mistTint, mistStain * 0.16);
-            gl_FragColor = vec4(color, feather);
-          }
-        `,
-        transparent: true,
-        depthWrite: false,
-      });
-    } else {
-      parkMat = new THREE.ShaderMaterial({
+    terrainTexture.colorSpace = THREE.SRGBColorSpace;
+    const parkMat = new THREE.ShaderMaterial({
         uniforms: {
           map:    { value: terrainTexture },
           repeat: { value: new THREE.Vector2(GRID_WIDTH / 4, GRID_HEIGHT / 4) },
@@ -766,7 +798,6 @@ export class GameScene {
         transparent: true,
         depthWrite: false
       });
-    }
     const parkFloor = new THREE.Mesh(parkGeo, parkMat);
     parkFloor.rotation.x = -Math.PI / 2;
     parkFloor.position.y = 0.02;
@@ -777,6 +808,7 @@ export class GameScene {
     const size = 600;
     const geo  = new THREE.PlaneGeometry(size, size);
     const outsideTex = sharedTextureLoader.load('/models/terrain-outside.png');
+    outsideTex.colorSpace = THREE.SRGBColorSpace;
     outsideTex.wrapS = THREE.RepeatWrapping;
     outsideTex.wrapT = THREE.RepeatWrapping;
     outsideTex.repeat.set(30, 30);

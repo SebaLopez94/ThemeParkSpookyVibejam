@@ -362,9 +362,9 @@ export class Visitor {
       { force: true, cooldownSeconds: 0 }
     );
 
-    // Only skip mixers on actual mobile devices.
-    // Narrow desktop windows should keep full walk animation.
-    if (!SHOULD_SKIP_VISITOR_MIXER && cached.clips.length > 0) {
+    // Mobile caps at 20 visitors — 20 AnimationMixers is negligible overhead.
+    // Always enable the walk animation so visitors look alive on all devices.
+    if (cached.clips.length > 0) {
       this.mixer    = new THREE.AnimationMixer(model);
       const walkClip = cached.clips.find(c => c.name.toLowerCase().includes('walk')) ?? cached.clips[0];
       this.walkAction = this.mixer.clipAction(walkClip);
@@ -579,9 +579,9 @@ export class Visitor {
 
   public showMoodWithOptions(
     thought: VisitorThought,
-    options?: { force?: boolean; cooldownSeconds?: number }
+    options?: { force?: boolean; cooldownSeconds?: number },
+    now = performance.now() / 1000
   ): void {
-    const now = performance.now() / 1000;
     if (!options?.force && !this.canShowMood(thought.kind)) return;
     this.data.lastThought = thought;
     this.activeMoodKind = thought.kind;
@@ -649,15 +649,15 @@ export class Visitor {
     this.data.lastThought = thought;
   }
 
-  public markRideUsed(rideId: string): void {
-    this.rideLastUsed.set(rideId, performance.now() / 1000);
+  public markRideUsed(rideId: string, now = performance.now() / 1000): void {
+    this.rideLastUsed.set(rideId, now);
     this.data.rideUseCounts[rideId] = (this.data.rideUseCounts[rideId] ?? 0) + 1;
   }
 
-  public canUseRide(rideId: string): boolean {
+  public canUseRide(rideId: string, now = performance.now() / 1000): boolean {
     const lastUsed = this.rideLastUsed.get(rideId);
     if (lastUsed === undefined) return true;
-    return (performance.now() / 1000) - lastUsed >= Visitor.RIDE_COOLDOWN;
+    return now - lastUsed >= Visitor.RIDE_COOLDOWN;
   }
 
   public dispose(): void {
