@@ -374,7 +374,7 @@ function App() {
             onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); }}
           >
             <Landmark />
-            MANAGE PARK
+            MANAGE
           </button>
           {showParkPanel && (
             <div className="px-anim-enter-scale">

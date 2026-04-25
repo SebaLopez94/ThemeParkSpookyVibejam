@@ -263,7 +263,7 @@ export class Ride {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.z);
-      const targetSize = GRID_SIZE * 3 * 0.62;
+      const targetSize = GRID_SIZE * 3 * 0.68;
       const scale = maxDim > 0 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -274,10 +274,10 @@ export class Ride {
       model.position.y -= scaledBox.min.y;
 
       this.applyRidePresentation(model, {
-        colorLift: 1.9,
-        whiteMix: 0.22,
-        emissiveIntensity: 0.48,
-        roughness: 0.54,
+        colorLift: 1.62,
+        whiteMix: 0.34,
+        emissiveIntensity: 0.38,
+        roughness: 0.58,
       });
 
       this.mesh.add(model);
@@ -291,7 +291,7 @@ export class Ride {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.z);
-      const targetSize = GRID_SIZE * 4 * 0.7; // Modificado para que sea más pequeño
+      const targetSize = GRID_SIZE * 4 * 0.66;
       const scale = maxDim > 0 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -302,10 +302,10 @@ export class Ride {
       model.position.y -= scaledBox.min.y;
 
       this.applyRidePresentation(model, {
-        colorLift: 2.05,
-        whiteMix: 0.28,
-        emissiveIntensity: 0.62,
-        roughness: 0.48,
+        colorLift: 1.82,
+        whiteMix: 0.3,
+        emissiveIntensity: 0.46,
+        roughness: 0.52,
       });
 
       this.mesh.add(model);
@@ -328,13 +328,13 @@ export class Ride {
       model.position.x -= center.x;
       model.position.z -= center.z;
       model.position.y -= scaledBox.min.y;
-      model.position.y -= 0.04;
+      model.position.y -= 0.5;
 
       this.applyRidePresentation(model, {
-        colorLift: 1.88,
-        whiteMix: 0.22,
-        emissiveIntensity: 0.46,
-        roughness: 0.54,
+        colorLift: 1.52,
+        whiteMix: 0.34,
+        emissiveIntensity: 0.32,
+        roughness: 0.6,
       });
 
       this.mesh.add(model);
@@ -386,10 +386,10 @@ export class Ride {
       model.position.y -= scaledBox.min.y;
 
       this.applyRidePresentation(model, {
-        colorLift: 2.08,
-        whiteMix: 0.3,
-        emissiveIntensity: 0.68,
-        roughness: 0.46,
+        colorLift: 1.78,
+        whiteMix: 0.38,
+        emissiveIntensity: 0.5,
+        roughness: 0.5,
         metalness: 0.05,
       });
 

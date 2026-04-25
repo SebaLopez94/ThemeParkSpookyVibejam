@@ -8,12 +8,12 @@ import {
 
 export const RESEARCH_NODES: ResearchNode[] = [
   {
-    id: 'research_pumpkin_lights',
-    name: 'Pumpkin Lantern Rituals',
-    description: 'Unlock glowing Pumpkins to raise park atmosphere.',
-    cost: 150,
-    duration: 25,
-    unlocks: [DecorationType.PUMPKIN],
+    id: 'research_terror_coaster',
+    name: 'Terror Coaster Engineering',
+    description: 'Unlock the Roller Coaster - the most thrilling and profitable ride in the park.',
+    cost: 1400,
+    duration: 100,
+    unlocks: [RideType.ROLLER_COASTER],
     dependencies: []
   },
   {
@@ -32,16 +32,8 @@ export const RESEARCH_NODES: ResearchNode[] = [
     cost: 900,
     duration: 70,
     unlocks: [RideType.HAUNTED_HOUSE],
-    dependencies: ['research_eye_of_doom']
-  },
-  {
-    id: 'research_terror_coaster',
-    name: 'Terror Coaster Engineering',
-    description: 'Unlock the Roller Coaster - the most thrilling and profitable ride in the park.',
-    cost: 1400,
-    duration: 100,
-    unlocks: [RideType.ROLLER_COASTER],
-    dependencies: ['research_eye_of_doom', 'research_haunted_house']
+    dependencies: [],
+    dependenciesAny: ['research_terror_coaster', 'research_eye_of_doom']
   }
 ];
 

@@ -71,7 +71,8 @@ export class ResearchSystem {
       this.cachedNodes = this.nodes.map(node => ({
         ...node,
         unlocks: [...node.unlocks],
-        dependencies: [...node.dependencies]
+        dependencies: [...node.dependencies],
+        dependenciesAny: node.dependenciesAny ? [...node.dependenciesAny] : undefined
       }));
     }
     return this.cachedNodes;
@@ -87,7 +88,9 @@ export class ResearchSystem {
       return false;
     }
 
-    return node.dependencies.every(dep => this.state.completed.includes(dep));
+    const requiredDone = node.dependencies.every(dep => this.state.completed.includes(dep));
+    const anyRequiredDone = !node.dependenciesAny?.length || node.dependenciesAny.some(dep => this.state.completed.includes(dep));
+    return requiredDone && anyRequiredDone;
   }
 
   public startResearch(id: string): ResearchNode | null {

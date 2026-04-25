@@ -534,12 +534,18 @@ export class Visitor {
   }
 
   private calculateHappiness(): number {
-    return (
-      this.data.needs.fun * 0.4 +
-      this.data.needs.hunger * 0.2 +
-      this.data.needs.thirst * 0.2 +
-      this.data.needs.hygiene * 0.2
-    );
+    const { fun, hunger, thirst, hygiene } = this.data.needs;
+
+    const base = fun * 0.4 + hunger * 0.2 + thirst * 0.2 + hygiene * 0.2;
+
+    // Critical-need penalties: being very hungry, thirsty or dirty actively drags
+    // down happiness regardless of fun — fun shouldn't mask basic discomfort.
+    // Each penalty ramps up linearly below its threshold to a max of −24.
+    const hungerPenalty  = hunger  < 30 ? (30 - hunger)  * 0.8 : 0; // up to −24
+    const thirstPenalty  = thirst  < 30 ? (30 - thirst)  * 0.8 : 0; // up to −24
+    const hygienePenalty = hygiene < 30 ? (30 - hygiene) * 0.8 : 0; // up to −24
+
+    return Math.max(0, base - hungerPenalty - thirstPenalty - hygienePenalty);
   }
 
   private updateMoodSprite(now: number): void {

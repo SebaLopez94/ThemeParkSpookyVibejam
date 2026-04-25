@@ -250,6 +250,7 @@ export interface ResearchNode {
   duration: number;
   unlocks: PlaceableBuildingKind[];
   dependencies: string[];
+  dependenciesAny?: string[];
 }
 
 export interface ResearchState {

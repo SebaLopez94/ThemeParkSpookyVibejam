@@ -17,6 +17,8 @@ const BUILD_ASSET_IMAGE_BY_KIND: Partial<Record<PlaceableBuildingKind, string>> 
   [ShopType.DRINK_STAND]: '/models/drinks.png',
   [ShopType.GIFT_SHOP]: '/models/gift.png',
   [ServiceType.RESTROOM]: '/models/wc.png',
+  [DecorationType.SPOOKY_TREE]: '/models/tree.png',
+  [DecorationType.PUMPKIN]: '/models/pumpkin.png',
   [DecorationType.LANTERN]: '/models/lantern.png',
   [DecorationType.TRASH_CUBE]: '/models/trash_cube.png',
   [DecorationType.SKELETON_DECORATION]: '/models/skeleton_decoration.png',
@@ -41,7 +43,6 @@ const TALL_BUILD_ASSETS = new Set<PlaceableBuildingKind>([
 
 const DECORATION_BUILD_ASSETS = new Set<PlaceableBuildingKind>([
   DecorationType.SPOOKY_TREE,
-  DecorationType.STONE,
   DecorationType.PUMPKIN,
   DecorationType.SKELETON_DECORATION,
   DecorationType.FRANKENSTEIN_DECORATION,

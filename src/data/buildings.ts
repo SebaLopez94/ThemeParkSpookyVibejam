@@ -136,22 +136,13 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     quality: 45,
     valueScore: 0
   },
-  [DecorationType.STONE]: {
-    type: BuildingType.DECORATION,
-    subType: DecorationType.STONE,
-    ...BUILDING_DISPLAY[DecorationType.STONE],
-    cost: 25,
-    quality: 48,
-    valueScore: 0
-  },
   [DecorationType.PUMPKIN]: {
     type: BuildingType.DECORATION,
     subType: DecorationType.PUMPKIN,
     ...BUILDING_DISPLAY[DecorationType.PUMPKIN],
     cost: 45,
     quality: 52,
-    valueScore: 0,
-    unlockRequirement: 'research_pumpkin_lights'
+    valueScore: 0
   },
   [DecorationType.SKELETON_DECORATION]: {
     type: BuildingType.DECORATION,
@@ -181,7 +172,7 @@ export const INITIAL_UNLOCKED_BUILDINGS: PlaceableBuildingKind[] = [
   ShopType.GIFT_SHOP,
   ServiceType.RESTROOM,
   DecorationType.SPOOKY_TREE,
-  DecorationType.STONE,
+  DecorationType.PUMPKIN,
   DecorationType.SKELETON_DECORATION,
   DecorationType.FRANKENSTEIN_DECORATION,
   DecorationType.LANTERN,

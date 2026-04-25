@@ -36,6 +36,28 @@ function getUnlockPreviewItem(kind: PlaceableBuildingKind) {
   };
 }
 
+function isResearchNodeReady(node: ResearchNode, completed: string[]): boolean {
+  const requiredDone = node.dependencies.every(dep => completed.includes(dep));
+  const anyRequiredDone = !node.dependenciesAny?.length || node.dependenciesAny.some(dep => completed.includes(dep));
+  return requiredDone && anyRequiredDone;
+}
+
+function getMissingResearchLabels(node: ResearchNode, nodes: ResearchNode[], completed: string[]): string {
+  const missingRequired = node.dependencies
+    .filter(dep => !completed.includes(dep))
+    .map(dep => nodes.find(item => item.id === dep)?.name)
+    .filter((value): value is string => Boolean(value));
+
+  if (node.dependenciesAny?.length && !node.dependenciesAny.some(dep => completed.includes(dep))) {
+    const alternatives = node.dependenciesAny
+      .map(dep => nodes.find(item => item.id === dep)?.name)
+      .filter((value): value is string => Boolean(value));
+    if (alternatives.length > 0) missingRequired.push(alternatives.join(' or '));
+  }
+
+  return missingRequired.join(' + ');
+}
+
 export function ResearchPanel({
   nodes,
   state,
@@ -55,12 +77,12 @@ export function ResearchPanel({
 
   const readyNodes = nodes.filter(node =>
     !state.completed.includes(node.id) &&
-    node.dependencies.every(dep => state.completed.includes(dep))
+    isResearchNodeReady(node, state.completed)
   );
 
   const lockedNodes = nodes.filter(node =>
     !state.completed.includes(node.id) &&
-    node.dependencies.some(dep => !state.completed.includes(dep))
+    !isResearchNodeReady(node, state.completed)
   );
 
   const completedCount = state.completed.length;
@@ -232,9 +254,7 @@ export function ResearchPanel({
               {lockedNodes.map(node => {
                 const unlockItem = node.unlocks[0];
                 const unlockDisplay = BUILDING_DISPLAY[unlockItem];
-                const missing = node.dependencies
-                  .map(dep => nodes.find(item => item.id === dep)?.name)
-                  .filter((value): value is string => Boolean(value));
+                const missing = getMissingResearchLabels(node, nodes, state.completed);
 
                 return (
                   <div
@@ -253,7 +273,7 @@ export function ResearchPanel({
                           {unlockDisplay.name}
                         </div>
                         <div className="px-body px-research-project__requires">
-                          Requires: {missing.join(' + ')}
+                          Requires: {missing}
                         </div>
                       </div>
                       <LockKeyhole className="px-research-project__lock" color="var(--px-muted)" />

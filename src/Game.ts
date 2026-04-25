@@ -106,6 +106,12 @@ export class Game {
   private previewEdges: THREE.LineSegments | null = null;
   private previewModelMeshes: THREE.Mesh[] = [];
   // Persistent materials — created once, never disposed between placements
+  // Single shared ghost material for all meshes inside a preview model.
+  // Avoids allocating N new MeshBasicMaterial instances every time the
+  // building selection changes — one color update hits all meshes at once.
+  private readonly previewModelMat = new THREE.MeshBasicMaterial({
+    color: 0x00ff88, transparent: true, opacity: 0.55, depthWrite: false,
+  });
   private readonly previewGreenMat = new THREE.MeshStandardMaterial({
     color: 0x00ff88, transparent: true, opacity: 0.28,
     emissive: 0x00ff88, emissiveIntensity: 0.15, depthWrite: false
@@ -138,6 +144,8 @@ export class Game {
   };
 
   private static readonly PREVIEW_TARGET_SIZES: Partial<Record<string, number>> = {
+    [RideType.FERRIS_WHEEL]: GRID_SIZE * 3 * 0.68,
+    [RideType.ROLLER_COASTER]: GRID_SIZE * 4 * 0.66,
     [DecorationType.SPOOKY_TREE]: GRID_SIZE * 1.35,
     [DecorationType.STONE]: GRID_SIZE * 0.9,
     [DecorationType.PUMPKIN]: GRID_SIZE * 0.7,
@@ -187,14 +195,23 @@ export class Game {
     parkRating: 0,
   };
 
-  // Selection highlight (shown when BuildingPanel is open)
+  // Selection highlight (shown when BuildingPanel is open).
+  // Group + meshes are created once on first use and reused thereafter —
+  // only their geometry data and position get updated on each selection.
   private selectionHighlight: THREE.Group | null = null;
   private selectionHighlightFill: THREE.Mesh | null = null;
+  private selectionHighlightEdge: THREE.LineSegments | null = null;
   private selectionHighlightTime = 0;
   private readonly selectionFillMat = new THREE.MeshBasicMaterial({
     color: 0xfbbf24, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide
   });
   private readonly selectionEdgeMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
+
+  // UI throttle — emit economyUpdate to React at most every 200 ms (≈5 fps)
+  // instead of on every economy mutation (which can fire at 60 fps).
+  private economyUiAccumulator = 0;
+  private pendingEconomyState: EconomyState | null = null;
+  private static readonly ECONOMY_UI_INTERVAL = 0.2;
 
   public readonly events = new EventBus<GameEvents>();
 
@@ -271,7 +288,9 @@ export class Game {
     // Store unsubscribe handles so dispose() can cleanly detach listeners.
     // Without this, repeated Game instantiation (hot-reload / React StrictMode)
     // accumulates stale callbacks inside the system instances.
-    this.unsubscribeEconomy   = this.economySystem.subscribe(state => this.events.emit('economyUpdate', state));
+    // Store the latest snapshot — the update loop emits it to React at a
+    // throttled rate (ECONOMY_UI_INTERVAL) to avoid 60-fps React re-renders.
+    this.unsubscribeEconomy   = this.economySystem.subscribe(state => { this.pendingEconomyState = state; });
     this.unsubscribeResearch  = this.researchSystem.subscribe(state => this.events.emit('researchUpdate', state));
     this.unsubscribeChallenges = this.challengeSystem.subscribe(state => this.events.emit('challengesUpdate', state));
 
@@ -692,24 +711,21 @@ export class Game {
 
     const element = document.createElement('div');
     element.textContent = text;
-    element.style.position = 'absolute';
-    element.style.left = `${x}px`;
-    element.style.top = `${y}px`;
-    element.style.color = color;
-    element.style.fontWeight = 'bold';
-    element.style.fontSize = '24px';
-    element.style.textShadow = '0 2px 4px rgba(0,0,0,0.5), 0 0 2px rgba(0,0,0,1)';
-    element.style.pointerEvents = 'none';
-    element.style.transform = 'translate(-50%, -50%)';
-    element.style.transition = 'all 1.5s ease-out';
-    element.style.zIndex = '1000';
+    // Set all styles in one shot (single reflow) via cssText
+    element.style.cssText = `position:absolute;left:${x}px;top:${y}px;color:${color};`
+      + `font-weight:bold;font-size:24px;pointer-events:none;z-index:1000;`
+      + `text-shadow:0 2px 4px rgba(0,0,0,.5),0 0 2px #000;`;
 
     this.renderer.renderer.domElement.parentElement?.appendChild(element);
-    void element.offsetWidth;
-    element.style.top = `${y - 60}px`;
-    element.style.opacity = '0';
 
-    setTimeout(() => element.remove(), 1500);
+    // Web Animations API — explicit keyframes need no force-reflow hack
+    element.animate(
+      [
+        { transform: 'translate(-50%, -50%)',        opacity: '1' },
+        { transform: 'translate(-50%, calc(-50% - 60px))', opacity: '0' },
+      ],
+      { duration: 1500, easing: 'ease-out', fill: 'forwards' }
+    ).finished.then(() => element.remove());
   }
 
   public startMoveBuilding(info: SelectedBuildingInfo): void {
@@ -864,9 +880,15 @@ export class Game {
       // Scale to fit footprint
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
+      const isHauntedHousePreview = path === '/models/house.glb';
       const previewTargetSize = subType ? Game.PREVIEW_TARGET_SIZES[subType] : undefined;
-      const maxDim = previewTargetSize ? Math.max(size.x, size.y, size.z) : Math.max(size.x, size.z);
-      const targetSize = previewTargetSize ?? Math.max(footprintW, footprintH) * GRID_SIZE * 0.88;
+      const usesFootprintTarget = subType === RideType.FERRIS_WHEEL || subType === RideType.ROLLER_COASTER || isHauntedHousePreview;
+      const maxDim = !previewTargetSize || usesFootprintTarget
+        ? Math.max(size.x, size.z)
+        : Math.max(size.x, size.y, size.z);
+      const targetSize = isHauntedHousePreview
+        ? GRID_SIZE * 3 * 0.65
+        : previewTargetSize ?? Math.max(footprintW, footprintH) * GRID_SIZE * 0.88;
       const scale = maxDim > 0.01 ? targetSize / maxDim : 1;
       model.scale.setScalar(scale);
 
@@ -875,24 +897,15 @@ export class Game {
       const center = scaled.getCenter(new THREE.Vector3());
       model.position.x -= center.x;
       model.position.z -= center.z;
-      if (path === '/models/house.glb') {
-        model.position.y -= scaled.min.y;
-        model.position.y += 0.02;
-        model.scale.setScalar(scale * 0.72);
-      } else {
-        model.position.y -= scaled.min.y;
-      }
+      model.position.y -= scaled.min.y;
+      if (isHauntedHousePreview) model.position.y -= 0.5;
 
-      // Ghost tinted material — semi-transparent, coloured by validity
+      // Ghost tinted material — all meshes share the same persistent material.
+      // Validity tint is changed by updating previewModelMat.color once, not per-mesh.
       this.previewModelMeshes = [];
       model.traverse(child => {
         if (!(child instanceof THREE.Mesh)) return;
-        child.material = new THREE.MeshBasicMaterial({
-          color: 0x00ff88,
-          transparent: true,
-          opacity: 0.55,
-          depthWrite: false,
-        });
+        child.material = this.previewModelMat;
         child.frustumCulled = false;
         this.previewModelMeshes.push(child);
       });
@@ -925,11 +938,8 @@ export class Game {
       this.previewEdges.material = isValid ? this.previewEdgeGreenMat! : this.previewEdgeRedMat!;
     }
 
-    // Update ghost model tint
-    const tint = isValid ? 0x00ff88 : 0xff3355;
-    this.previewModelMeshes.forEach(mesh => {
-      (mesh.material as THREE.MeshBasicMaterial).color.setHex(tint);
-    });
+    // Update ghost model tint — one call covers all meshes (shared material)
+    this.previewModelMat.color.setHex(isValid ? 0x00ff88 : 0xff3355);
 
     const worldPos = GridHelper.gridToWorld(this.hoveredGridPosition);
     this.previewGroup.position.set(
@@ -949,15 +959,8 @@ export class Game {
     this.previewFloorMesh?.geometry.dispose();
     this.previewEdges?.geometry.dispose();
 
-    // Ghost model geometry comes from the loadBuildingGLTF cache — shared, must NOT dispose.
-    // Ghost model materials are fresh MeshBasicMaterial instances per preview — safe to dispose.
-    this.previewModelMeshes.forEach(mesh => {
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach(m => m.dispose());
-      } else {
-        (mesh.material as THREE.Material).dispose();
-      }
-    });
+    // Ghost model geometry — shared cache, must NOT dispose.
+    // Ghost model material — previewModelMat is persistent, must NOT dispose here.
 
     this.previewGroup = null;
     this.previewFloorMesh = null;
@@ -966,47 +969,48 @@ export class Game {
   }
 
   private showSelectionHighlight(position: GridPosition, width: number, height: number): void {
-    this.hideSelectionHighlight();
+    // Lazy-init — group, fill mesh and edge LineSegments are created once and
+    // reused for every selection.  Only scale + vertex data + position change.
+    if (!this.selectionHighlight) {
+      const fillGeo = new THREE.PlaneGeometry(1, 1);
+      this.selectionHighlightFill = new THREE.Mesh(fillGeo, this.selectionFillMat);
+      this.selectionHighlightFill.rotation.x = -Math.PI / 2;
 
-    // GridHelper.gridToWorld returns center of the single cell at 'position'
+      const edgeGeo = new THREE.BufferGeometry();
+      edgeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(24), 3));
+      this.selectionHighlightEdge = new THREE.LineSegments(edgeGeo, this.selectionEdgeMat);
+
+      this.selectionHighlight = new THREE.Group();
+      this.selectionHighlight.add(this.selectionHighlightFill, this.selectionHighlightEdge);
+      this.scene.scene.add(this.selectionHighlight);
+    }
+
     const cellCenter = GridHelper.gridToWorld(position);
     const wx = cellCenter.x + (width  - 1) * GRID_SIZE / 2;
     const wz = cellCenter.z + (height - 1) * GRID_SIZE / 2;
     const w  = width  * GRID_SIZE - 0.12;
     const h  = height * GRID_SIZE - 0.12;
 
-    const fillGeo = new THREE.PlaneGeometry(w, h);
-    this.selectionHighlightFill = new THREE.Mesh(fillGeo, this.selectionFillMat);
-    this.selectionHighlightFill.rotation.x = -Math.PI / 2;
+    // Resize fill via scale — avoids recreating PlaneGeometry each time
+    this.selectionHighlightFill!.scale.set(w, 1, h);
 
-    const edgeGeo = new THREE.BufferGeometry();
-    const hw = w / 2; const hh = h / 2;
-    const verts = new Float32Array([
-      -hw, 0, -hh,   hw, 0, -hh,
-       hw, 0, -hh,   hw, 0,  hh,
-       hw, 0,  hh,  -hw, 0,  hh,
-      -hw, 0,  hh,  -hw, 0, -hh,
-    ]);
-    edgeGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-    const edges = new THREE.LineSegments(edgeGeo, this.selectionEdgeMat);
+    // Update edge vertices in-place — same 8-vertex layout, just different hw/hh
+    const hw = w / 2, hh = h / 2;
+    const edgeAttr = this.selectionHighlightEdge!.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const v = edgeAttr.array as Float32Array;
+    v[0]=-hw; v[1]=0; v[2]=-hh;  v[3]= hw; v[4]=0; v[5]=-hh;
+    v[6]= hw; v[7]=0; v[8]=-hh;  v[9]= hw; v[10]=0; v[11]= hh;
+    v[12]= hw; v[13]=0; v[14]= hh;  v[15]=-hw; v[16]=0; v[17]= hh;
+    v[18]=-hw; v[19]=0; v[20]= hh;  v[21]=-hw; v[22]=0; v[23]=-hh;
+    edgeAttr.needsUpdate = true;
 
-    this.selectionHighlight = new THREE.Group();
-    this.selectionHighlight.add(this.selectionHighlightFill, edges);
     this.selectionHighlight.position.set(wx, 0.06, wz);
-    this.scene.scene.add(this.selectionHighlight);
+    this.selectionHighlight.visible = true;
     this.selectionHighlightTime = 0;
   }
 
   private hideSelectionHighlight(): void {
-    if (!this.selectionHighlight) return;
-    this.scene.scene.remove(this.selectionHighlight);
-    this.selectionHighlight.children.forEach(child => {
-      if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
-        child.geometry.dispose();
-      }
-    });
-    this.selectionHighlight = null;
-    this.selectionHighlightFill = null;
+    if (this.selectionHighlight) this.selectionHighlight.visible = false;
   }
 
   public deselectBuilding(): void {
@@ -1413,6 +1417,11 @@ export class Game {
     sim.isOpen      = this.economySystem.isOpen;
     sim.ticketPrice = this.economySystem.ticketPrice;
     sim.parkRating  = this.economySystem.parkRating;
+
+    // Begin batch BEFORE visitor update so that onVisitorSpend / onVisitorLeave /
+    // onVisitorSpawn mutations are all deferred and collapsed into one notification
+    // at endBatch(), instead of firing separately outside the batch window.
+    this.economySystem.beginBatch();
     this.visitorSystem.update(deltaTime, sim);
 
     const unlocked = this.researchSystem.update(deltaTime);
@@ -1429,9 +1438,7 @@ export class Game {
 
     this.processChallengeRewardQueue(deltaTime);
 
-    // Batch all economy mutations in this tick so that chargeMaintenance() and
-    // updateParkRating() together produce a single UI notification instead of two.
-    this.economySystem.beginBatch();
+    // Economy mutations for maintenance + rating (already inside the batch started above).
 
     const maintenance = this.buildingSystem.getMaintenanceChargePerInterval();
     this.economySystem.setMaintenancePerMinute(maintenance * (60 / this.MAINTENANCE_UPDATE_INTERVAL));
@@ -1474,8 +1481,17 @@ export class Game {
       completed.forEach(challenge => this.queueChallengeReward(challenge.id));
     }
 
-    // Flush: sends at most one notification to the UI covering all mutations above.
+    // Flush: sends at most one notification covering all mutations this tick.
     this.economySystem.endBatch();
+
+    // Throttle economy → React: emit at most every ECONOMY_UI_INTERVAL seconds.
+    // This prevents 60 React re-renders/sec when visitors are spending money.
+    this.economyUiAccumulator += deltaTime;
+    if (this.economyUiAccumulator >= Game.ECONOMY_UI_INTERVAL && this.pendingEconomyState) {
+      this.economyUiAccumulator = 0;
+      this.events.emit('economyUpdate', this.pendingEconomyState);
+      this.pendingEconomyState = null;
+    }
 
     // Shadow map throttle: re-render every N frames instead of every frame.
     // Visitor movement doesn't cast shadows so there's nothing dynamic to track.
@@ -1556,13 +1572,19 @@ export class Game {
     this.teardownAudioResume();
     this.mouseController.dispose();
     this.disposePreview();
+    this.previewModelMat.dispose();
     this.previewGreenMat.dispose();
     this.previewRedMat.dispose();
     this.previewEdgeGreenMat.dispose();
     this.previewEdgeRedMat.dispose();
     this.selectionFillMat.dispose();
     this.selectionEdgeMat.dispose();
-    this.hideSelectionHighlight();
+    if (this.selectionHighlight) {
+      this.scene.scene.remove(this.selectionHighlight);
+      this.selectionHighlightFill?.geometry.dispose();
+      this.selectionHighlightEdge?.geometry.dispose();
+      this.selectionHighlight = null;
+    }
     this.buildingSystem.clear();
     this.visitorSystem.clear();
     disposeEmojiTextureCache();
