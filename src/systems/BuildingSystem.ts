@@ -496,20 +496,24 @@ export class BuildingSystem {
       rides: this.getRides().map(ride => ({
         position: { ...ride.data.position },
         subType: ride.data.rideType,
-        price: ride.data.price
+        price: ride.data.price,
+        rotationY: ride.mesh.rotation.y
       })),
       shops: this.getShops().map(shop => ({
         position: { ...shop.data.position },
         subType: shop.data.shopType,
-        price: shop.data.price
+        price: shop.data.price,
+        rotationY: shop.mesh.rotation.y
       })),
       services: this.getServices().map(service => ({
         position: { ...service.data.position },
-        subType: service.data.serviceType
+        subType: service.data.serviceType,
+        rotationY: service.mesh.rotation.y
       })),
       decorations: this.getDecorations().map(decoration => ({
         position: { ...decoration.data.position },
-        subType: decoration.data.decorationType
+        subType: decoration.data.decorationType,
+        rotationY: decoration.mesh.rotation.y
       }))
     };
   }

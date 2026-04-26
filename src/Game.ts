@@ -1107,23 +1107,30 @@ export class Game {
     buildings.rides.forEach(entry => {
       const placed = this.buildingSystem.placeRide(entry.position, entry.subType);
       if (!placed) throw new Error(`Failed to restore ride at ${entry.position.x},${entry.position.z}.`);
+      placed.mesh.rotation.y = entry.rotationY ?? 0;
       this.buildingSystem.updateBuildingPrice(entry.position, entry.price);
     });
 
     buildings.shops.forEach(entry => {
       const placed = this.buildingSystem.placeShop(entry.position, entry.subType);
       if (!placed) throw new Error(`Failed to restore shop at ${entry.position.x},${entry.position.z}.`);
+      placed.mesh.rotation.y = entry.rotationY ?? 0;
+      this.buildingSystem.refreshStaticBuildingVisual(placed);
       this.buildingSystem.updateBuildingPrice(entry.position, entry.price);
     });
 
     buildings.services.forEach(entry => {
       const placed = this.buildingSystem.placeService(entry.position, entry.subType);
       if (!placed) throw new Error(`Failed to restore service at ${entry.position.x},${entry.position.z}.`);
+      placed.mesh.rotation.y = entry.rotationY ?? 0;
+      this.buildingSystem.refreshStaticBuildingVisual(placed);
     });
 
     buildings.decorations.forEach(entry => {
       const placed = this.buildingSystem.placeDecoration(entry.position, entry.subType);
       if (!placed) throw new Error(`Failed to restore decoration at ${entry.position.x},${entry.position.z}.`);
+      placed.mesh.rotation.y = entry.rotationY ?? 0;
+      this.buildingSystem.refreshDecorationVisual(placed);
     });
 
     this.renderer.invalidateShadowMap();
@@ -1315,6 +1322,15 @@ export class Game {
     return { position };
   }
 
+  private validateRotation(raw: unknown, label: string): number {
+    if (raw === undefined) return 0;
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+      throw new Error(`${label} has an invalid rotation.`);
+    }
+    const quarterTurn = Math.PI / 2;
+    return Math.round(raw / quarterTurn) * quarterTurn;
+  }
+
   private validateRideEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedRideEntry {
     const entry = raw as Partial<SavedRideEntry>;
     if (!Object.values(RideType).includes(entry.subType as RideType)) {
@@ -1345,7 +1361,12 @@ export class Game {
     );
     if (!hasPathAccess) throw new Error('Save contains a ride without path access.');
 
-    return { position, subType: entry.subType as RideType, price: Math.round(entry.price) };
+    return {
+      position,
+      subType: entry.subType as RideType,
+      price: Math.round(entry.price),
+      rotationY: this.validateRotation(entry.rotationY, 'Ride')
+    };
   }
 
   private validateShopEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedShopEntry {
@@ -1358,7 +1379,12 @@ export class Game {
     }
     const position = this.validateSingleCellBuilding(entry.position, occupied, pathSet, 'Shop');
     this.assertPathAdjacent(position, pathSet, 'Shop');
-    return { position, subType: entry.subType as ShopType, price: Math.round(entry.price) };
+    return {
+      position,
+      subType: entry.subType as ShopType,
+      price: Math.round(entry.price),
+      rotationY: this.validateRotation(entry.rotationY, 'Shop')
+    };
   }
 
   private validateServiceEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedServiceEntry {
@@ -1368,7 +1394,11 @@ export class Game {
     }
     const position = this.validateSingleCellBuilding(entry.position, occupied, pathSet, 'Service');
     this.assertPathAdjacent(position, pathSet, 'Service');
-    return { position, subType: entry.subType as ServiceType };
+    return {
+      position,
+      subType: entry.subType as ServiceType,
+      rotationY: this.validateRotation(entry.rotationY, 'Service')
+    };
   }
 
   private validateDecorationEntry(raw: unknown, occupied: Set<number>, pathSet: Set<number>): SavedDecorationEntry {
@@ -1377,7 +1407,11 @@ export class Game {
       throw new Error('Save contains an unknown decoration.');
     }
     const position = this.validateSingleCellBuilding(entry.position, occupied, pathSet, 'Decoration');
-    return { position, subType: entry.subType as DecorationType };
+    return {
+      position,
+      subType: entry.subType as DecorationType,
+      rotationY: this.validateRotation(entry.rotationY, 'Decoration')
+    };
   }
 
   private validateSingleCellBuilding(raw: unknown, occupied: Set<number>, pathSet: Set<number>, label: string): GridPosition {

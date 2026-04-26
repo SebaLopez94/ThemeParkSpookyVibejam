@@ -315,22 +315,26 @@ export interface SavedRideEntry {
   position: GridPosition;
   subType: RideType;
   price: number;
+  rotationY?: number;
 }
 
 export interface SavedShopEntry {
   position: GridPosition;
   subType: ShopType;
   price: number;
+  rotationY?: number;
 }
 
 export interface SavedServiceEntry {
   position: GridPosition;
   subType: ServiceType;
+  rotationY?: number;
 }
 
 export interface SavedDecorationEntry {
   position: GridPosition;
   subType: DecorationType;
+  rotationY?: number;
 }
 
 export interface SavedBuildingsData {
