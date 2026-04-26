@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -40,30 +40,40 @@ function happinessToFaceIndex(h: number): number {
   return 5;             // AMAZING
 }
 
-const JOY_FACES: Array<{ emoji: string; label: string; color: string }> = [
-  { emoji: '😡', label: 'FURIOUS',  color: '#ef4444' },
-  { emoji: '😢', label: 'SAD',      color: '#93c5fd' },
-  { emoji: '😐', label: 'NEUTRAL',  color: '#94a3b8' },
-  { emoji: '🙂', label: 'HAPPY',    color: '#86efac' },
-  { emoji: '😄', label: 'GREAT',    color: '#4ade80' },
-  { emoji: '🤩', label: 'AMAZING',  color: '#fbbf24' },
+const JOY_FACES: Array<{ image: string; label: string; color: string }> = [
+  { image: 'FURIOUS', label: 'FURIOUS', color: '#ef4444' },
+  { image: 'SAD', label: 'SAD', color: '#93c5fd' },
+  { image: 'NEUTRAL', label: 'NEUTRAL', color: '#94a3b8' },
+  { image: 'HAPPY', label: 'HAPPY', color: '#86efac' },
+  { image: 'GREAT', label: 'GREAT', color: '#4ade80' },
+  { image: 'AMAZING', label: 'AMAZING', color: '#fbbf24' },
 ];
 
 function JoyFace({ stars, mobile }: { stars: number; mobile: boolean }) {
   const idx = Math.max(0, Math.min(5, stars));
-  const { emoji, label, color } = JOY_FACES[idx];
+  const { image, label, color } = JOY_FACES[idx];
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: mobile ? 4 : 6 }}>
-      <span style={{ fontSize: mobile ? 22 : 26, lineHeight: 1, filter: 'drop-shadow(1px 1px 0 #000)' }}>
-        {emoji}
-      </span>
+      <img
+        src={`/ui/${image}.webp`}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        style={{
+          width: mobile ? 28 : 32,
+          height: mobile ? 28 : 32,
+          objectFit: 'contain',
+          imageRendering: 'auto',
+          filter: `drop-shadow(1px 1px 0 #000) drop-shadow(0 0 7px ${color}66)`,
+          flexShrink: 0,
+        }}
+      />
       <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: mobile ? 8 : 9, color, textShadow: '1px 1px 0 #000' }}>
         {label}
       </span>
     </span>
   );
 }
-
 interface HUDProps {
   economy: EconomyState;
 }
@@ -246,3 +256,4 @@ function InlineRating({
     </div>
   );
 }
+

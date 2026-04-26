@@ -77,6 +77,16 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
         background: 'linear-gradient(180deg, rgba(4,1,12,0.78) 0%, rgba(4,1,12,0.42) 35%, rgba(4,1,12,0.48) 65%, rgba(4,1,12,0.85) 100%)',
       }} />
 
+      <div className="px-menu-bats" aria-hidden="true">
+        <span className="px-menu-bat px-menu-bat--one" />
+        <span className="px-menu-bat px-menu-bat--two" />
+        <span className="px-menu-bat px-menu-bat--three" />
+        <span className="px-menu-bat px-menu-bat--four" />
+        <span className="px-menu-bat px-menu-bat--five" />
+        <span className="px-menu-bat px-menu-bat--six" />
+        <span className="px-menu-bat px-menu-bat--seven" />
+      </div>
+
       {/* Main content — logo + buttons */}
       <div style={{
         position: 'relative', zIndex: 1,
@@ -122,23 +132,19 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
         </div>
 
         {/* Buttons */}
-        <div style={{
-          width: '100%', maxWidth: isMobile ? 300 : 340,
-          display: 'flex', flexDirection: 'column',
-          gap: isMobile ? 14 : 16,
-        }}>
+        <div
+          className="px-menu-actions-plain"
+          style={{
+            maxWidth: isMobile ? 300 : 340,
+          }}
+        >
           {/* NEW GAME — primary CTA */}
           <button
             ref={newGameBtnRef}
-            className="px-btn px-btn--lg"
+            className="px-btn px-menu-action px-menu-action--primary"
             style={{
-              width: '100%', justifyContent: 'center',
-              fontSize: isMobile ? 13 : 15,
-              padding: isMobile ? '16px 20px' : '18px 24px',
-              borderTopColor: '#d4c0ec', borderLeftColor: '#c4aee0',
               animation: 'px-menu-pulse 2.2s ease-in-out infinite, px-menu-btn-enter 0.45s 0.25s cubic-bezier(0.34,1.2,0.64,1) both',
               opacity: hoveredBtn === 'load' ? 0.55 : 1,
-              transition: 'opacity 0.18s ease',
             }}
             onClick={onNewGame}
             onMouseEnter={() => setHoveredBtn('new')}
@@ -146,18 +152,15 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
             aria-label="Start a new game"
           >
             <Play />
-            NEW GAME
+            <span>NEW GAME</span>
           </button>
 
           {/* LOAD GAME */}
           <button
-            className="px-btn px-btn--lg"
+            className="px-btn px-menu-action px-menu-action--secondary"
             style={{
-              width: '100%', justifyContent: 'center',
-              fontSize: isMobile ? 13 : 14,
               animation: 'px-menu-btn-enter 0.45s 0.38s cubic-bezier(0.34,1.2,0.64,1) both',
               opacity: hoveredBtn === 'new' ? 0.55 : 1,
-              transition: 'opacity 0.18s ease',
             }}
             onClick={handleLoadClick}
             onMouseEnter={() => setHoveredBtn('load')}
@@ -165,7 +168,7 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
             aria-label="Load a saved game"
           >
             <FolderOpen />
-            LOAD GAME
+            <span>LOAD GAME</span>
           </button>
 
           {errorMessage && (
