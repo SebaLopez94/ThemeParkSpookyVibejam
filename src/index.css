@@ -4039,20 +4039,25 @@ button {
     background: transparent;
     border: none;
     box-shadow: none;
-    color: rgba(167, 139, 250, 0.42);   /* park violet dim — overridden per type below */
+    color: rgba(167, 139, 250, 0.65);   /* park violet dim — overridden per type below */
     text-shadow: none;
     border-radius: 10px;
     transition: color 0.18s ease, background 0.18s ease, transform 0.1s ease;
     position: relative;
   }
 
+  .px-mobile-tab::before,
+  .px-mobile-tab::after {
+    display: none;
+  }
+
   /* Inactive per-type muted colors */
   .px-mobile-tab.px-side-tab--challenges {
-    color: rgba(251, 146, 60, 0.42);
+    color: rgba(251, 146, 60, 0.65);
   }
 
   .px-mobile-tab.px-side-tab--research {
-    color: rgba(103, 232, 249, 0.38);
+    color: rgba(103, 232, 249, 0.65);
   }
 
   /* Hover only on pointer devices — prevents sticky hover on touch */
