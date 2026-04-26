@@ -987,7 +987,7 @@ function App() {
                 marginBottom: 10
               }}
             >
-              <Gem size={28} strokeWidth={2.3} />
+              <img src="/ui/AMAZING.webp" alt="Amazing!" style={{ width: 64, height: 'auto', imageRendering: 'pixelated', dropShadow: '0 4px 12px rgba(251,191,36,0.5)' }} />
             </div>
             <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(14px, 4vw, 22px)', color: 'var(--px-gold)', textShadow: '2px 2px 0 #000', lineHeight: 1.6 }}>
               {celebrationTitle}
