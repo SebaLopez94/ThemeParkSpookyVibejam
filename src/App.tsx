@@ -1022,7 +1022,7 @@ function App() {
               </div>
 
               {/* CHALLENGE COMPLETE label */}
-              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-purple)', letterSpacing: 2, marginBottom: 10, opacity: 0.85 }}>CHALLENGE COMPLETE</div>
+              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: '#d8b4fe', letterSpacing: 2, marginBottom: 10, opacity: 0.85 }}>CHALLENGE COMPLETE</div>
 
               {/* Title */}
               <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(13px, 3.5vw, 20px)', color: 'var(--px-gold)', textShadow: '0 0 20px rgba(251,191,36,0.6), 2px 2px 0 #000', lineHeight: 1.5 }}>
