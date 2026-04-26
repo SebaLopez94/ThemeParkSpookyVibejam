@@ -53,14 +53,14 @@ const MSG_BORED = ["This park needs more thrilling rides. 🎢", "I'm getting ki
 const MSG_SAD = ["I'm not having a great time. 😔", "This park is a letdown.", "I wish I went somewhere else.", "Just want to go home."];
 const MSG_BROKE = ["I'm completely out of cash.", "Everything is so expensive... 💸", "I spent all my money!", "Can't afford anything else."];
 const MSG_EXCITED = ["This ride looks insanely fun! 🤩", "I love the spooky vibes here!", "Frankenstein is hilarious!", "This park is absolutely amazing!", "I'm having the time of my life!"];
-const MSG_HAPPY = ["This place is great!", "I love the atmosphere! 🦇", "Best theme park ever!", "So glad I came here today."];
+const MSG_HAPPY = ["This place is great!", "I love the atmosphere! 🦇", "Best theme park ever!", "So glad I came here today.", "This park is something else!", "Having a great time here.", "Totally worth the visit."];
 const MSG_CROWDED = ["It's way too crowded here. 😤", "Need some breathing room.", "Why are there so many people?", "Excuse me, coming through..."];
 const MSG_PRICE = ["That's way too expensive! 💰", "What a rip-off!", "I'm not paying that much.", "Prices here are crazy."];
 const MSG_FOOD = ["This burger is amazing! 🍔", "Yum, so delicious!", "Best food in the park!", "Exactly what I needed."];
 const MSG_DRINK = ["So refreshing! 🥤", "Ah, just what I needed.", "Best drink ever.", "I was so thirsty!"];
 const MSG_GIFT = ["I love this souvenir! 🛍️", "Can't wait to show this off.", "This is so cool!", "Money well spent."];
 const MSG_RIDE_GREAT = ["That was INCREDIBLE! 🎢", "I need to go again!", "Best ride in the park!", "My heart is still racing!", "That was worth every penny!"];
-const MSG_RIDE_OK = ["Not bad, actually.", "That was pretty fun!", "Glad I tried that.", "Could have been wilder, but okay."];
+const MSG_RIDE_OK = ["Not bad, actually.", "That was pretty fun!", "Glad I tried that.", "Could have been wilder, but okay.", "I'd ride that again.", "Decent ride, honestly.", "Better than I expected!"];
 
 function pickMsg(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -143,7 +143,16 @@ export class VisitorSystem {
   public onVisitorLeave: (() => void) | null = null;
   public onVisitorSpend: ((amount: number) => void) | null = null;
   public onVisitorThought: ((thought: import('../types').FeedMessage) => void) | null = null;
+  public onParkWideEvent: ((event: import('../types').FeedMessage) => void) | null = null;
   private lastGlobalThoughtTime = 0;
+
+  // Leave-spike detection
+  private leaveWindowStart = 0;
+  private leavesInWindow = 0;
+  private lastLeaveSpikeFired = 0;
+  private static readonly LEAVE_SPIKE_THRESHOLD = 5;
+  private static readonly LEAVE_SPIKE_WINDOW    = 12; // seconds
+  private static readonly LEAVE_SPIKE_COOLDOWN  = 25; // seconds between park-event fires
 
   private applyMood(
     visitor: Visitor,
@@ -173,6 +182,8 @@ export class VisitorSystem {
         faceImage: `/ui/kid${visitor.kidNumber}_${faceMood}.webp`,
         text: mood.message,
         timestamp: Date.now(),
+        kind: mood.kind,
+        personality: visitor.data.personality,
       });
     }
   }
@@ -305,6 +316,36 @@ export class VisitorSystem {
       this.removeVisitor(id);
       this.onVisitorLeave?.();
     });
+
+    if (toRemove.length > 0) {
+      // Roll the leave window forward if it expired
+      if (now - this.leaveWindowStart > VisitorSystem.LEAVE_SPIKE_WINDOW) {
+        this.leaveWindowStart = now;
+        this.leavesInWindow = 0;
+      }
+      this.leavesInWindow += toRemove.length;
+
+      if (
+        this.leavesInWindow >= VisitorSystem.LEAVE_SPIKE_THRESHOLD &&
+        now - this.lastLeaveSpikeFired > VisitorSystem.LEAVE_SPIKE_COOLDOWN
+      ) {
+        const count = this.leavesInWindow;
+        this.leavesInWindow = 0;
+        this.lastLeaveSpikeFired = now;
+        const spikeMsgs = [
+          `${count} guests just walked out`,
+          `A wave of guests abandoned the park`,
+          `${count} visitors left — something's wrong`,
+        ];
+        this.onParkWideEvent?.({
+          id: Math.random().toString(36).substring(2, 9),
+          emoji: '🚪',
+          text: spikeMsgs[Math.floor(Math.random() * spikeMsgs.length)],
+          timestamp: Date.now(),
+          kind: 'park_event',
+        });
+      }
+    }
   }
 
   private handleArrival(

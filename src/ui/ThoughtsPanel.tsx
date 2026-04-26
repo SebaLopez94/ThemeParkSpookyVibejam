@@ -1,5 +1,6 @@
 import { MessageSquare, X } from 'lucide-react';
-import { FeedMessage } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FeedMessage, VisitorMoodKind } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface ThoughtsPanelProps {
@@ -7,6 +8,32 @@ interface ThoughtsPanelProps {
   onClose: () => void;
   style?: React.CSSProperties;
 }
+
+// ── Per-kind visual style ────────────────────────────────────────────────────
+// Groups: red = problem, amber = physical need, green = positive, violet = system
+interface KindStyle { border: string; bg: string }
+const KIND_STYLES: Partial<Record<VisitorMoodKind | 'park_event', KindStyle>> = {
+  sick:       { border: 'rgba(239,68,68,0.55)',   bg: 'rgba(239,68,68,0.14)'  },
+  sad:        { border: 'rgba(239,68,68,0.44)',   bg: 'rgba(239,68,68,0.10)'  },
+  price:      { border: 'rgba(239,68,68,0.44)',   bg: 'rgba(239,68,68,0.10)'  },
+  hunger:     { border: 'rgba(251,146,60,0.55)',  bg: 'rgba(251,146,60,0.13)' },
+  thirst:     { border: 'rgba(251,146,60,0.48)',  bg: 'rgba(251,146,60,0.11)' },
+  bored:      { border: 'rgba(148,163,184,0.38)', bg: 'rgba(148,163,184,0.10)'},
+  crowded:    { border: 'rgba(148,163,184,0.34)', bg: 'rgba(148,163,184,0.08)'},
+  broke:      { border: 'rgba(148,163,184,0.34)', bg: 'rgba(148,163,184,0.08)'},
+  happy:      { border: 'rgba(74,222,128,0.50)',  bg: 'rgba(74,222,128,0.12)' },
+  excited:    { border: 'rgba(74,222,128,0.55)',  bg: 'rgba(74,222,128,0.14)' },
+  shopping:   { border: 'rgba(74,222,128,0.44)',  bg: 'rgba(74,222,128,0.10)' },
+  park_event: { border: 'rgba(167,139,250,0.55)', bg: 'rgba(167,139,250,0.13)'},
+};
+const DEFAULT_KIND_STYLE: KindStyle = {
+  border: 'rgba(148,163,184,0.13)',
+  bg: 'rgba(71,85,105,0.10)',
+};
+function kindStyle(kind: string): KindStyle {
+  return KIND_STYLES[kind as VisitorMoodKind | 'park_event'] ?? DEFAULT_KIND_STYLE;
+}
+
 
 export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
   const isMobile = useIsMobile();
@@ -35,6 +62,7 @@ export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
           display: 'flex',
           flexDirection: 'column',
           gap: isMobile ? 8 : 10,
+          overflowY: 'auto',
         }}
       >
         {feed.length === 0 ? (
@@ -50,67 +78,76 @@ export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
             </span>
           </div>
         ) : (
-          feed.map((msg, index) => {
-            // Older entries fade out gradually — newest is full opacity, 8th is ~35%
-            const ageOpacity = Math.max(0.35, 1 - index * 0.082);
-            return (
-              <ThoughtCard key={msg.id} msg={msg} opacity={ageOpacity} isMobile={isMobile} />
-            );
-          })
+          <AnimatePresence initial={false} mode="sync">
+            {feed.map((msg, index) => {
+              // Newest entry = full opacity; each step down dims slightly
+              const ageOpacity = Math.max(0.35, 1 - index * 0.082);
+              return (
+                <motion.div
+                  key={msg.id}
+                  layout
+                  initial={{ opacity: 0, y: -10, scale: 0.96 }}
+                  animate={{ opacity: ageOpacity, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.12 } }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <ThoughtCard msg={msg} isMobile={isMobile} />
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
       </div>
     </div>
   );
 }
 
-function ThoughtCard({
-  msg,
-  opacity,
-  isMobile,
-}: {
-  msg: FeedMessage;
-  opacity: number;
-  isMobile: boolean;
-}) {
+// ── Individual card ──────────────────────────────────────────────────────────
+function ThoughtCard({ msg, isMobile }: { msg: FeedMessage; isMobile: boolean }) {
+  const { border, bg } = kindStyle(msg.kind);
+  const isParkEvent = msg.kind === 'park_event';
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: 10,
-        padding: isMobile ? '9px 10px' : '10px 12px',
-        background: 'linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 55%), rgba(71,85,105,0.1)',
-        border: '1px solid rgba(148,163,184,0.13)',
-        borderRadius: 8,
-        alignItems: 'center',
-        opacity,
-      }}
-    >
-      {/* Visitor face */}
-      <div style={{
-        flexShrink: 0,
-        width: isMobile ? 36 : 40,
-        height: isMobile ? 36 : 40,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        {msg.faceImage ? (
-          <img
-            src={msg.faceImage}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              filter: 'drop-shadow(1px 1px 0 #000)',
-            }}
-          />
-        ) : (
-          <span style={{ fontSize: isMobile ? 22 : 26 }}>{msg.emoji}</span>
-        )}
-      </div>
+    <div style={{
+      display: 'flex',
+      gap: 10,
+      padding: isMobile ? '9px 10px' : '10px 12px',
+      background: `linear-gradient(160deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 55%), ${bg}`,
+      border: `1px solid ${border}`,
+      borderRadius: 8,
+      alignItems: 'center',
+    }}>
+
+      {/* Left: visitor face OR park-event icon */}
+      {isParkEvent ? (
+        <span style={{
+          flexShrink: 0,
+          fontSize: isMobile ? 24 : 28,
+          filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))',
+        }}>
+          {msg.emoji}
+        </span>
+      ) : (
+        <div style={{ flexShrink: 0 }}>
+          {msg.faceImage ? (
+            <img
+              src={msg.faceImage}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              style={{
+                width: isMobile ? 34 : 38,
+                height: isMobile ? 34 : 38,
+                objectFit: 'contain',
+                filter: 'drop-shadow(1px 1px 0 #000)',
+                display: 'block',
+              }}
+            />
+          ) : (
+            <span style={{ fontSize: isMobile ? 22 : 26 }}>{msg.emoji}</span>
+          )}
+        </div>
+      )}
 
       {/* Thought text */}
       <p className="px-body" style={{
@@ -118,21 +155,38 @@ function ThoughtCard({
         margin: 0,
         fontSize: isMobile ? 10 : 11,
         lineHeight: 1.55,
-        color: 'rgba(226,232,240,0.85)',
+        color: isParkEvent ? 'rgba(221,214,254,0.92)' : 'rgba(226,232,240,0.85)',
         minWidth: 0,
       }}>
         {msg.text}
       </p>
 
-      {/* Thought emoji pill */}
-      <span style={{
-        flexShrink: 0,
-        fontSize: isMobile ? 16 : 18,
-        alignSelf: 'center',
-        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
-      }}>
-        {msg.emoji}
-      </span>
+      {/* Right side: count badge OR thought emoji */}
+      {(msg.count ?? 1) > 1 ? (
+        <span style={{
+          flexShrink: 0,
+          fontFamily: "'Press Start 2P', monospace",
+          fontSize: isMobile ? 7 : 8,
+          color: 'rgba(255,255,255,0.55)',
+          background: 'rgba(255,255,255,0.08)',
+          border: `1px solid ${border}`,
+          borderRadius: 5,
+          padding: '3px 5px',
+          lineHeight: 1,
+          alignSelf: 'center',
+        }}>
+          x{msg.count}
+        </span>
+      ) : !isParkEvent ? (
+        <span style={{
+          flexShrink: 0,
+          fontSize: isMobile ? 16 : 18,
+          alignSelf: 'center',
+          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+        }}>
+          {msg.emoji}
+        </span>
+      ) : null}
     </div>
   );
 }

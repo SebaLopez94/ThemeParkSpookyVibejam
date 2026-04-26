@@ -219,6 +219,13 @@ export class Game {
   private pendingEconomyState: EconomyState | null = null;
   private static readonly ECONOMY_UI_INTERVAL = 0.2;
 
+  // Happiness-crash park event
+  private happinessHistory: number[] = [];
+  private happinessCrashCooldown = 0;
+  private static readonly HAPPINESS_HISTORY_SIZE  = 10; // last 10 rating ticks (~10 s)
+  private static readonly HAPPINESS_CRASH_DELTA   = 12; // drop in points to trigger
+  private static readonly HAPPINESS_CRASH_COOLDOWN = 60; // seconds between events
+
   public readonly events = new EventBus<GameEvents>();
 
   /** True once the first assetsLoaded has fired, to suppress repeated fires. */
@@ -262,6 +269,7 @@ export class Game {
     this.visitorSystem.onVisitorLeave = () => this.economySystem.removeVisitor();
     this.visitorSystem.onVisitorSpend = amount => this.economySystem.addMoney(amount);
     this.visitorSystem.onVisitorThought = thought => this.events.emit('newThought', thought);
+    this.visitorSystem.onParkWideEvent = event => this.events.emit('newThought', event);
 
     // Wire up stable function references for simulationEntities — set once, reused every frame.
     this.simulationEntities.getLocalDecorationBonus = pos => this.buildingSystem.getLocalDecorationBonus(pos);
@@ -1493,11 +1501,34 @@ export class Game {
     }
 
     this.ratingUpdateTimer += deltaTime;
+    this.happinessCrashCooldown -= deltaTime;
     if (this.ratingUpdateTimer >= this.RATING_UPDATE_INTERVAL) {
       this.ratingUpdateTimer = 0;
       const counts = this.buildingSystem.getBuildingCounts();
+      const avgHappiness = this.visitorSystem.getAverageHappiness();
+
+      // Track rolling happiness history for crash detection
+      this.happinessHistory.push(avgHappiness);
+      if (this.happinessHistory.length > Game.HAPPINESS_HISTORY_SIZE) this.happinessHistory.shift();
+      if (
+        this.happinessHistory.length >= Game.HAPPINESS_HISTORY_SIZE &&
+        this.happinessCrashCooldown <= 0
+      ) {
+        const drop = this.happinessHistory[0] - avgHappiness;
+        if (drop >= Game.HAPPINESS_CRASH_DELTA) {
+          this.happinessCrashCooldown = Game.HAPPINESS_CRASH_COOLDOWN;
+          this.events.emit('newThought', {
+            id: Math.random().toString(36).substring(2, 9),
+            emoji: '⚠️',
+            text: 'Guest happiness is plummeting!',
+            timestamp: Date.now(),
+            kind: 'park_event',
+          });
+        }
+      }
+
       this.economySystem.updateParkRating(
-        this.visitorSystem.getAverageHappiness(),
+        avgHappiness,
         this.buildingSystem.getFacilityScore(),
         this.buildingSystem.getDecorationAppeal(),
         this.visitorSystem.getVisitorCount(),
@@ -1509,7 +1540,7 @@ export class Game {
       const completed = this.challengeSystem.update(this.RATING_UPDATE_INTERVAL, {
         totalVisitors: updatedEconState.totalVisitors,
         activeVisitors: updatedEconState.activeVisitors,
-        averageHappiness: this.visitorSystem.getAverageHappiness(),
+        averageHappiness: avgHappiness,
         netProfit: updatedEconState.netProfit,
         parkRating: updatedEconState.parkRating,
         buildingCounts: counts,

@@ -186,6 +186,10 @@ export interface FeedMessage {
   faceImage?: string;
   text: string;
   timestamp: number;
+  kind: VisitorMoodKind | 'park_event';
+  personality?: VisitorPersonality;
+  /** Set when multiple consecutive messages of the same kind are grouped. */
+  count?: number;
 }
 
 export interface VisitorData {

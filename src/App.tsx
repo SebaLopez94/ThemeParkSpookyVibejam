@@ -39,8 +39,42 @@ import {
   ResearchNode,
   ResearchState,
   SelectedBuildingInfo,
-  FeedMessage
+  FeedMessage,
+  VisitorMoodKind,
 } from './types';
+
+// ── Feed grouping helpers ────────────────────────────────────────────────────
+const GROUP_LABELS: Partial<Record<VisitorMoodKind, (n: number) => string>> = {
+  hunger:   n => `${n} guests are starving`,
+  thirst:   n => `${n} guests need a drink`,
+  bored:    n => `${n} guests are bored`,
+  sick:     n => `${n} guests feel sick`,
+  sad:      n => `${n} guests are unhappy`,
+  crowded:  n => `${n} guests feel crowded`,
+  price:    n => `${n} guests think prices are too high`,
+  broke:    n => `${n} guests ran out of money`,
+  happy:    n => `${n} guests are loving it`,
+  excited:  n => `${n} guests are having a blast`,
+  shopping: n => `${n} guests made purchases`,
+};
+function getGroupedText(kind: VisitorMoodKind, count: number): string {
+  return GROUP_LABELS[kind]?.(count) ?? `${count} similar thoughts`;
+}
+function mergeFeed(msg: FeedMessage, prev: FeedMessage[]): FeedMessage[] {
+  const last = prev[0];
+  const GROUP_WINDOW_MS = 5000;
+  if (
+    last &&
+    last.kind === msg.kind &&
+    msg.kind !== 'park_event' &&
+    Date.now() - last.timestamp < GROUP_WINDOW_MS &&
+    (last.count ?? 1) < 6
+  ) {
+    const count = (last.count ?? 1) + 1;
+    return [{ ...last, count, text: getGroupedText(last.kind as VisitorMoodKind, count) }, ...prev.slice(1)];
+  }
+  return [msg, ...prev].slice(0, 8);
+}
 
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -132,7 +166,7 @@ function App() {
     events.on('rotationChange', degree => setBuildRotation(degree));
     events.on('researchUpdate', state => setResearchState(state));
     events.on('challengesUpdate', state => setChallenges(state));
-    events.on('newThought', msg => setThoughtsFeed(prev => [msg, ...prev].slice(0, 8)));
+    events.on('newThought', msg => setThoughtsFeed(prev => mergeFeed(msg, prev)));
     events.on('challengeCompleted', challenge => {
       const celebrationIds: Record<string, { title: string; sub: string }> = {
         challenge_first_ride:   { title: 'ðŸŽ¡ FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
