@@ -30,7 +30,7 @@ export function ParkPanel({
 }: ParkPanelProps) {
   const isMobile = useIsMobile();
   return (
-    <div className="px-panel px-panel--park px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '52vh', padding: 0, ...style }}>
+    <div className="px-panel px-panel--park px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : 'calc(100vh - 32px)', padding: 0, ...style }}>
       <div className="px-overlay-panel__top">
         <div className="px-overlay-panel__meta">
           <span className="px-label" style={{ color: 'var(--px-muted)' }}>Manage Park</span>

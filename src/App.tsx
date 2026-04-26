@@ -492,7 +492,7 @@ function App() {
 
       {/* ── Desktop panels ─────────────────────────────────────────────── */}
       {showParkPanel && (
-        <div className="px-dock-panel px-anim-enter-scale">
+        <div className="px-dock-panel px-dock-panel--park px-anim-enter-scale">
           <ParkPanel
             economy={economy}
             localTicketPrice={localTicketPrice}
@@ -509,12 +509,12 @@ function App() {
         </div>
       )}
       {showChallenges && (
-        <div className="px-dock-panel px-anim-enter-scale">
+        <div className="px-dock-panel px-dock-panel--challenges px-anim-enter-scale">
           <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />
         </div>
       )}
       {showResearch && (
-        <div className="px-dock-panel px-anim-enter-scale">
+        <div className="px-dock-panel px-dock-panel--research px-anim-enter-scale">
           <ResearchPanel
             nodes={researchNodes}
             state={researchState}
