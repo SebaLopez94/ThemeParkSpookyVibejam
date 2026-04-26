@@ -1,4 +1,5 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown,
   ChevronUp,
@@ -76,9 +77,10 @@ function JoyFace({ stars, mobile }: { stars: number; mobile: boolean }) {
 }
 interface HUDProps {
   economy: EconomyState;
+  hideMoney?: boolean;
 }
 
-export function HUD({ economy }: HUDProps) {
+export function HUD({ economy, hideMoney }: HUDProps) {
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isMobile);
@@ -120,7 +122,10 @@ export function HUD({ economy }: HUDProps) {
   if (!mounted) return null;
 
   return (
-    <div
+    <motion.div
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
       style={{
         position: 'fixed',
         top: 16,
@@ -133,10 +138,12 @@ export function HUD({ economy }: HUDProps) {
         <div className="px-titlebar px-titlebar--hud px-hud-bar">
           <div className="px-titlebar__label px-hud-bar__label">
             <Radio className="px-icon-sm" />
-            <span className="px-hud-inline-money">
-              <Coins className="px-icon-sm" color="var(--px-gold)" />
-              ${economy.money.toLocaleString()}
-            </span>
+            {!hideMoney && collapsed && (
+              <span className="px-hud-inline-money">
+                <Coins className="px-icon-sm" color="var(--px-gold)" />
+                ${economy.money.toLocaleString()}
+              </span>
+            )}
           </div>
 
           <div className="px-hud-bar__actions">
@@ -153,60 +160,70 @@ export function HUD({ economy }: HUDProps) {
           </div>
         </div>
 
-        {!collapsed && (
-          <div className="px-panel-body px-panel-body--sm px-hud-body px-hud-body--compact">
-            <div className="px-hud-money-row">
-              <div className="px-hud-money-row__main">
-                <span className="px-label">Cash Vault</span>
-                <span
-                  className={
-                    moneyFlash === 'green'
-                      ? 'px-hud-money-row__amount px-flash-green'
-                      : moneyFlash === 'red'
-                        ? 'px-hud-money-row__amount px-flash-red'
-                        : 'px-hud-money-row__amount'
-                  }
-                >
-                  ${economy.money.toLocaleString()}
-                </span>
-              </div>
-              <div className="px-hud-money-row__icon">
-                <Coins className="px-icon-md" color="var(--px-gold)" />
-              </div>
-            </div>
+        <AnimatePresence>
+          {!collapsed && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0, transition: { duration: 0.15 } }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              style={{ overflow: "hidden" }}
+            >
+              <div className="px-panel-body px-panel-body--sm px-hud-body px-hud-body--compact">
+                <div className="px-hud-money-row">
+                  <div className="px-hud-money-row__main">
+                    <span className="px-label">Cash Vault</span>
+                    <span
+                      className={
+                        moneyFlash === 'green'
+                          ? 'px-hud-money-row__amount px-flash-green'
+                          : moneyFlash === 'red'
+                            ? 'px-hud-money-row__amount px-flash-red'
+                            : 'px-hud-money-row__amount'
+                      }
+                    >
+                      ${economy.money.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="px-hud-money-row__icon">
+                    <Coins className="px-icon-md" color="var(--px-gold)" />
+                  </div>
+                </div>
 
-            <div className="px-hud-inline-stats">
-              <InlineStat
-                icon={<Users className="px-icon-sm" color="var(--px-cyan)" />}
-                label="Inside"
-                value={economy.activeVisitors.toLocaleString()}
-              />
-              <InlineStat
-                icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}
-                label="Burn / Min"
-                value={`$${economy.maintenancePerMinute.toLocaleString()}`}
-              />
-            </div>
+                <div className="px-hud-inline-stats">
+                  <InlineStat
+                    icon={<Users className="px-icon-sm" color="var(--px-cyan)" />}
+                    label="Inside"
+                    value={economy.activeVisitors.toLocaleString()}
+                  />
+                  <InlineStat
+                    icon={<TrendingDown className="px-icon-sm" color="var(--px-red)" />}
+                    label="Burn / Min"
+                    value={`$${economy.maintenancePerMinute.toLocaleString()}`}
+                  />
+                </div>
 
-            <div className="px-hud-ratings">
-              <InlineRating
-                icon={<Laugh className="px-icon-sm" color="var(--px-green-hi)" />}
-                label="Guest Joy"
-                stars={joyStars}
-                mobile={isMobile}
-                type="face"
-              />
-              <InlineRating
-                icon={<Star className="px-icon-sm" color="var(--px-gold)" />}
-                label="Park Rating"
-                stars={ratingStars}
-                mobile={isMobile}
-              />
-            </div>
-          </div>
-        )}
+                <div className="px-hud-ratings">
+                  <InlineRating
+                    icon={<Laugh className="px-icon-sm" color="var(--px-green-hi)" />}
+                    label="Guest Joy"
+                    stars={joyStars}
+                    mobile={isMobile}
+                    type="face"
+                  />
+                  <InlineRating
+                    icon={<Star className="px-icon-sm" color="var(--px-gold)" />}
+                    label="Park Rating"
+                    stars={ratingStars}
+                    mobile={isMobile}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

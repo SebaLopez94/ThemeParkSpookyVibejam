@@ -1,5 +1,6 @@
 import { CSSProperties, HTMLAttributes, RefObject, useEffect, useMemo, useState } from 'react';
 import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { getAllCatalogItems } from '../data/buildings';
 import { BuildingCatalogItem, BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -128,15 +129,18 @@ export function BuildMenu({
         position: 'fixed' as const,
         bottom: bottom ?? 16,
         left: '50%',
-        transform: 'translateX(-50%)',
         zIndex: 40,
       };
 
   return (
-    <div
+    <motion.div
       ref={isMobile ? mobileSheetRef : undefined}
       className={isMobile ? mobileSheetClassName : undefined}
       style={shellStyle}
+      initial={isMobile ? { y: "100%", opacity: 0.98 } : { y: 20, x: "-50%", opacity: 0 }}
+      animate={isMobile ? { y: 0, opacity: 1 } : { y: 0, x: "-50%", opacity: 1 }}
+      exit={isMobile ? { y: "100%", opacity: 0.98, transition: { type: "tween", duration: 0.25, ease: "easeInOut" } } : { y: 20, x: "-50%", opacity: 0, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", stiffness: 350, damping: 28 }}
       {...(isMobile ? mobileSheetHandlers : undefined)}
     >
       <div
@@ -293,7 +297,7 @@ export function BuildMenu({
           </section>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useIsMobile } from './hooks/useIsMobile';
 import {
@@ -336,11 +337,6 @@ function App() {
   const resetMobilePanelMotion = () => {
     setMobilePanelDragY(0);
     setIsMobilePanelDragging(false);
-    setIsMobilePanelClosing(false);
-    if (mobilePanelCloseTimerRef.current) {
-      window.clearTimeout(mobilePanelCloseTimerRef.current);
-      mobilePanelCloseTimerRef.current = null;
-    }
   };
   const clearMobileOverlayPanels = () => {
     setShowParkPanel(false);
@@ -355,24 +351,13 @@ function App() {
   };
   const closeMobileOverlayPanels = () => {
     if (!activeMobileSheet) return;
-    const sheetToClose = activeMobileSheet;
+    if (activeMobileSheet === 'build') {
+      handleCancelBuildMode();
+    } else {
+      clearMobileOverlayPanels();
+    }
+    setMobilePanelDragY(0);
     setIsMobilePanelDragging(false);
-    setIsMobilePanelClosing(true);
-    window.requestAnimationFrame(() => {
-      setMobilePanelDragY(getMobileSheetCloseDistance());
-    });
-    if (mobilePanelCloseTimerRef.current) window.clearTimeout(mobilePanelCloseTimerRef.current);
-    mobilePanelCloseTimerRef.current = window.setTimeout(() => {
-      if (sheetToClose === 'build') {
-        handleCancelBuildMode();
-      } else {
-        clearMobileOverlayPanels();
-      }
-      setMobilePanelDragY(0);
-      setIsMobilePanelDragging(false);
-      setIsMobilePanelClosing(false);
-      mobilePanelCloseTimerRef.current = null;
-    }, 240);
   };
   const openMobilePanel = (panel: 'park' | 'challenges' | 'research') => {
     if (activeMobilePanel === panel) {
@@ -386,43 +371,17 @@ function App() {
     setShowBuildMenu(false);
   };
   const mobileSheetTouchHandlers = {
-    onTouchStart: (event: any) => {
-      const touch = event.touches[0];
-      if (!touch) return;
-      const rect = event.currentTarget.getBoundingClientRect();
-      mobilePanelSwipeStartRef.current = {
-        y: touch.clientY,
-        fromTop: touch.clientY - rect.top <= 72,
-      };
-      setIsMobilePanelDragging(false);
-    },
-    onTouchMove: (event: any) => {
-      const start = mobilePanelSwipeStartRef.current;
-      const touch = event.touches[0];
-      if (!start || !touch || !start.fromTop) return;
-      const deltaY = touch.clientY - start.y;
-      setIsMobilePanelDragging(true);
-      const maxDrag = getMobileSheetCloseDistance();
-      const nextDragY = Math.max(0, Math.min(maxDrag, deltaY));
-      setMobilePanelDragY(nextDragY);
-    },
-    onTouchEnd: (event: any) => {
-      const start = mobilePanelSwipeStartRef.current;
-      mobilePanelSwipeStartRef.current = null;
-      const touch = event.changedTouches[0];
-      if (!start || !touch || !start.fromTop) return;
-      if (touch.clientY - start.y > 86) {
+    drag: "y" as const,
+    dragConstraints: { top: 0, bottom: 0 },
+    dragElastic: { top: 0, bottom: 0.8 },
+    onDragEnd: (_e: any, info: any) => {
+      if (info.offset.y > 100 || info.velocity.y > 500) {
         closeMobileOverlayPanels();
-      } else {
-        setIsMobilePanelDragging(false);
-        setMobilePanelDragY(0);
       }
-    },
+    }
   };
-  const mobileSheetClassName = `px-mobile-panel-sheet${activeMobileSheet === 'build' ? ' px-mobile-panel-sheet--build' : ''}${isMobilePanelClosing ? ' px-mobile-panel-sheet--closing' : ''}${isMobilePanelDragging ? ' px-mobile-panel-sheet--dragging' : ''}`;
-  const mobileSheetDragStyle = {
-    transform: mobilePanelDragY > 0 ? `translateY(${mobilePanelDragY}px)` : undefined,
-  };
+  const mobileSheetClassName = `px-mobile-panel-sheet${activeMobileSheet === 'build' ? ' px-mobile-panel-sheet--build' : ''}`;
+  const mobileSheetDragStyle = {};
 
   if (!gameStarted) {
     return (
@@ -452,7 +411,7 @@ function App() {
       />
       <ToastStack items={toasts} />
 
-      {shouldShowHud && <HUD economy={economy} />}
+      {shouldShowHud && <HUD economy={economy} hideMoney={showParkPanel} />}
 
       {/* â”€â”€ Desktop side tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {/* ── Desktop icon dock ──────────────────────────────────────────── */}
@@ -463,7 +422,7 @@ function App() {
           aria-label="Manage Park"
           onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); }}
         >
-          <RollerCoaster size={20} />
+          <RollerCoaster size={24} />
           <span className="px-dock-btn__label">PARK</span>
         </button>
         <button
@@ -473,7 +432,7 @@ function App() {
           style={{ position: 'relative' }}
           onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
         >
-          <Trophy size={20} />
+          <Trophy size={24} />
           <span className="px-dock-btn__label">GOALS</span>
           {challenges.some(c => c.completed && !c.claimed) && (
             <span className="px-notif-dot" aria-hidden="true" />
@@ -485,102 +444,128 @@ function App() {
           aria-label="Research"
           onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
         >
-          <FlaskConical size={20} />
+          <FlaskConical size={24} />
           <span className="px-dock-btn__label">LAB</span>
         </button>
       </div>
 
       {/* ── Desktop panels ─────────────────────────────────────────────── */}
-      {showParkPanel && (
-        <div className="px-dock-panel px-dock-panel--park px-anim-enter-scale">
-          <ParkPanel
-            economy={economy}
-            localTicketPrice={localTicketPrice}
-            onTicketPriceChange={value => setLocalTicketPrice(value)}
-            onTicketPriceCommit={handleTicketCommit}
-            onToggleParkOpen={isOpen => {
-              gameRef.current?.setParkOpen(isOpen);
-            }}
-            onSaveGame={handleSaveGame}
-            onLoadGame={handleLoadGame}
-            activeResearchLabel={activeResearchLabel}
-            onClose={() => setShowParkPanel(false)}
-          />
-        </div>
-      )}
-      {showChallenges && (
-        <div className="px-dock-panel px-dock-panel--challenges px-anim-enter-scale">
-          <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />
-        </div>
-      )}
-      {showResearch && (
-        <div className="px-dock-panel px-dock-panel--research px-anim-enter-scale">
-          <ResearchPanel
-            nodes={researchNodes}
-            state={researchState}
-            onStartResearch={id => gameRef.current?.startResearch(id)}
-            canAffordResearch={cost => canAfford(cost)}
-            onClose={() => setShowResearch(false)}
-          />
-        </div>
-      )}
+      <AnimatePresence>
+        {showParkPanel && (
+          <motion.div
+            initial={{ opacity: 0, x: -30, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.95, transition: { duration: 0.15 } }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="px-dock-panel px-dock-panel--park"
+          >
+            <ParkPanel
+              economy={economy}
+              localTicketPrice={localTicketPrice}
+              onTicketPriceChange={value => setLocalTicketPrice(value)}
+              onTicketPriceCommit={handleTicketCommit}
+              onToggleParkOpen={isOpen => {
+                gameRef.current?.setParkOpen(isOpen);
+              }}
+              onSaveGame={handleSaveGame}
+              onLoadGame={handleLoadGame}
+              activeResearchLabel={activeResearchLabel}
+              onClose={() => setShowParkPanel(false)}
+            />
+          </motion.div>
+        )}
+        {showChallenges && (
+          <motion.div
+            initial={{ opacity: 0, x: -30, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.95, transition: { duration: 0.15 } }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="px-dock-panel px-dock-panel--challenges"
+          >
+            <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />
+          </motion.div>
+        )}
+        {showResearch && (
+          <motion.div
+            initial={{ opacity: 0, x: -30, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.95, transition: { duration: 0.15 } }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="px-dock-panel px-dock-panel--research"
+          >
+            <ResearchPanel
+              nodes={researchNodes}
+              state={researchState}
+              onStartResearch={id => gameRef.current?.startResearch(id)}
+              canAffordResearch={cost => canAfford(cost)}
+              onClose={() => setShowResearch(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* â”€â”€ Mobile bottom nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 95 }}>
           {/* Active panel — fullscreen on mobile */}
-          {(showParkPanel || showChallenges || showResearch) && (
-            <div
-              ref={mobileSheetRef}
-              className={mobileSheetClassName}
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 'calc(56px + var(--safe-bottom))',
-                zIndex: 80,
-                ...mobileSheetDragStyle,
-              }}
-              {...mobileSheetTouchHandlers}
-            >
-              <div className="px-mobile-panel-content">
-              {showParkPanel && (
-                <ParkPanel
-                  style={mobileFullscreenPanelStyle}
-                  economy={economy}
-                  localTicketPrice={localTicketPrice}
-                  onTicketPriceChange={value => setLocalTicketPrice(value)}
-                  onTicketPriceCommit={handleTicketCommit}
-                  onToggleParkOpen={isOpen => {
-                    gameRef.current?.setParkOpen(isOpen);
-                  }}
-                  onSaveGame={handleSaveGame}
-                  onLoadGame={handleLoadGame}
-                  activeResearchLabel={activeResearchLabel}
-                  onClose={closeMobileOverlayPanels}
-                />
-              )}
-              {showChallenges && (
-                <ChallengesPanel
-                  challenges={challenges}
-                  style={mobileFullscreenPanelStyle}
-                  onClose={closeMobileOverlayPanels}
-                />
-              )}
-              {showResearch && (
-                <ResearchPanel
-                  style={mobileFullscreenPanelStyle}
-                  nodes={researchNodes}
-                  state={researchState}
-                  onStartResearch={id => gameRef.current?.startResearch(id)}
-                  canAffordResearch={cost => canAfford(cost)}
-                  onClose={closeMobileOverlayPanels}
-                />
-              )}
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {(showParkPanel || showChallenges || showResearch) && (
+              <motion.div
+                ref={mobileSheetRef}
+                className={mobileSheetClassName}
+                initial={{ y: "100%", opacity: 0.98 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0.98, transition: { type: "tween", duration: 0.25, ease: "easeInOut" } }}
+                transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 'calc(56px + var(--safe-bottom))',
+                  zIndex: 80,
+                  ...mobileSheetDragStyle,
+                }}
+                {...mobileSheetTouchHandlers}
+              >
+                <div className="px-mobile-panel-content">
+                {showParkPanel && (
+                  <ParkPanel
+                    style={mobileFullscreenPanelStyle}
+                    economy={economy}
+                    localTicketPrice={localTicketPrice}
+                    onTicketPriceChange={value => setLocalTicketPrice(value)}
+                    onTicketPriceCommit={handleTicketCommit}
+                    onToggleParkOpen={isOpen => {
+                      gameRef.current?.setParkOpen(isOpen);
+                    }}
+                    onSaveGame={handleSaveGame}
+                    onLoadGame={handleLoadGame}
+                    activeResearchLabel={activeResearchLabel}
+                    onClose={closeMobileOverlayPanels}
+                  />
+                )}
+                {showChallenges && (
+                  <ChallengesPanel
+                    challenges={challenges}
+                    style={mobileFullscreenPanelStyle}
+                    onClose={closeMobileOverlayPanels}
+                  />
+                )}
+                {showResearch && (
+                  <ResearchPanel
+                    style={mobileFullscreenPanelStyle}
+                    nodes={researchNodes}
+                    state={researchState}
+                    onStartResearch={id => gameRef.current?.startResearch(id)}
+                    canAffordResearch={cost => canAfford(cost)}
+                    onClose={closeMobileOverlayPanels}
+                  />
+                )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {/* Nav bar */}
           <div className="px-nav-bar" style={{ position: 'relative', zIndex: 90 }}>
             <button
@@ -670,29 +655,33 @@ function App() {
         </div>
       )}
 
-      {isBuildMenuVisible && (
-        <BuildMenu
-          onSelectBuilding={handleSelectBuilding}
-          onCancel={isMobile ? closeMobileOverlayPanels : handleCancelBuildMode}
-          canAfford={canAfford}
-          unlockedBuildings={researchState.unlocked}
-          bottom={isMobile ? 'calc(68px + var(--safe-bottom))' : 16}
-          mobileSheetClassName={mobileSheetClassName}
-          mobileSheetStyle={mobileSheetDragStyle}
-          mobileSheetHandlers={mobileSheetTouchHandlers}
-          mobileSheetRef={mobileSheetRef}
-        />
-      )}
+      <AnimatePresence>
+        {isBuildMenuVisible && (
+          <BuildMenu
+            onSelectBuilding={handleSelectBuilding}
+            onCancel={isMobile ? closeMobileOverlayPanels : handleCancelBuildMode}
+            canAfford={canAfford}
+            unlockedBuildings={researchState.unlocked}
+            bottom={isMobile ? 'calc(68px + var(--safe-bottom))' : 16}
+            mobileSheetClassName={mobileSheetClassName}
+            mobileSheetStyle={mobileSheetDragStyle}
+            mobileSheetHandlers={mobileSheetTouchHandlers}
+            mobileSheetRef={mobileSheetRef}
+          />
+        )}
+      </AnimatePresence>
 
-      {selectedBuilding && (
-        <BuildingPanel
-          building={selectedBuilding}
-          onClose={handleClosePanel}
-          onDelete={handleDeleteBuilding}
-          onMove={handleMoveBuilding}
-          onPriceChange={handlePriceChange}
-        />
-      )}
+      <AnimatePresence>
+        {selectedBuilding && (
+          <BuildingPanel
+            building={selectedBuilding}
+            onClose={handleClosePanel}
+            onDelete={handleDeleteBuilding}
+            onMove={handleMoveBuilding}
+            onPriceChange={handlePriceChange}
+          />
+        )}
+      </AnimatePresence>
 
       {isPlacing && activeBuildDefinition && (
         isMobile ? (

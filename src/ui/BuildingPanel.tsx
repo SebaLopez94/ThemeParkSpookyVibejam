@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowRightLeft, Settings2, Trash2, X } from 'lucide-react';
 import { BuildingType, GridPosition, SelectedBuildingInfo } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -64,9 +65,15 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
     : { position: 'fixed' as const, bottom: 16, left: 16, zIndex: 40 };
 
   return (
-    <div style={panelStyle}>
+    <motion.div
+      style={panelStyle}
+      initial={{ y: 50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 20, opacity: 0, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", stiffness: 350, damping: 25 }}
+    >
       <div
-        className="px-panel px-panel--manage px-anim-enter-up"
+        className={`px-panel px-panel--manage${isMobile ? '' : ' px-anim-enter-up'}`}
         style={{
           padding: 0,
           width: isMobile ? '100%' : 410,
@@ -195,7 +202,7 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
