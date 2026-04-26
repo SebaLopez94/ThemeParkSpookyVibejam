@@ -1004,7 +1004,7 @@ function App() {
               className="px-celebration"
               role="alertdialog"
               aria-label="Challenge complete"
-              onClick={e => e.stopPropagation()}
+              style={{ cursor: 'pointer' }}
             >
               {/* Top glow bar */}
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent, var(--px-gold), var(--px-purple), var(--px-gold), transparent)', borderRadius: '12px 12px 0 0' }} />
