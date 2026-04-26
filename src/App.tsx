@@ -367,74 +367,75 @@ function App() {
       {shouldShowHud && <HUD economy={economy} />}
 
       {/* â”€â”€ Desktop side tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="px-side-tabs">
-        <div className="px-side-tab-column">
-          <button
-            className="px-btn px-side-tab px-side-tab--park"
-            onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); }}
-          >
-            <Landmark />
-            MANAGE
-          </button>
-          {showParkPanel && (
-            <div className="px-anim-enter-scale">
-              <ParkPanel
-                economy={economy}
-                localTicketPrice={localTicketPrice}
-                onTicketPriceChange={value => setLocalTicketPrice(value)}
-                onTicketPriceCommit={handleTicketCommit}
-                onToggleParkOpen={isOpen => {
-                  gameRef.current?.setParkOpen(isOpen);
-                }}
-                onSaveGame={handleSaveGame}
-                onLoadGame={handleLoadGame}
-                activeResearchLabel={activeResearchLabel}
-                onClose={() => setShowParkPanel(false)}
-              />
-            </div>
+      {/* ── Desktop icon dock ──────────────────────────────────────────── */}
+      <div className="px-icon-dock">
+        <button
+          className={`px-dock-btn px-dock-btn--park${showParkPanel ? ' px-dock-btn--active' : ''}`}
+          title="Manage Park"
+          aria-label="Manage Park"
+          onClick={() => { setShowParkPanel(v => !v); setShowChallenges(false); setShowResearch(false); }}
+        >
+          <Landmark size={20} />
+          <span className="px-dock-btn__label">PARK</span>
+        </button>
+        <button
+          className={`px-dock-btn px-dock-btn--challenges${showChallenges ? ' px-dock-btn--active' : ''}`}
+          title="Challenges"
+          aria-label="Challenges"
+          style={{ position: 'relative' }}
+          onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
+        >
+          <Trophy size={20} />
+          <span className="px-dock-btn__label">GOALS</span>
+          {challenges.some(c => c.completed && !c.claimed) && (
+            <span className="px-notif-dot" aria-hidden="true" />
           )}
-        </div>
-
-        <div className="px-side-tab-column">
-          <button
-            className="px-btn px-side-tab px-side-tab--challenges"
-            style={{ position: 'relative' }}
-            onClick={() => { setShowChallenges(v => !v); setShowParkPanel(false); setShowResearch(false); }}
-          >
-            <Trophy />
-            CHALLENGES
-            {challenges.some(c => c.completed && !c.claimed) && (
-              <span className="px-notif-dot" aria-hidden="true" />
-            )}
-          </button>
-          {showChallenges && (
-            <div className="px-anim-enter-scale">
-              <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />
-            </div>
-          )}
-        </div>
-
-        <div className="px-side-tab-column">
-          <button
-            className="px-btn px-side-tab px-side-tab--research"
-            onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
-          >
-            <FlaskConical />
-            RESEARCH
-          </button>
-          {showResearch && (
-            <div className="px-anim-enter-scale">
-              <ResearchPanel
-                nodes={researchNodes}
-                state={researchState}
-                onStartResearch={id => gameRef.current?.startResearch(id)}
-                canAffordResearch={cost => canAfford(cost)}
-                onClose={() => setShowResearch(false)}
-              />
-            </div>
-          )}
-        </div>
+        </button>
+        <button
+          className={`px-dock-btn px-dock-btn--research${showResearch ? ' px-dock-btn--active' : ''}`}
+          title="Research"
+          aria-label="Research"
+          onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
+        >
+          <FlaskConical size={20} />
+          <span className="px-dock-btn__label">LAB</span>
+        </button>
       </div>
+
+      {/* ── Desktop panels ─────────────────────────────────────────────── */}
+      {showParkPanel && (
+        <div className="px-dock-panel px-anim-enter-scale">
+          <ParkPanel
+            economy={economy}
+            localTicketPrice={localTicketPrice}
+            onTicketPriceChange={value => setLocalTicketPrice(value)}
+            onTicketPriceCommit={handleTicketCommit}
+            onToggleParkOpen={isOpen => {
+              gameRef.current?.setParkOpen(isOpen);
+            }}
+            onSaveGame={handleSaveGame}
+            onLoadGame={handleLoadGame}
+            activeResearchLabel={activeResearchLabel}
+            onClose={() => setShowParkPanel(false)}
+          />
+        </div>
+      )}
+      {showChallenges && (
+        <div className="px-dock-panel px-anim-enter-scale">
+          <ChallengesPanel challenges={challenges} onClose={() => setShowChallenges(false)} />
+        </div>
+      )}
+      {showResearch && (
+        <div className="px-dock-panel px-anim-enter-scale">
+          <ResearchPanel
+            nodes={researchNodes}
+            state={researchState}
+            onStartResearch={id => gameRef.current?.startResearch(id)}
+            canAffordResearch={cost => canAfford(cost)}
+            onClose={() => setShowResearch(false)}
+          />
+        </div>
+      )}
 
       {/* â”€â”€ Mobile bottom nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isMobile && (
@@ -502,7 +503,7 @@ function App() {
       )}
 
       {!(isMobile && (showParkPanel || showChallenges || showResearch || showBuildMenu || isPlacing)) && (
-        <div style={{ position: 'fixed', bottom: isMobile ? 'calc(72px + var(--safe-bottom))' : 16, right: controlsRight, display: 'flex', flexDirection: 'row', gap: isMobile ? 6 : 10, zIndex: 40, alignItems: 'center' }}>
+        <div className={`px-controls-bar${isMobile ? ' px-controls-bar--mobile' : ''}`}>
           {!isBuildMenuVisible && (
             <>
               <button
@@ -535,25 +536,25 @@ function App() {
                 <Hammer />
                 BUILD
               </button>
+              <div className="px-controls-bar__divider" />
             </>
           )}
           <button
-            className="px-btn"
-            style={{ width: isMobile ? 46 : 52, height: isMobile ? 46 : 52, padding: 0 }}
+            className="px-btn px-icon-btn"
+            title="How to play"
             onClick={() => {
               setShowHelp(value => !value);
               setShowBuildMenu(false);
             }}
           >
-            <HelpCircle size={isMobile ? 18 : 20} />
+            <HelpCircle size={18} />
           </button>
           <button
-            className="px-btn"
-            style={{ width: isMobile ? 46 : 52, height: isMobile ? 46 : 52, padding: 0 }}
+            className="px-btn px-icon-btn"
             onClick={handleToggleMute}
             aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
           >
-            {isMuted ? <VolumeX size={isMobile ? 18 : 20} /> : <Volume2 size={isMobile ? 18 : 20} />}
+            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
       )}

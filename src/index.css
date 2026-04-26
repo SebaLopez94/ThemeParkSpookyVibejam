@@ -563,16 +563,16 @@ button {
 }
 
 .px-btn--lg {
-  font-size: 14px;
-  padding: 13px 20px;
-  min-width: 190px;
+  font-size: 12px;
+  padding: 11px 18px;
+  min-width: 130px;
   justify-content: flex-start;
-  letter-spacing: 1.4px;
+  letter-spacing: 1px;
 }
 
 .px-btn--lg svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .px-btn--active {
@@ -1873,6 +1873,307 @@ button {
   background: linear-gradient(180deg, #2d1b4e 0%, #160d2e 100%);
 }
 
+/* ── Desktop icon dock ─────────────────────────────────────────────── */
+.px-icon-dock {
+  position: fixed;
+  top: 16px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 45;
+}
+
+.px-dock-btn {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.00) 55%),
+    rgba(14, 8, 28, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-top-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    0 6px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease,
+    transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: 'Press Start 2P', monospace;
+  color: rgba(196, 181, 253, 0.6);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Top shine shimmer */
+.px-dock-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 50%);
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  opacity: 1;
+}
+
+/* Bottom accent bar — color indicator */
+.px-dock-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: currentColor;
+  opacity: 0.25;
+  transition: opacity 0.18s ease, left 0.18s ease, right 0.18s ease, height 0.18s ease;
+}
+
+.px-dock-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.18s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.px-dock-btn:hover {
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.02) 55%),
+    rgba(22, 12, 42, 0.92);
+  border-color: rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.28);
+  color: var(--px-text);
+  transform: scale(1.06);
+}
+
+.px-dock-btn:hover::after {
+  opacity: 0.5;
+  left: 10px;
+  right: 10px;
+}
+
+.px-dock-btn:hover svg {
+  transform: scale(1.1) translateY(-1px);
+}
+
+.px-dock-btn:active {
+  transform: scale(0.94);
+}
+
+.px-dock-btn__label {
+  font-size: 6px;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  color: inherit;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 1);
+  position: relative;
+  z-index: 1;
+  transition: letter-spacing 0.18s ease;
+}
+
+/* ── Park (violet) */
+.px-dock-btn--park {
+  color: rgba(196, 181, 253, 0.72);
+}
+.px-dock-btn--park:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+  border-top-color: rgba(221, 214, 254, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.28),
+    0 2px 12px rgba(0,0,0,0.5),
+    0 0 24px rgba(139, 92, 246, 0.28);
+  color: #ddd6fe;
+}
+.px-dock-btn--park.px-dock-btn--active {
+  background:
+    linear-gradient(160deg, rgba(167,139,250,0.24) 0%, rgba(139,92,246,0.08) 55%),
+    rgba(16, 8, 34, 0.95);
+  border-color: rgba(167, 139, 250, 0.6);
+  border-top-color: rgba(221, 214, 254, 0.8);
+  color: #ede9fe;
+  box-shadow:
+    inset 0 1px 0 rgba(221,214,254,0.2),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 0 28px rgba(139, 92, 246, 0.45),
+    0 4px 20px rgba(0,0,0,0.5);
+}
+.px-dock-btn--park.px-dock-btn--active::after {
+  background: #c4b5fd;
+  opacity: 1;
+  left: 10px;
+  right: 10px;
+  height: 3px;
+  box-shadow: 0 0 8px rgba(196, 181, 253, 0.6);
+}
+
+/* ── Challenges (orange/gold) */
+.px-dock-btn--challenges {
+  color: rgba(253, 186, 116, 0.72);
+}
+.px-dock-btn--challenges:hover {
+  border-color: rgba(251, 146, 60, 0.45);
+  border-top-color: rgba(253, 186, 116, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.28),
+    0 2px 12px rgba(0,0,0,0.5),
+    0 0 24px rgba(251, 146, 60, 0.28);
+  color: #fed7aa;
+}
+.px-dock-btn--challenges.px-dock-btn--active {
+  background:
+    linear-gradient(160deg, rgba(251,146,60,0.24) 0%, rgba(251,146,60,0.07) 55%),
+    rgba(20, 10, 8, 0.95);
+  border-color: rgba(251, 146, 60, 0.6);
+  border-top-color: rgba(253, 186, 116, 0.8);
+  color: #ffedd5;
+  box-shadow:
+    inset 0 1px 0 rgba(253,186,116,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 0 28px rgba(251, 146, 60, 0.4),
+    0 4px 20px rgba(0,0,0,0.5);
+}
+.px-dock-btn--challenges.px-dock-btn--active::after {
+  background: #fdba74;
+  opacity: 1;
+  left: 10px;
+  right: 10px;
+  height: 3px;
+  box-shadow: 0 0 8px rgba(253, 186, 116, 0.6);
+}
+
+/* ── Research (cyan) */
+.px-dock-btn--research {
+  color: rgba(167, 243, 255, 0.72);
+}
+.px-dock-btn--research:hover {
+  border-color: rgba(103, 232, 249, 0.45);
+  border-top-color: rgba(167, 243, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.28),
+    0 2px 12px rgba(0,0,0,0.5),
+    0 0 24px rgba(103, 232, 249, 0.28);
+  color: #cffafe;
+}
+.px-dock-btn--research.px-dock-btn--active {
+  background:
+    linear-gradient(160deg, rgba(103,232,249,0.22) 0%, rgba(34,211,238,0.07) 55%),
+    rgba(4, 12, 24, 0.95);
+  border-color: rgba(103, 232, 249, 0.6);
+  border-top-color: rgba(167, 243, 255, 0.8);
+  color: #ecfeff;
+  box-shadow:
+    inset 0 1px 0 rgba(167,243,255,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 0 28px rgba(103, 232, 249, 0.38),
+    0 4px 20px rgba(0,0,0,0.5);
+}
+.px-dock-btn--research.px-dock-btn--active::after {
+  background: #a7f3ff;
+  opacity: 1;
+  left: 10px;
+  right: 10px;
+  height: 3px;
+  box-shadow: 0 0 8px rgba(167, 243, 255, 0.6);
+}
+
+/* Panel container — opens to the left of the dock */
+.px-dock-panel {
+  position: fixed;
+  top: 16px;
+  right: 82px; /* 62px dock + 12px right margin + 8px gap */
+  z-index: 44;
+  width: 420px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.px-dock-panel::-webkit-scrollbar { display: none; }
+
+/* Hide dock on mobile — mobile has its own bottom nav */
+@media (max-width: 640px) {
+  .px-icon-dock { display: none; }
+  .px-dock-panel { display: none; }
+}
+
+/* ── Controls bar (PATH / BUILD / Help / Mute) ─────────────────────── */
+.px-controls-bar {
+  position: fixed;
+  bottom: 16px;
+  right: 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  z-index: 40;
+  padding: 7px 10px;
+  background: rgba(8, 4, 18, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(167, 139, 250, 0.16);
+  border-top-color: rgba(221, 214, 254, 0.22);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.px-controls-bar--mobile {
+  bottom: calc(74px + var(--safe-bottom));
+  padding: 5px 8px;
+}
+
+.px-controls-bar__divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(167, 139, 250, 0.2);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Small square icon button (Help, Mute) */
+.px-icon-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+
+.px-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .px-icon-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+}
+
 .px-scroll-hidden {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -2949,20 +3250,63 @@ button {
   /* Side tabs hidden — replaced by mobile bottom nav in JS */
   .px-side-tabs { display: none; }
 
-  /* Mobile bottom nav tab buttons */
+  /* Mobile bottom nav tab buttons — override heavy px-btn style */
   .px-mobile-tab {
     flex: 1;
-    min-height: 50px;
-    font-size: 9px;
-    padding: 8px 5px;
-    letter-spacing: 0;
-    gap: 5px;
+    min-height: 54px;
+    font-size: 7px;
+    padding: 8px 6px;
+    letter-spacing: 0.4px;
+    gap: 6px;
     justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: rgba(196, 181, 253, 0.75);
+    text-shadow: none;
+    border-radius: 10px;
+    transition: color 0.18s ease, background 0.18s ease, transform 0.1s ease;
+    position: relative;
+  }
+
+.px-mobile-tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    box-shadow: none;
+    color: rgba(221, 214, 254, 0.8);
+    transform: translateY(-1px);
+  }
+
+  .px-mobile-tab.px-btn--active {
+    background: rgba(139, 92, 246, 0.12);
+    border: none;
+    box-shadow: none;
+    color: #ddd6fe;
+    transform: translateY(-1px);
+  }
+
+  .px-mobile-tab.px-side-tab--challenges.px-btn--active {
+    background: rgba(251, 146, 60, 0.1);
+    color: #fed7aa;
+  }
+
+  .px-mobile-tab.px-side-tab--research.px-btn--active {
+    background: rgba(103, 232, 249, 0.1);
+    color: #a7f3ff;
   }
 
   .px-mobile-tab svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
+    filter: none;
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .px-mobile-tab.px-btn--active svg {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 4px currentColor);
   }
 
   .px-btn--lg {
@@ -3021,14 +3365,19 @@ button {
 /* ── Safe area nav bar ───────────────────────────────────────────────── */
 .px-nav-bar {
   display: flex;
-  gap: 6px;
-  padding: 0 8px;
-  padding-bottom: calc(8px + var(--safe-bottom));
-  padding-top: 8px;
-  background: rgba(10, 5, 20, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-top: 2px solid rgba(139, 92, 246, 0.25);
+  gap: 4px;
+  padding: 6px 8px;
+  padding-bottom: calc(6px + var(--safe-bottom));
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 1px, transparent 1px),
+    rgba(7, 3, 16, 0.92);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-top: 1px solid rgba(167, 139, 250, 0.18);
+  box-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 -8px 40px rgba(0, 0, 0, 0.55),
+    0 -24px 48px rgba(0, 0, 0, 0.2);
 }
 
 /* ── Notification dot ────────────────────────────────────────────────── */

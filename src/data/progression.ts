@@ -224,16 +224,6 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
     target: 88,
     reward: { money: 3000, rating: 0 },
     tier: 5
-  },
-  {
-    id: 'challenge_profit_3',
-    title: 'Undying Fortune',
-    description: 'Stay profitable for 150 seconds. This proves the park can run sustainably at scale.',
-    type: 'profit_streak',
-    target: 1,
-    duration: 150,
-    reward: { money: 2500, rating: 6 },
-    tier: 5
   }
 ];
 
