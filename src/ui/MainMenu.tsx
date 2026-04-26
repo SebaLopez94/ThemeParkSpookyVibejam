@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FolderOpen, Play } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface MainMenuProps {
@@ -21,7 +22,7 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
   const loadInputRef = useRef<HTMLInputElement>(null);
   const newGameBtnRef = useRef<HTMLButtonElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [hoveredBtn, setHoveredBtn] = useState<'new' | 'load' | null>(null);
+  const [hovered, setHovered] = useState<'new' | 'load' | null>(null);
 
   useEffect(() => {
     newGameBtnRef.current?.focus();
@@ -47,7 +48,7 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
     }
   };
 
-  const logoSize = isMobile ? 270 : 370;
+  const logoSize = isMobile ? 260 : 360;
 
   return (
     <div
@@ -56,7 +57,7 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
       aria-label="Theme Park Vibes main menu"
       style={{ position: 'fixed', inset: 0, zIndex: 90, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
     >
-      {/* Background image */}
+      {/* Background */}
       <img
         src="/ui/menu-background.png"
         alt=""
@@ -71,12 +72,15 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
         }}
       />
 
-      {/* Overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: 'linear-gradient(180deg, rgba(4,1,12,0.78) 0%, rgba(4,1,12,0.42) 35%, rgba(4,1,12,0.48) 65%, rgba(4,1,12,0.85) 100%)',
+      {/* Multi-layer overlay for depth */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 90% 70% at 50% 55%, rgba(80,20,140,0.18) 0%, transparent 70%)',
+      }} />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(180deg, rgba(4,1,12,0.85) 0%, rgba(4,1,12,0.30) 30%, rgba(4,1,12,0.38) 60%, rgba(2,0,10,0.95) 100%)',
       }} />
 
+      {/* Bats */}
       <div className="px-menu-bats" aria-hidden="true">
         <span className="px-menu-bat px-menu-bat--one" />
         <span className="px-menu-bat px-menu-bat--two" />
@@ -87,20 +91,21 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
         <span className="px-menu-bat px-menu-bat--seven" />
       </div>
 
-      {/* Main content — logo + buttons */}
+      {/* Main content */}
       <div style={{
         position: 'relative', zIndex: 1,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: isMobile ? 4 : 6,
-        padding: isMobile ? '0 24px' : '0 32px',
         width: '100%',
+        padding: isMobile ? '0 20px' : '0 32px',
       }}>
 
         {/* Logo */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-          animation: 'px-menu-logo-enter 0.6s cubic-bezier(0.34,1.2,0.64,1) both',
-        }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.82, y: -20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 220, damping: 20, delay: 0.05 }}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+        >
           <img
             src="/models/logo.png"
             alt="Theme Park Vibes"
@@ -110,102 +115,141 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
               width: logoSize, height: logoSize,
               imageRendering: 'pixelated',
               filter: isMobile
-                ? 'drop-shadow(0 0 12px rgba(251,113,133,0.75)) drop-shadow(0 0 24px rgba(168,85,247,0.50)) drop-shadow(0 5px 8px rgba(0,0,0,0.9))'
-                : 'drop-shadow(0 0 28px rgba(251,113,133,0.95)) drop-shadow(0 0 56px rgba(168,85,247,0.75)) drop-shadow(0 8px 12px rgba(0,0,0,1))',
+                ? 'drop-shadow(0 0 16px rgba(251,113,133,0.8)) drop-shadow(0 0 32px rgba(168,85,247,0.55)) drop-shadow(0 6px 10px rgba(0,0,0,0.95))'
+                : 'drop-shadow(0 0 32px rgba(251,113,133,1)) drop-shadow(0 0 64px rgba(168,85,247,0.8)) drop-shadow(0 10px 16px rgba(0,0,0,1))',
             }}
             draggable={false}
           />
-          {/* Subtitle with dark band for legibility */}
-          <p style={{
-            fontFamily: "'Press Start 2P', monospace",
-            fontSize: isMobile ? 8 : 9,
-            color: '#e9d5ff',
-            margin: 0,
-            marginBottom: isMobile ? 12 : 16,
-            letterSpacing: 2,
-            padding: '5px 12px',
-            background: 'rgba(4,1,14,0.62)',
-            textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 0 0 14px rgba(168,85,247,0.9)',
-          }}>
-            BUILD YOUR HAUNTED PARK
-          </p>
-        </div>
+
+          {/* Subtitle */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            style={{
+              marginTop: isMobile ? -12 : -16,
+              marginBottom: isMobile ? 28 : 36,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            }}
+          >
+            <p style={{
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: isMobile ? 8 : 10,
+              color: '#e9d5ff',
+              margin: 0,
+              letterSpacing: 3,
+              padding: '6px 16px',
+              background: 'linear-gradient(90deg, rgba(4,1,14,0), rgba(4,1,14,0.75) 20%, rgba(4,1,14,0.75) 80%, rgba(4,1,14,0))',
+              textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 0 0 18px rgba(168,85,247,0.95)',
+            }}>
+              BUILD YOUR HAUNTED PARK
+            </p>
+            {/* Decorative divider */}
+            <div style={{
+              width: isMobile ? 180 : 240, height: 1,
+              background: 'linear-gradient(90deg, transparent, rgba(196,181,253,0.4), rgba(251,113,133,0.3), rgba(196,181,253,0.4), transparent)',
+            }} />
+          </motion.div>
+        </motion.div>
 
         {/* Buttons */}
-        <div
-          className="px-menu-actions-plain"
-          style={{
-            maxWidth: isMobile ? 300 : 340,
-          }}
-        >
-          {/* NEW GAME — primary CTA */}
-          <button
+        <div style={{ width: '100%', maxWidth: isMobile ? 300 : 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* NEW GAME */}
+          <motion.button
             ref={newGameBtnRef}
             className="px-btn px-menu-action px-menu-action--primary"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 22, delay: 0.38 }}
             style={{
-              animation: 'px-menu-pulse 2.2s ease-in-out infinite, px-menu-btn-enter 0.45s 0.25s cubic-bezier(0.34,1.2,0.64,1) both',
-              opacity: hoveredBtn === 'load' ? 0.55 : 1,
+              opacity: hovered === 'load' ? 0.5 : 1,
+              transition: 'opacity 0.2s ease',
+              animation: 'px-menu-pulse 2.2s ease-in-out infinite',
             }}
             onClick={onNewGame}
-            onMouseEnter={() => setHoveredBtn('new')}
-            onMouseLeave={() => setHoveredBtn(null)}
+            onMouseEnter={() => setHovered('new')}
+            onMouseLeave={() => setHovered(null)}
             aria-label="Start a new game"
           >
             <Play />
             <span>NEW GAME</span>
-          </button>
+          </motion.button>
 
           {/* LOAD GAME */}
-          <button
+          <motion.button
             className="px-btn px-menu-action px-menu-action--secondary"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 22, delay: 0.50 }}
             style={{
-              animation: 'px-menu-btn-enter 0.45s 0.38s cubic-bezier(0.34,1.2,0.64,1) both',
-              opacity: hoveredBtn === 'new' ? 0.55 : 1,
+              opacity: hovered === 'new' ? 0.5 : 1,
+              transition: 'opacity 0.2s ease',
             }}
             onClick={handleLoadClick}
-            onMouseEnter={() => setHoveredBtn('load')}
-            onMouseLeave={() => setHoveredBtn(null)}
+            onMouseEnter={() => setHovered('load')}
+            onMouseLeave={() => setHovered(null)}
             aria-label="Load a saved game"
           >
             <FolderOpen />
             <span>LOAD GAME</span>
-          </button>
+          </motion.button>
 
-          {errorMessage && (
-            <p role="alert" style={{
-              fontFamily: "'Press Start 2P', monospace", fontSize: 9,
-              color: '#f87171', margin: '2px 0 0', textAlign: 'center',
-              textShadow: '1px 1px 0 #000',
-            }}>
-              {errorMessage}
-            </p>
-          )}
+          {/* Error */}
+          <AnimatePresence>
+            {errorMessage && (
+              <motion.p
+                role="alert"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  fontFamily: "'Press Start 2P', monospace", fontSize: 9,
+                  color: '#f87171', margin: '2px 0 0', textAlign: 'center',
+                  textShadow: '1px 1px 0 #000',
+                }}
+              >
+                {errorMessage}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Footer — fixed to bottom */}
-      <div style={{
-        position: 'absolute', bottom: isMobile ? 16 : 20, left: 0, right: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 12, zIndex: 1,
-        animation: 'px-menu-footer-enter 0.6s 0.55s ease both',
-      }}>
-        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(180,160,220,0.55)', letterSpacing: 1 }}>v1.0.0</span>
-        <span style={{ color: 'rgba(180,160,220,0.3)', fontSize: 10 }}>·</span>
-        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(180,160,220,0.55)', letterSpacing: 1 }}>by Seba Lopez</span>
-        <span style={{ color: 'rgba(180,160,220,0.3)', fontSize: 10 }}>·</span>
+      {/* Footer */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7, duration: 0.6 }}
+        style={{
+          position: 'absolute',
+          bottom: isMobile ? 'calc(16px + var(--safe-bottom, 0px))' : 20,
+          left: 0, right: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 10, zIndex: 1,
+        }}
+      >
+        {/* Decorative line left */}
+        <div style={{ flex: 1, maxWidth: 60, height: 1, background: 'linear-gradient(90deg, transparent, rgba(180,160,220,0.25))' }} />
+
+        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(180,160,220,0.45)', letterSpacing: 1 }}>v1.0.0</span>
+        <span style={{ color: 'rgba(180,160,220,0.25)', fontSize: 10 }}>·</span>
+        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: isMobile ? 7 : 8, color: 'rgba(180,160,220,0.45)', letterSpacing: 1 }}>by Seba Lopez</span>
+        <span style={{ color: 'rgba(180,160,220,0.25)', fontSize: 10 }}>·</span>
         <a
           href="https://x.com/Sebalg_tech"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: 'rgba(180,160,220,0.6)', textDecoration: 'none', display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(220,200,255,0.9)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(180,160,220,0.6)')}
+          style={{ color: 'rgba(180,160,220,0.55)', textDecoration: 'none', display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(220,200,255,0.95)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(180,160,220,0.55)')}
           aria-label="Follow on X"
         >
-          <XLogo size={isMobile ? 22 : 26} />
+          <XLogo size={isMobile ? 20 : 24} />
         </a>
-      </div>
+
+        {/* Decorative line right */}
+        <div style={{ flex: 1, maxWidth: 60, height: 1, background: 'linear-gradient(90deg, rgba(180,160,220,0.25), transparent)' }} />
+      </motion.div>
 
       <input
         ref={loadInputRef}
