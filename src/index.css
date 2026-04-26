@@ -2693,15 +2693,16 @@ button {
 }
 
 .px-overlay-panel.px-panel--thoughts {
-  border: 1px solid rgba(148,163,184,0.65);
-  border-top-color: rgba(148,163,184,0.8);
+  border: 1px solid rgba(148,163,184,0.55);
+  border-top-color: rgba(148,163,184,0.55);
+  border-left-color: rgba(148,163,184,0.55);
   border-radius: 14px;
   box-shadow:
-    0 0 8px rgba(148,163,184,0.3),
-    0 0 22px rgba(100,116,139,0.2),
-    0 0 46px rgba(71,85,105,0.12),
+    0 0 8px rgba(148,163,184,0.22),
+    0 0 22px rgba(100,116,139,0.14),
+    0 0 46px rgba(71,85,105,0.08),
     0 24px 48px rgba(0,0,0,0.55),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+    inset 0 1px 0 rgba(255,255,255,0.07);
 }
 
 .px-overlay-panel.px-panel--challenges {
@@ -4209,6 +4210,15 @@ button {
   .px-mobile-tab.px-side-tab--research.px-btn--active {
     background: rgba(103, 232, 249, 0.1);
     color: #a7f3ff;
+  }
+
+  .px-mobile-tab.px-side-tab--thoughts {
+    color: rgba(148, 163, 184, 0.55);
+  }
+
+  .px-mobile-tab.px-side-tab--thoughts.px-btn--active {
+    background: rgba(148, 163, 184, 0.1);
+    color: #cbd5e1;
   }
 
   .px-mobile-tab svg {

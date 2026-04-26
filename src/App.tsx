@@ -69,7 +69,7 @@ function App() {
   const [buildRotation, setBuildRotation] = useState(0);
   const [isPlacing, setIsPlacing] = useState(false);
   // Pre-populate with initial unlocked buildings so they show in the build
-  // menu immediately â€” the ResearchSystem fires its first notify() before
+  // menu immediately â€" the ResearchSystem fires its first notify() before
   const [researchState, setResearchState] = useState<ResearchState>(() => ({
     unlocked: [...INITIAL_UNLOCKED_BUILDINGS],
     completed: [],
@@ -136,7 +136,7 @@ function App() {
     events.on('challengeCompleted', challenge => {
       const celebrationIds: Record<string, { title: string; sub: string }> = {
         challenge_first_ride:   { title: 'ðŸŽ¡ FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
-        challenge_three_rides:  { title: 'ðŸŽ¢ THRILL PARK UNLOCKED!',  sub: 'Three rides â€” fear is your product.' },
+        challenge_three_rides:  { title: 'ðŸŽ¢ THRILL PARK UNLOCKED!',  sub: 'Three rides â€" fear is your product.' },
         challenge_rating:       { title: 'â­ FIVE-STAR NIGHTMARE!',   sub: 'The park is legendary.' },
         challenge_visitors_150: { title: 'ðŸ’€ THOUSAND SCREAMS!',     sub: 'Your park is a phenomenon.' },
       };
@@ -421,7 +421,7 @@ function App() {
 
       {shouldShowHud && <HUD economy={economy} hideMoney={showParkPanel} />}
 
-      {/* â”€â”€ Desktop side tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* â"€â"€ Desktop side tabs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {/* ── Desktop icon dock ──────────────────────────────────────────── */}
       <div className="px-icon-dock">
         <button
@@ -535,7 +535,7 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* â”€â”€ Mobile bottom nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* â"€â"€ Mobile bottom nav â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 95 }}>
           {/* Active panel — fullscreen on mobile */}
@@ -815,7 +815,7 @@ function App() {
                   {activeBuildDefinition.type !== BuildingType.PATH && activeBuildDefinition.type !== BuildingType.DELETE ? (
                     <>
                       <div className="px-chip">Cost ${activeBuildDefinition.cost}</div>
-                      <div className="px-chip"><RotateCw size={12} /> R to rotate â€” {buildRotation}Â°</div>
+                      <div className="px-chip"><RotateCw size={12} />{' R to rotate — '}{buildRotation}{'°'}</div>
                     </>
                   ) : (
                     <div className="px-chip">

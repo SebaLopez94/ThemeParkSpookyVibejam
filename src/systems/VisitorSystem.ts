@@ -59,6 +59,8 @@ const MSG_PRICE = ["That's way too expensive! 💰", "What a rip-off!", "I'm not
 const MSG_FOOD = ["This burger is amazing! 🍔", "Yum, so delicious!", "Best food in the park!", "Exactly what I needed."];
 const MSG_DRINK = ["So refreshing! 🥤", "Ah, just what I needed.", "Best drink ever.", "I was so thirsty!"];
 const MSG_GIFT = ["I love this souvenir! 🛍️", "Can't wait to show this off.", "This is so cool!", "Money well spent."];
+const MSG_RIDE_GREAT = ["That was INCREDIBLE! 🎢", "I need to go again!", "Best ride in the park!", "My heart is still racing!", "That was worth every penny!"];
+const MSG_RIDE_OK = ["Not bad, actually.", "That was pretty fun!", "Glad I tried that.", "Could have been wilder, but okay."];
 
 function pickMsg(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -143,29 +145,34 @@ export class VisitorSystem {
   public onVisitorThought: ((thought: import('../types').FeedMessage) => void) | null = null;
   private lastGlobalThoughtTime = 0;
 
-  private applyMood(visitor: Visitor, mood: VisitorThought, options?: any, now?: number): void {
+  private applyMood(
+    visitor: Visitor,
+    mood: VisitorThought,
+    options?: { force?: boolean; cooldownSeconds?: number },
+    now?: number
+  ): void {
     if (options || now !== undefined) {
       visitor.showMoodWithOptions(mood, options, now ?? this.frameNow);
     } else {
       visitor.showMood(mood);
     }
-    
-    // Throttle global feed emissions to max 1 every 2 seconds to prevent spam
+
+    // Throttle feed emissions: max 1 per 2 s globally to avoid React setState thrash.
     const currentNow = now ?? this.frameNow;
     if (currentNow - this.lastGlobalThoughtTime > 2.0) {
       this.lastGlobalThoughtTime = currentNow;
-      
+
       let faceMood = 'happy';
-      if (['sick'].includes(mood.kind)) faceMood = 'dirty';
-      else if (['sad', 'broke', 'hunger', 'thirst', 'price'].includes(mood.kind)) faceMood = 'sad';
-      else if (['bored', 'crowded'].includes(mood.kind)) faceMood = 'bored';
+      if (mood.kind === 'sick') faceMood = 'dirty';
+      else if (mood.kind === 'sad' || mood.kind === 'broke' || mood.kind === 'hunger' || mood.kind === 'thirst' || mood.kind === 'price') faceMood = 'sad';
+      else if (mood.kind === 'bored' || mood.kind === 'crowded') faceMood = 'bored';
 
       this.onVisitorThought?.({
         id: Math.random().toString(36).substring(2, 9),
         emoji: mood.emoji,
         faceImage: `/ui/kid${visitor.kidNumber}_${faceMood}.webp`,
         text: mood.message,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -323,9 +330,21 @@ export class VisitorSystem {
         const funBoost = Math.min(100, ride.data.funFactor * (ride.data.quality / 60) + decorBonus);
         visitor.boostFun(funBoost);
         visitor.markRideUsed(ride.data.id, this.frameNow);
-        visitor.startActivity('ride', ride.data.duration);
         if (fairness < 0.45) visitor.adjustHappiness(-6);
         else visitor.adjustHappiness(3); // positive memory from a fair ride
+        // Only ~25% of rides produce a feed thought — great rides have a higher chance.
+        // No force: canShowMood gates per-visitor cooldown so the sprite work isn't wasted.
+        const isGreat = funBoost > 55;
+        const rideThoughtChance = isGreat ? 0.32 : 0.14;
+        if (Math.random() < rideThoughtChance) {
+          this.applyMood(visitor, {
+            kind: isGreat ? 'excited' : 'happy',
+            emoji: '🎢',
+            message: isGreat ? pickMsg(MSG_RIDE_GREAT) : pickMsg(MSG_RIDE_OK),
+            duration: 2.0,
+          }, { cooldownSeconds: 30 }, this.frameNow);
+        }
+        visitor.startActivity('ride', ride.data.duration);
       }
       return;
     }

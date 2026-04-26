@@ -1,5 +1,6 @@
-import { X } from 'lucide-react';
+import { MessageSquare, X } from 'lucide-react';
 import { FeedMessage } from '../types';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface ThoughtsPanelProps {
   feed: FeedMessage[];
@@ -8,65 +9,130 @@ interface ThoughtsPanelProps {
 }
 
 export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="px-overlay-panel px-panel--thoughts px-shadow-glow" style={style}>
+    <div
+      className="px-panel px-overlay-panel px-panel--thoughts"
+      style={{ width: '100%', maxHeight: isMobile ? '56vh' : 'calc(100vh - 32px)', padding: 0, ...style }}
+    >
       {/* Header */}
-      <div className="px-panel-header" style={{ padding: '24px', borderBottom: '1px solid rgba(148,163,184,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#f8fafc', textShadow: '0 0 12px rgba(148,163,184,0.5)' }}>Visitor Thoughts</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#94a3b8' }}>Live feed from the park</p>
+      <div className="px-overlay-panel__top">
+        <div className="px-overlay-panel__meta">
+          <MessageSquare size={13} color="var(--px-muted)" />
+          <span className="px-label" style={{ color: 'var(--px-muted)' }}>Guest Feed</span>
         </div>
-        <button 
-          className="px-btn px-btn--sm" 
-          onClick={onClose}
-          aria-label="Close thoughts"
-          style={{ 
-            borderColor: 'rgba(148,163,184,0.4)', 
-            color: '#cbd5e1',
-            padding: 8
-          }}
-        >
-          <X size={18} />
+        <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
+          <X />
         </button>
       </div>
 
-      {/* Feed List */}
-      <div className="px-panel-content px-scroll-hidden" style={{ padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Feed list */}
+      <div
+        className="px-overlay-panel__body px-scroll-hidden"
+        style={{
+          padding: isMobile ? '10px 12px 14px' : '14px 16px 18px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: isMobile ? 8 : 10,
+        }}
+      >
         {feed.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', fontSize: 12 }}>
-            <span style={{ fontSize: 32, display: 'block', marginBottom: 16, opacity: 0.5 }}>👻</span>
-            No thoughts yet.<br/>Wait for visitors to arrive.
+          <div style={{ textAlign: 'center', padding: '40px 16px' }}>
+            <span style={{ fontSize: 32, display: 'block', marginBottom: 14, opacity: 0.35 }}>👻</span>
+            <span style={{
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: 8,
+              color: 'rgba(148,163,184,0.45)',
+              lineHeight: 2,
+            }}>
+              No thoughts yet.<br />Wait for visitors.
+            </span>
           </div>
         ) : (
-          feed.map(msg => (
-            <div 
-              key={msg.id} 
-              style={{
-                display: 'flex',
-                gap: '12px',
-                padding: '12px',
-                background: 'linear-gradient(145deg, rgba(30,41,59,0.4) 0%, rgba(15,23,42,0.6) 100%)',
-                border: '1px solid rgba(148,163,184,0.15)',
-                borderRadius: '8px',
-                alignItems: 'center'
-              }}
-            >
-              <div style={{ flexShrink: 0, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>
-                {msg.faceImage ? (
-                  <img src={msg.faceImage} alt="Visitor face" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : (
-                  <span style={{ fontSize: 24 }}>{msg.emoji}</span>
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.4 }}>
-                  {msg.text}
-                </p>
-              </div>
-            </div>
-          ))
+          feed.map((msg, index) => {
+            // Older entries fade out gradually — newest is full opacity, 8th is ~35%
+            const ageOpacity = Math.max(0.35, 1 - index * 0.082);
+            return (
+              <ThoughtCard key={msg.id} msg={msg} opacity={ageOpacity} isMobile={isMobile} />
+            );
+          })
         )}
       </div>
+    </div>
+  );
+}
+
+function ThoughtCard({
+  msg,
+  opacity,
+  isMobile,
+}: {
+  msg: FeedMessage;
+  opacity: number;
+  isMobile: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 10,
+        padding: isMobile ? '9px 10px' : '10px 12px',
+        background: 'linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 55%), rgba(71,85,105,0.1)',
+        border: '1px solid rgba(148,163,184,0.13)',
+        borderRadius: 8,
+        alignItems: 'center',
+        opacity,
+      }}
+    >
+      {/* Visitor face */}
+      <div style={{
+        flexShrink: 0,
+        width: isMobile ? 36 : 40,
+        height: isMobile ? 36 : 40,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        {msg.faceImage ? (
+          <img
+            src={msg.faceImage}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              filter: 'drop-shadow(1px 1px 0 #000)',
+            }}
+          />
+        ) : (
+          <span style={{ fontSize: isMobile ? 22 : 26 }}>{msg.emoji}</span>
+        )}
+      </div>
+
+      {/* Thought text */}
+      <p className="px-body" style={{
+        flex: 1,
+        margin: 0,
+        fontSize: isMobile ? 10 : 11,
+        lineHeight: 1.55,
+        color: 'rgba(226,232,240,0.85)',
+        minWidth: 0,
+      }}>
+        {msg.text}
+      </p>
+
+      {/* Thought emoji pill */}
+      <span style={{
+        flexShrink: 0,
+        fontSize: isMobile ? 16 : 18,
+        alignSelf: 'center',
+        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+      }}>
+        {msg.emoji}
+      </span>
     </div>
   );
 }
