@@ -3348,6 +3348,17 @@ button {
   to   { opacity: 1;    transform: translateY(0); }
 }
 
+@keyframes px-mobile-build-sheet-enter {
+  from {
+    opacity: 0.98;
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 @keyframes px-mobile-sheet-exit {
   from { opacity: 1; }
   to   { opacity: 0.98; }
@@ -3357,6 +3368,11 @@ button {
   animation: px-mobile-sheet-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   touch-action: pan-y;
+}
+
+.px-mobile-panel-sheet--build {
+  animation-name: px-mobile-build-sheet-enter;
+  overflow: hidden;
 }
 
 .px-mobile-panel-sheet--dragging {

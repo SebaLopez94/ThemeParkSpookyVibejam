@@ -1,4 +1,4 @@
-import { CSSProperties, HTMLAttributes, useEffect, useMemo, useState } from 'react';
+import { CSSProperties, HTMLAttributes, RefObject, useEffect, useMemo, useState } from 'react';
 import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'lucide-react';
 import { getAllCatalogItems } from '../data/buildings';
 import { BuildingCatalogItem, BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
@@ -14,6 +14,7 @@ interface BuildMenuProps {
   mobileSheetClassName?: string;
   mobileSheetStyle?: CSSProperties;
   mobileSheetHandlers?: HTMLAttributes<HTMLDivElement>;
+  mobileSheetRef?: RefObject<HTMLDivElement>;
 }
 
 type Tab = 'rides' | 'shops' | 'services' | 'decor';
@@ -74,7 +75,8 @@ export function BuildMenu({
   bottom,
   mobileSheetClassName,
   mobileSheetStyle,
-  mobileSheetHandlers
+  mobileSheetHandlers,
+  mobileSheetRef
 }: BuildMenuProps) {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<Tab>('rides');
@@ -132,6 +134,7 @@ export function BuildMenu({
 
   return (
     <div
+      ref={isMobile ? mobileSheetRef : undefined}
       className={isMobile ? mobileSheetClassName : undefined}
       style={shellStyle}
       {...(isMobile ? mobileSheetHandlers : undefined)}

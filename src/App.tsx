@@ -44,6 +44,7 @@ function App() {
   const gameRef = useRef<Game | null>(null);
   const loadInputRef = useRef<HTMLInputElement>(null);
   const mobilePanelSwipeStartRef = useRef<{ y: number; fromTop: boolean } | null>(null);
+  const mobileSheetRef = useRef<HTMLDivElement>(null);
   const mobilePanelCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   const [economy, setEconomy] = useState<EconomyState>({
@@ -355,13 +356,19 @@ function App() {
     setShowChallenges(false);
     setShowResearch(false);
   };
+  const getMobileSheetCloseDistance = () => {
+    if (activeMobileSheet === 'build') {
+      return mobileSheetRef.current?.getBoundingClientRect().height ?? window.innerHeight;
+    }
+    return window.innerHeight;
+  };
   const closeMobileOverlayPanels = () => {
     if (!activeMobileSheet) return;
     const sheetToClose = activeMobileSheet;
     setIsMobilePanelDragging(false);
     setIsMobilePanelClosing(true);
     window.requestAnimationFrame(() => {
-      setMobilePanelDragY(window.innerHeight);
+      setMobilePanelDragY(getMobileSheetCloseDistance());
     });
     if (mobilePanelCloseTimerRef.current) window.clearTimeout(mobilePanelCloseTimerRef.current);
     mobilePanelCloseTimerRef.current = window.setTimeout(() => {
@@ -404,7 +411,7 @@ function App() {
       if (!start || !touch || !start.fromTop) return;
       const deltaY = touch.clientY - start.y;
       setIsMobilePanelDragging(true);
-      const maxDrag = window.innerHeight;
+      const maxDrag = getMobileSheetCloseDistance();
       const nextDragY = Math.max(0, Math.min(maxDrag, deltaY));
       setMobilePanelDragY(nextDragY);
     },
@@ -421,7 +428,7 @@ function App() {
       }
     },
   };
-  const mobileSheetClassName = `px-mobile-panel-sheet${isMobilePanelClosing ? ' px-mobile-panel-sheet--closing' : ''}${isMobilePanelDragging ? ' px-mobile-panel-sheet--dragging' : ''}`;
+  const mobileSheetClassName = `px-mobile-panel-sheet${activeMobileSheet === 'build' ? ' px-mobile-panel-sheet--build' : ''}${isMobilePanelClosing ? ' px-mobile-panel-sheet--closing' : ''}${isMobilePanelDragging ? ' px-mobile-panel-sheet--dragging' : ''}`;
   const mobileSheetDragStyle = {
     transform: mobilePanelDragY > 0 ? `translateY(${mobilePanelDragY}px)` : undefined,
   };
@@ -541,10 +548,11 @@ function App() {
 
       {/* â”€â”€ Mobile bottom nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {isMobile && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45 }}>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 95 }}>
           {/* Active panel — fullscreen on mobile */}
           {(showParkPanel || showChallenges || showResearch) && (
             <div
+              ref={mobileSheetRef}
               className={mobileSheetClassName}
               style={{
                 position: 'fixed',
@@ -693,6 +701,7 @@ function App() {
           mobileSheetClassName={mobileSheetClassName}
           mobileSheetStyle={mobileSheetDragStyle}
           mobileSheetHandlers={mobileSheetTouchHandlers}
+          mobileSheetRef={mobileSheetRef}
         />
       )}
 
