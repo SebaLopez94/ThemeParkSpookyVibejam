@@ -150,28 +150,34 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
 
                     return (
                       <article key={challenge.id} className={`px-challenge-card px-challenge-card--${status}`}>
-                        <div className="px-challenge-card__status">
-                          {status === 'claimed' ? <CheckCircle2 /> : status === 'ready' ? <Gem /> : <Trophy />}
-                          <span>{status === 'claimed' ? 'Claimed' : status === 'ready' ? 'Ready' : getChallengeLabel(challenge)}</span>
+                        {/* Top row: status badge + reward */}
+                        <div className="px-challenge-card__top">
+                          <div className="px-challenge-card__badge">
+                            {status === 'claimed' ? <CheckCircle2 /> : status === 'ready' ? <Gem /> : <Trophy />}
+                            <span>{status === 'claimed' ? 'Claimed' : status === 'ready' ? 'Claim!' : getChallengeLabel(challenge)}</span>
+                          </div>
+                          <div className="px-challenge-card__reward">
+                            <Coins />
+                            <span>+${challenge.reward.money}</span>
+                          </div>
                         </div>
 
+                        {/* Title + description */}
                         <div className="px-challenge-card__copy">
                           <h4>{challenge.title}</h4>
                           <p>{challenge.description}</p>
                         </div>
 
-                        <div className="px-challenge-card__reward">
-                          <span><Coins /> +${challenge.reward.money}</span>
-                        </div>
-
-                        <div className="px-challenge-card__footer">
-                          <span>{getProgressText(challenge)}</span>
-                          {challenge.duration && <span><TimerReset /> Streak</span>}
-                          {status === 'active' && percent >= 75 && <span><Sparkles /> Close</span>}
-                        </div>
-
-                        <div className="px-challenge-card__bar" aria-hidden="true">
-                          <span style={{ width: `${percent}%` }} />
+                        {/* Progress bar + meta */}
+                        <div className="px-challenge-card__progress-row">
+                          <div className="px-challenge-card__bar" aria-hidden="true">
+                            <span style={{ width: `${percent}%` }} />
+                          </div>
+                          <div className="px-challenge-card__meta">
+                            <span>{getProgressText(challenge)}</span>
+                            {challenge.duration && <span><TimerReset /> Streak</span>}
+                            {status === 'active' && percent >= 75 && <span className="px-challenge-card__almost"><Sparkles /> Almost!</span>}
+                          </div>
                         </div>
                       </article>
                     );

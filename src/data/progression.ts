@@ -46,7 +46,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_first_ride',
     title: 'Summon the Screams',
-    description: 'Build any ride so visitors have a reason to enter and spend money.',
+    description: 'Build 1 ride.',
     type: 'ride_count',
     target: 1,
     reward: { money: 400, rating: 3 },
@@ -55,7 +55,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_first_shop',
     title: 'Feed the Damned',
-    description: 'Build any shop to cover guest needs and create extra income.',
+    description: 'Build 1 shop.',
     type: 'shop_count',
     target: 1,
     reward: { money: 250, rating: 2 },
@@ -64,7 +64,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_visitors_15',
     title: 'First Sacrifices',
-    description: 'Attract 20 total visitors. Open the park and make sure paths connect to attractions.',
+    description: 'Attract 20 visitors.',
     type: 'visitor_count',
     target: 20,
     reward: { money: 300, rating: 3 },
@@ -75,7 +75,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_decorations_3',
     title: 'Dark Atmosphere',
-    description: 'Place 5 decorations to improve park appeal around paths and attractions.',
+    description: 'Place 5 decorations.',
     type: 'decoration_count',
     target: 5,
     reward: { money: 300, rating: 2 },
@@ -84,7 +84,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_visitors_30',
     title: 'Ghost Crowd',
-    description: 'Reach 45 total visitors by keeping the park open and offering enough things to do.',
+    description: 'Attract 45 visitors.',
     type: 'visitor_count',
     target: 45,
     reward: { money: 500, rating: 3 },
@@ -93,7 +93,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_first_restroom',
     title: 'Necessary Evil',
-    description: 'Build a restroom so guests can recover hygiene before it hurts happiness.',
+    description: 'Build 1 service building.',
     type: 'service_count',
     target: 1,
     reward: { money: 300, rating: 2 },
@@ -102,7 +102,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_happiness_1',
     title: 'Happy Haunting',
-    description: 'Keep average happiness above 65 for 35 seconds by balancing fun, food, drinks and hygiene.',
+    description: 'Happiness above 65 for 35s.',
     type: 'happiness_streak',
     target: 65,
     duration: 35,
@@ -113,7 +113,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_all_shops',
     title: 'Catering to Chaos',
-    description: 'Build food, drinks and gift shops so visitors can satisfy every shop need.',
+    description: 'Build 3 shops.',
     type: 'shop_count',
     target: 3,
     reward: { money: 700, rating: 4 },
@@ -122,7 +122,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_visitors_60',
     title: 'The Masses Arrive',
-    description: 'Attract 85 total visitors. More variety and good satisfaction will keep traffic growing.',
+    description: 'Attract 85 visitors.',
     type: 'visitor_count',
     target: 85,
     reward: { money: 800, rating: 4 },
@@ -131,7 +131,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_three_rides',
     title: 'Triple Threat',
-    description: 'Build 4 rides to give guests more fun options and reduce boredom.',
+    description: 'Build 4 rides.',
     type: 'ride_count',
     target: 4,
     reward: { money: 900, rating: 5 },
@@ -140,7 +140,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_rating_50',
     title: 'Rising Dread',
-    description: 'Reach a park rating of 55 by improving attractions, services, decorations and guest happiness.',
+    description: 'Reach 55 park rating.',
     type: 'rating_threshold',
     target: 55,
     reward: { money: 800, rating: 0 },
@@ -151,7 +151,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_visitors_100',
     title: 'The Haunted Hundreds',
-    description: 'Attract 140 total visitors by scaling attractions and keeping guest needs covered.',
+    description: 'Attract 140 visitors.',
     type: 'visitor_count',
     target: 140,
     reward: { money: 1500, rating: 6 },
@@ -160,7 +160,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_active_15',
     title: 'Packed Graveyard',
-    description: 'Have 25 visitors inside the park at once. Keep enough capacity so guests do not leave early.',
+    description: '25 visitors at once.',
     type: 'active_visitors',
     target: 25,
     reward: { money: 1000, rating: 4 },
@@ -169,7 +169,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_happiness_2',
     title: 'Waves of Delight',
-    description: 'Keep average happiness above 75 for 60 seconds with strong rides, shops and services.',
+    description: 'Happiness above 75 for 60s.',
     type: 'happiness_streak',
     target: 75,
     duration: 60,
@@ -179,7 +179,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_rating_70',
     title: 'Crowned in Darkness',
-    description: 'Reach a park rating of 75. Improve the whole park, not just one attraction.',
+    description: 'Reach 75 park rating.',
     type: 'rating_threshold',
     target: 75,
     reward: { money: 1800, rating: 0 },
@@ -188,7 +188,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_profit_2',
     title: 'Sustained Terror',
-    description: 'Keep net profit positive for 120 seconds. Make sure income stays ahead of maintenance costs.',
+    description: 'Positive profit for 120s.',
     type: 'profit_streak',
     target: 1,
     duration: 120,
@@ -200,7 +200,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_visitors_200',
     title: 'Haunted Empire',
-    description: 'Attract 240 total visitors. A large park needs enough rides, shops and services to stay healthy.',
+    description: 'Attract 240 visitors.',
     type: 'visitor_count',
     target: 240,
     reward: { money: 3500, rating: 8 },
@@ -209,7 +209,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_happiness_3',
     title: 'The Perfect Nightmare',
-    description: 'Keep average happiness above 84 for 75 seconds. Every guest need must be under control.',
+    description: 'Happiness above 84 for 75s.',
     type: 'happiness_streak',
     target: 84,
     duration: 75,
@@ -219,7 +219,7 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_rating_85',
     title: 'Nightmare Crowned',
-    description: 'Reach a park rating of 88 with a complete, well-balanced and highly satisfying park.',
+    description: 'Reach 88 park rating.',
     type: 'rating_threshold',
     target: 88,
     reward: { money: 3000, rating: 0 },
