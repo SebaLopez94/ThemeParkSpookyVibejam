@@ -72,6 +72,17 @@ html, body {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  /* Prevent white flash on mobile when browser chrome collapses */
+  background: #050206;
+  height: 100%;
+}
+
+/* Use dynamic viewport height on mobile to fill the screen correctly
+   when the browser address bar collapses or expands */
+@media (max-width: 640px) {
+  .h-screen {
+    height: 100dvh !important;
+  }
 }
 
 /* All interactive elements: instant tap response, no 300ms delay */
