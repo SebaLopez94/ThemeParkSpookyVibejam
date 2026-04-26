@@ -89,7 +89,7 @@ export function ResearchPanel({
   const totalCount = nodes.length;
 
   return (
-    <div className="px-panel px-panel--research px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '48vh', padding: 0, ...style }}>
+    <div className="px-panel px-panel--research px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : 'calc(100vh - 32px)', padding: 0, ...style }}>
       <div className="px-overlay-panel__top">
         <div className="px-overlay-panel__meta">
           <span className="px-label" style={{ color: 'var(--px-cyan)' }}>Research</span>

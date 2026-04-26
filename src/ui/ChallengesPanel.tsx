@@ -85,7 +85,7 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
   return (
     <div
       className="px-panel px-panel--challenges px-overlay-panel px-challenge-board"
-      style={{ width: '100%', maxHeight: isMobile ? '64vh' : '58vh', padding: 0, ...style }}
+      style={{ width: '100%', maxHeight: isMobile ? '64vh' : 'min(78vh, 760px)', padding: 0, ...style }}
     >
       <div className="px-challenge-board__header">
         <div className="px-challenge-board__mark">
