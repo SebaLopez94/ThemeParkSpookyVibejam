@@ -133,19 +133,16 @@ export function HUD({ economy }: HUDProps) {
         <div className="px-titlebar px-titlebar--hud px-hud-bar">
           <div className="px-titlebar__label px-hud-bar__label">
             <Radio className="px-icon-sm" />
-            <span className="px-hud-bar__title">Park Live</span>
+            <span className="px-hud-inline-money">
+              <Coins className="px-icon-sm" color="var(--px-gold)" />
+              ${economy.money.toLocaleString()}
+            </span>
           </div>
 
           <div className="px-hud-bar__actions">
             <span className={`px-hud-status ${economy.isOpen ? 'px-hud-status--open' : 'px-hud-status--closed'}`}>
               {economy.isOpen ? 'OPEN' : 'CLOSED'}
             </span>
-            {collapsed && (
-              <span className="px-hud-inline-money">
-                <Coins className="px-icon-sm" color="var(--px-gold)" />
-                ${economy.money.toLocaleString()}
-              </span>
-            )}
             <button
               className="px-btn px-btn--sm"
               aria-label={collapsed ? 'Expand HUD' : 'Collapse HUD'}
