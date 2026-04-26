@@ -803,7 +803,7 @@ function App() {
         >
           {isMobile ? (
             /* ── MOBILE HELP ───────────────────────────────────────────── */
-            <div className="px-panel px-scroll-hidden" style={{ width: '100%', padding: 0, maxHeight: '100dvh', overflowY: 'auto', overflowX: 'hidden', borderRadius: 0 }} onClick={e => e.stopPropagation()}>
+            <div className="px-panel px-panel--help px-scroll-hidden" style={{ width: '100%', padding: 0, maxHeight: '100dvh', overflowY: 'auto', overflowX: 'hidden', borderRadius: 0 }} onClick={e => e.stopPropagation()}>
               <div className="px-titlebar" style={{ fontSize: 10 }}>HOW TO PLAY</div>
               <div style={{ padding: '14px 14px 20px' }}>
 
@@ -878,7 +878,7 @@ function App() {
             </div>
           ) : (
             /* ── DESKTOP HELP ──────────────────────────────────────────── */
-            <div className="px-panel px-scroll-hidden" style={{ maxWidth: 640, width: '94%', padding: 0, maxHeight: '90vh', overflowY: 'auto', overflowX: 'hidden' }} onClick={e => e.stopPropagation()}>
+            <div className="px-panel px-panel--help px-scroll-hidden" style={{ maxWidth: 640, width: '94%', padding: 0, maxHeight: '90vh', overflowY: 'auto', overflowX: 'hidden' }} onClick={e => e.stopPropagation()}>
               <div className="px-titlebar">HOW TO PLAY</div>
               <div style={{ padding: '20px 24px 24px' }}>
 

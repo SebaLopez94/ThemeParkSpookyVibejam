@@ -387,15 +387,66 @@ button {
 
 .px-panel--manage {
   background:
-    radial-gradient(circle at top left, rgba(167,139,250,0.18), transparent 35%),
-    linear-gradient(180deg, #24173a 0%, #140d24 100%);
+    radial-gradient(circle at top left, rgba(139,92,246,0.12), transparent 42%),
+    rgba(12, 6, 22, 0.97);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(139,92,246,0.42);
+  border-top-color: rgba(167,139,250,0.42);
+  border-left-color: rgba(139,92,246,0.42);
+  box-shadow:
+    0 0 22px rgba(139,92,246,0.22),
+    0 0 52px rgba(139,92,246,0.08),
+    0 12px 36px rgba(0,0,0,0.62);
 }
 
 .px-panel--controls {
   background:
-    radial-gradient(circle at top left, rgba(217,249,157,0.12), transparent 35%),
-    linear-gradient(180deg, #1d1e33 0%, #11131f 100%);
+    radial-gradient(circle at top left, rgba(217,249,157,0.09), transparent 42%),
+    rgba(6, 12, 4, 0.97);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(217,249,157,0.42);
+  border-top-color: rgba(217,249,157,0.42);
+  border-left-color: rgba(217,249,157,0.42);
+  box-shadow:
+    0 0 20px rgba(217,249,157,0.20),
+    0 0 50px rgba(217,249,157,0.08),
+    0 8px 28px rgba(0,0,0,0.58);
 }
+.px-panel--controls .px-titlebar {
+  background:
+    linear-gradient(160deg, rgba(217,249,157,0.14) 0%, rgba(217,249,157,0.04) 55%),
+    rgba(0,0,0,0.22);
+  border: none;
+  border-bottom: 1px solid rgba(217,249,157,0.18);
+  margin: 0;
+  box-shadow: none;
+}
+.px-panel--controls .px-titlebar::before { display: none; }
+
+/* ── Help panel ─────────────────────────────────────────────────── */
+.px-panel--help {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(217,249,157,0.08), transparent 40%),
+    rgba(5, 10, 3, 0.97);
+  backdrop-filter: blur(28px);
+  border: 1px solid rgba(217,249,157,0.42);
+  border-top-color: rgba(217,249,157,0.42);
+  border-left-color: rgba(217,249,157,0.42);
+  box-shadow:
+    0 0 22px rgba(217,249,157,0.20),
+    0 0 56px rgba(217,249,157,0.08),
+    0 12px 36px rgba(0,0,0,0.65);
+}
+.px-panel--help .px-titlebar {
+  background:
+    linear-gradient(160deg, rgba(217,249,157,0.14) 0%, rgba(217,249,157,0.04) 55%),
+    rgba(0,0,0,0.22);
+  border: none;
+  border-bottom: 1px solid rgba(217,249,157,0.18);
+  margin: 0;
+  box-shadow: none;
+}
+.px-panel--help .px-titlebar::before { display: none; }
 
 .px-titlebar {
   display: flex;
@@ -489,9 +540,14 @@ button {
 
 .px-titlebar--manage {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.02) 28%, transparent 29%),
-    linear-gradient(180deg, #3a274b 0%, #21142f 58%, #140b1f 100%);
+    linear-gradient(160deg, rgba(139,92,246,0.18) 0%, rgba(139,92,246,0.05) 55%),
+    rgba(0,0,0,0.22);
+  border: none;
+  border-bottom: 1px solid rgba(139,92,246,0.24);
+  margin: 0;
+  box-shadow: none;
 }
+.px-titlebar--manage::before { display: none; }
 
 .px-titlebar__label {
   display: inline-flex;
@@ -1583,12 +1639,14 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 10px;
+  padding: 6px 10px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 11px;
-  color: var(--px-text);
-  background: rgba(255,255,255,0.06);
-  border: 2px solid rgba(255,255,255,0.1);
+  font-size: 10px;
+  color: rgba(217,249,157,0.88);
+  background: rgba(217,249,157,0.07);
+  border: 1px solid rgba(217,249,157,0.2);
+  border-radius: 5px;
+  text-shadow: 0 0 8px rgba(217,249,157,0.22);
 }
 
 .px-chip svg {
@@ -4267,24 +4325,25 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 22px;
-  padding: 4px 0;
+  padding: 4px 8px;
   font-family: 'Press Start 2P', monospace;
   font-size: 7px;
   line-height: 1.4;
   text-align: center;
-  background: transparent;
-  border: none;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px;
   white-space: nowrap;
 }
-
 .px-building-status--good {
   color: var(--px-green-hi);
-  border-color: rgba(217,249,157,0.2);
+  background: rgba(217,249,157,0.08);
+  border-color: rgba(217,249,157,0.24);
 }
 
 .px-building-status--warn {
   color: var(--px-gold);
+  background: rgba(251,191,36,0.08);
   border-color: rgba(251,191,36,0.24);
 }
 
@@ -4295,8 +4354,8 @@ button {
 .px-building-metrics {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0;
-  margin: 6px 0 12px;
+  gap: 4px;
+  margin: 10px 0 14px;
 }
 
 .px-building-metric {
@@ -4305,9 +4364,10 @@ button {
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
-  padding: 6px 0;
-  background: transparent;
-  border: none;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px;
 }
 
 .px-building-metric span {
