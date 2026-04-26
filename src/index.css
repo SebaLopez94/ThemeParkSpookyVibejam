@@ -2392,6 +2392,52 @@ button {
   box-shadow: 0 0 8px rgba(167, 243, 255, 0.6);
 }
 
+/* ──────────────────────────────────────────────────────────
+   THOUGHTS DOCK BTN
+   ────────────────────────────────────────────────────────── */
+.px-dock-btn--thoughts {
+  color: rgba(148, 163, 184, 0.72);
+}
+.px-dock-btn--thoughts:hover {
+  border-color: rgba(148, 163, 184, 0.45);
+  border-top-color: rgba(203, 213, 225, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.28),
+    0 2px 12px rgba(0,0,0,0.5),
+    0 0 24px rgba(148, 163, 184, 0.28);
+  color: #f1f5f9;
+}
+.px-dock-btn--thoughts.px-dock-btn--active {
+  background:
+    linear-gradient(160deg, rgba(148, 163, 184, 0.22) 0%, rgba(100, 116, 139, 0.07) 55%),
+    rgba(4, 12, 24, 0.95);
+  border-color: rgba(148, 163, 184, 0.6);
+  border-top-color: rgba(203, 213, 225, 0.8);
+  color: #f8fafc;
+  box-shadow:
+    inset 0 1px 0 rgba(203, 213, 225, 0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 0 28px rgba(148, 163, 184, 0.38),
+    0 4px 20px rgba(0,0,0,0.5);
+}
+.px-dock-btn--thoughts.px-dock-btn--active svg {
+  filter:
+    drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 7px rgba(203, 213, 225, 0.95));
+}
+.px-dock-btn--thoughts.px-dock-btn--active .px-dock-btn__label {
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 1),
+    0 0 8px rgba(203, 213, 225, 0.95);
+}
+.px-dock-btn--thoughts.px-dock-btn--active::after {
+  background: #cbd5e1;
+  opacity: 1;
+  left: 10px;
+  right: 10px;
+}
+
 /* Panel container — opens to the left of the dock */
 .px-dock-panel {
   position: fixed;
@@ -2460,6 +2506,14 @@ button {
 
 .px-dock-panel--research::before {
   top: 196px;
+}
+
+.px-dock-panel--thoughts {
+  color: #cbd5e1;
+}
+
+.px-dock-panel--thoughts::before {
+  top: 274px;
 }
 
 /* Hide dock on mobile — mobile has its own bottom nav */
@@ -2634,6 +2688,18 @@ button {
     0 0 8px rgba(167,243,255,0.3),
     0 0 22px rgba(34,211,238,0.2),
     0 0 46px rgba(8,145,178,0.12),
+    0 24px 48px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.px-overlay-panel.px-panel--thoughts {
+  border: 1px solid rgba(148,163,184,0.65);
+  border-top-color: rgba(148,163,184,0.8);
+  border-radius: 14px;
+  box-shadow:
+    0 0 8px rgba(148,163,184,0.3),
+    0 0 22px rgba(100,116,139,0.2),
+    0 0 46px rgba(71,85,105,0.12),
     0 24px 48px rgba(0,0,0,0.55),
     inset 0 1px 0 rgba(255,255,255,0.1);
 }
@@ -4512,6 +4578,12 @@ button {
     align-items: flex-start;
     flex-direction: column;
     gap: 7px;
+  }
+}
+
+@media (max-width: 640px) {
+  .px-panel--thoughts {
+    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   }
 }
 

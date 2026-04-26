@@ -129,6 +129,7 @@ function getEmojiTexture(emoji: string): THREE.CanvasTexture {
 export class Visitor {
   public mesh: THREE.Group;
   public data: VisitorData;
+  public readonly kidNumber: number;
   private moveSpeed = 1;
 
   private mixer: THREE.AnimationMixer | null = null;
@@ -167,6 +168,7 @@ export class Visitor {
     const worldPos = GridHelper.gridToWorld(startPosition);
 
     const personality = pickRandomPersonality();
+    this.kidNumber = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
 
     // Bake personality multipliers once — never recomputed per frame.
     this.funMult    = personality === 'thrill_seeker' ? 1.25 : personality === 'relaxer' ? 0.80 : 1.0;
@@ -246,7 +248,7 @@ export class Visitor {
   }
 
   private loadModel(): void {
-    const modelPath = VISITOR_MODEL_PATHS[Math.floor(Math.random() * VISITOR_MODEL_PATHS.length)];
+    const modelPath = VISITOR_MODEL_PATHS[this.kidNumber - 1];
 
     const cached = GLTF_MODEL_CACHE.get(modelPath);
     if (cached) {

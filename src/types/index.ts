@@ -1,4 +1,4 @@
-﻿export interface GridPosition {
+export interface GridPosition {
   x: number;
   z: number;
 }
@@ -178,6 +178,14 @@ export interface VisitorThought {
   emoji: string;
   message: string;
   duration: number;
+}
+
+export interface FeedMessage {
+  id: string;
+  emoji: string;
+  faceImage?: string;
+  text: string;
+  timestamp: number;
 }
 
 export interface VisitorData {

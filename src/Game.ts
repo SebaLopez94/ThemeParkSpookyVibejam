@@ -70,6 +70,7 @@ export interface GameEvents {
   assetsProgress: number;
   /** Fires once when all queued startup assets complete. */
   assetsLoaded: void;
+  newThought: import('./types').FeedMessage;
 }
 
 export class Game {
@@ -260,6 +261,7 @@ export class Game {
     this.visitorSystem.onVisitorRestoreSpawn = () => this.economySystem.addRestoredVisitor();
     this.visitorSystem.onVisitorLeave = () => this.economySystem.removeVisitor();
     this.visitorSystem.onVisitorSpend = amount => this.economySystem.addMoney(amount);
+    this.visitorSystem.onVisitorThought = thought => this.events.emit('newThought', thought);
 
     // Wire up stable function references for simulationEntities — set once, reused every frame.
     this.simulationEntities.getLocalDecorationBonus = pos => this.buildingSystem.getLocalDecorationBonus(pos);

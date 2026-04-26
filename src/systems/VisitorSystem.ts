@@ -46,6 +46,24 @@ interface TargetCandidate {
   decorationBonus: number;
 }
 
+const MSG_SICK = ["I think I'm gonna hurl... 🤢", "This place feels gross.", "My stomach hurts.", "I need to sit down."];
+const MSG_HUNGER = ["I'm absolutely starving.", "I need a snack, ASAP.", "Where is the nearest food stall? 🍔", "My stomach is growling."];
+const MSG_THIRST = ["I'm so parched.", "I really need a drink.", "Where can I get some water? 💧", "Dying of thirst here."];
+const MSG_BORED = ["This park needs more thrilling rides. 🎢", "I'm getting kind of bored.", "Is there anything fun to do?", "I expected more action."];
+const MSG_SAD = ["I'm not having a great time. 😔", "This park is a letdown.", "I wish I went somewhere else.", "Just want to go home."];
+const MSG_BROKE = ["I'm completely out of cash.", "Everything is so expensive... 💸", "I spent all my money!", "Can't afford anything else."];
+const MSG_EXCITED = ["This ride looks insanely fun! 🤩", "I love the spooky vibes here!", "Frankenstein is hilarious!", "This park is absolutely amazing!", "I'm having the time of my life!"];
+const MSG_HAPPY = ["This place is great!", "I love the atmosphere! 🦇", "Best theme park ever!", "So glad I came here today."];
+const MSG_CROWDED = ["It's way too crowded here. 😤", "Need some breathing room.", "Why are there so many people?", "Excuse me, coming through..."];
+const MSG_PRICE = ["That's way too expensive! 💰", "What a rip-off!", "I'm not paying that much.", "Prices here are crazy."];
+const MSG_FOOD = ["This burger is amazing! 🍔", "Yum, so delicious!", "Best food in the park!", "Exactly what I needed."];
+const MSG_DRINK = ["So refreshing! 🥤", "Ah, just what I needed.", "Best drink ever.", "I was so thirsty!"];
+const MSG_GIFT = ["I love this souvenir! 🛍️", "Can't wait to show this off.", "This is so cool!", "Money well spent."];
+
+function pickMsg(arr: string[]): string {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 export class VisitorSystem {
   private visitors: Map<string, Visitor> = new Map();
   private visitorTargets: Map<string, VisitorTarget> = new Map();
@@ -122,6 +140,35 @@ export class VisitorSystem {
   public onVisitorRestoreSpawn: (() => void) | null = null;
   public onVisitorLeave: (() => void) | null = null;
   public onVisitorSpend: ((amount: number) => void) | null = null;
+  public onVisitorThought: ((thought: import('../types').FeedMessage) => void) | null = null;
+  private lastGlobalThoughtTime = 0;
+
+  private applyMood(visitor: Visitor, mood: VisitorThought, options?: any, now?: number): void {
+    if (options || now !== undefined) {
+      visitor.showMoodWithOptions(mood, options, now ?? this.frameNow);
+    } else {
+      visitor.showMood(mood);
+    }
+    
+    // Throttle global feed emissions to max 1 every 2 seconds to prevent spam
+    const currentNow = now ?? this.frameNow;
+    if (currentNow - this.lastGlobalThoughtTime > 2.0) {
+      this.lastGlobalThoughtTime = currentNow;
+      
+      let faceMood = 'happy';
+      if (['sick'].includes(mood.kind)) faceMood = 'dirty';
+      else if (['sad', 'broke', 'hunger', 'thirst', 'price'].includes(mood.kind)) faceMood = 'sad';
+      else if (['bored', 'crowded'].includes(mood.kind)) faceMood = 'bored';
+
+      this.onVisitorThought?.({
+        id: Math.random().toString(36).substring(2, 9),
+        emoji: mood.emoji,
+        faceImage: `/ui/kid${visitor.kidNumber}_${faceMood}.webp`,
+        text: mood.message,
+        timestamp: Date.now()
+      });
+    }
+  }
 
   constructor(scene: THREE.Scene, pathfinding: PathfindingSystem) {
     this.scene = scene;
@@ -301,10 +348,14 @@ export class VisitorSystem {
         } else if (fairness < 0.45) {
           visitor.adjustHappiness(-4);
         }
-        visitor.showMoodWithOptions({
+        let shoppingMsg = pickMsg(MSG_GIFT);
+        if (shop.data.shopType === ShopType.FOOD_STALL) shoppingMsg = pickMsg(MSG_FOOD);
+        else if (shop.data.shopType === ShopType.DRINK_STAND) shoppingMsg = pickMsg(MSG_DRINK);
+
+        this.applyMood(visitor, {
           kind: 'shopping',
           emoji: this.getShopActivityEmoji(shop.data.shopType),
-          message: 'Buying something.',
+          message: shoppingMsg,
           duration: 10,
         }, { force: true, cooldownSeconds: 2 }, this.frameNow);
         visitor.startActivity('shop', 10);
@@ -325,7 +376,7 @@ export class VisitorSystem {
           visitor.boostNeed(key as VisitorNeedType, (service.data.satisfactionEffects as Record<string, number>)[key] ?? 0);
         }
         if (fairness < 0.5) visitor.adjustHappiness(-2);
-        visitor.showMoodWithOptions({
+        this.applyMood(visitor, {
           kind: 'shopping',
           emoji: '🚻',
           message: 'Using the restroom.',
@@ -342,7 +393,7 @@ export class VisitorSystem {
       this.showPriorityMood(visitor, {
         kind: 'crowded',
         emoji: '😤',
-        message: 'This path is too crowded.',
+        message: pickMsg(MSG_CROWDED),
         duration: 1.9,
       });
       visitor.adjustHappiness(-2);
@@ -611,7 +662,7 @@ export class VisitorSystem {
     this.showPriorityMood(visitor, {
       kind: thoughtType,
       emoji: '💸',
-      message: 'Too expensive for what it offers.',
+      message: pickMsg(MSG_PRICE),
       duration: 2.1,
     });
     visitor.adjustHappiness(-3);
@@ -620,7 +671,7 @@ export class VisitorSystem {
 
   private showPriorityMood(visitor: Visitor, mood: VisitorThought): void {
     if (!visitor.canShowMood(mood.kind)) return;
-    visitor.showMood(mood);
+    this.applyMood(visitor, mood);
   }
 
   private tryShowAmbientMood(visitor: Visitor, now: number): void {
@@ -631,49 +682,49 @@ export class VisitorSystem {
     // now passed in — no extra performance.now() call per canShowMood check.
     const sickSeverity = THREE.MathUtils.clamp((18 - needs.hygiene) / 14, 0, 1);
     if (sickSeverity > 0 && visitor.canShowMood('sick', now) && r < 0.003 + sickSeverity * 0.012) {
-      visitor.showMood({ kind: 'sick', emoji: '🤢', message: 'This place feels gross.', duration: 2.1 });
+      this.applyMood(visitor, { kind: 'sick', emoji: '🤢', message: pickMsg(MSG_SICK), duration: 2.1 });
       return;
     }
 
     const hungerSeverity = THREE.MathUtils.clamp((55 - needs.hunger) / 35, 0, 1);
     if (hungerSeverity > 0 && visitor.canShowMood('hunger', now) && r < 0.008 + hungerSeverity * 0.02) {
-      visitor.showMood({ kind: 'hunger', emoji: '🍔', message: 'I need food.', duration: 1.9 });
+      this.applyMood(visitor, { kind: 'hunger', emoji: '🍔', message: pickMsg(MSG_HUNGER), duration: 1.9 });
       return;
     }
 
     const thirstSeverity = THREE.MathUtils.clamp((60 - needs.thirst) / 35, 0, 1);
     if (thirstSeverity > 0 && visitor.canShowMood('thirst', now) && r < 0.008 + thirstSeverity * 0.02) {
-      visitor.showMood({ kind: 'thirst', emoji: '🥤', message: 'I need a drink.', duration: 1.9 });
+      this.applyMood(visitor, { kind: 'thirst', emoji: '🥤', message: pickMsg(MSG_THIRST), duration: 1.9 });
       return;
     }
 
     const boredSeverity = THREE.MathUtils.clamp((40 - needs.fun) / 25, 0, 1);
     if (boredSeverity > 0 && visitor.canShowMood('bored', now) && r < 0.005 + boredSeverity * 0.012) {
-      visitor.showMood({ kind: 'bored', emoji: '🥱', message: 'This park needs more fun.', duration: 1.8 });
+      this.applyMood(visitor, { kind: 'bored', emoji: '🥱', message: pickMsg(MSG_BORED), duration: 1.8 });
       return;
     }
 
     const sadSeverity = THREE.MathUtils.clamp((38 - needs.happiness) / 22, 0, 1);
     if (sadSeverity > 0 && visitor.canShowMood('sad', now) && r < 0.004 + sadSeverity * 0.01) {
-      visitor.showMood({ kind: 'sad', emoji: '☹️', message: 'I am not having a great time.', duration: 1.8 });
+      this.applyMood(visitor, { kind: 'sad', emoji: '☹️', message: pickMsg(MSG_SAD), duration: 1.8 });
       return;
     }
 
     const brokeSeverity = THREE.MathUtils.clamp((12 - needs.money) / 10, 0, 1);
     if (brokeSeverity > 0 && visitor.canShowMood('broke', now) && r < 0.006 + brokeSeverity * 0.015) {
-      visitor.showMood({ kind: 'broke', emoji: '😔', message: 'I am running out of money.', duration: 1.8 });
+      this.applyMood(visitor, { kind: 'broke', emoji: '😔', message: pickMsg(MSG_BROKE), duration: 1.8 });
       return;
     }
 
     const excitedSeverity = THREE.MathUtils.clamp((needs.happiness - 88) / 10, 0, 1);
     if (excitedSeverity > 0 && visitor.canShowMood('excited', now) && r < 0.001 + excitedSeverity * 0.004) {
-      visitor.showMood({ kind: 'excited', emoji: '🤩', message: 'This park is amazing!', duration: 2.0 });
+      this.applyMood(visitor, { kind: 'excited', emoji: '🤩', message: pickMsg(MSG_EXCITED), duration: 2.0 });
       return;
     }
 
     const happySeverity = THREE.MathUtils.clamp((needs.happiness - 78) / 18, 0, 1);
     if (happySeverity > 0 && visitor.canShowMood('happy', now) && r < 0.0015 + happySeverity * 0.003) {
-      visitor.showMood({ kind: 'happy', emoji: '😊', message: 'This place is great!', duration: 1.7 });
+      this.applyMood(visitor, { kind: 'happy', emoji: '😊', message: pickMsg(MSG_HAPPY), duration: 1.7 });
     }
   }
 

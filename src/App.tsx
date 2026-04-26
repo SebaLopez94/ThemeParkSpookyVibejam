@@ -7,6 +7,7 @@ import {
   Gem,
   Hammer,
   HelpCircle,
+  MessageSquare,
   MousePointer2,
   RollerCoaster,
   RotateCw,
@@ -25,6 +26,7 @@ import { BuildingPanel } from './ui/BuildingPanel';
 import { HUD } from './ui/HUD';
 import { ParkPanel } from './ui/ParkPanel';
 import { ResearchPanel } from './ui/ResearchPanel';
+import { ThoughtsPanel } from './ui/ThoughtsPanel';
 import { BuildingIcon } from './ui/BuildingIcon';
 import { MainMenu } from './ui/MainMenu';
 import { ToastItem, ToastStack } from './ui/ToastStack';
@@ -36,7 +38,8 @@ import {
   GridPosition,
   ResearchNode,
   ResearchState,
-  SelectedBuildingInfo
+  SelectedBuildingInfo,
+  FeedMessage
 } from './types';
 
 function App() {
@@ -79,6 +82,8 @@ function App() {
   const [showResearch, setShowResearch] = useState(false);
   const [showChallenges, setShowChallenges] = useState(false);
   const [showParkPanel, setShowParkPanel] = useState(false);
+  const [showThoughtsPanel, setShowThoughtsPanel] = useState(false);
+  const [thoughtsFeed, setThoughtsFeed] = useState<FeedMessage[]>([]);
   const [mobilePanelDragY, setMobilePanelDragY] = useState(0);
   const [isMobilePanelDragging, setIsMobilePanelDragging] = useState(false);
   const [isMobilePanelClosing, setIsMobilePanelClosing] = useState(false);
@@ -127,6 +132,7 @@ function App() {
     events.on('rotationChange', degree => setBuildRotation(degree));
     events.on('researchUpdate', state => setResearchState(state));
     events.on('challengesUpdate', state => setChallenges(state));
+    events.on('newThought', msg => setThoughtsFeed(prev => [msg, ...prev].slice(0, 8)));
     events.on('challengeCompleted', challenge => {
       const celebrationIds: Record<string, { title: string; sub: string }> = {
         challenge_first_ride:   { title: 'ðŸŽ¡ FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
@@ -327,7 +333,7 @@ function App() {
   const celebrationTitle = celebration?.title.replace(/^[^A-Za-z0-9]+/u, '').trim() ?? '';
 
   const controlsRight = 16;
-  const activeMobilePanel = showParkPanel ? 'park' : showChallenges ? 'challenges' : showResearch ? 'research' : null;
+  const activeMobilePanel = showParkPanel ? 'park' : showChallenges ? 'challenges' : showResearch ? 'research' : showThoughtsPanel ? 'thoughts' : null;
   const activeMobileSheet = isBuildMenuVisible ? 'build' : activeMobilePanel;
   const mobileFullscreenPanelStyle = {
     height: 'calc(100dvh - 56px - var(--safe-bottom))',
@@ -342,6 +348,7 @@ function App() {
     setShowParkPanel(false);
     setShowChallenges(false);
     setShowResearch(false);
+    setShowThoughtsPanel(false);
   };
   const getMobileSheetCloseDistance = () => {
     if (activeMobileSheet === 'build') {
@@ -359,7 +366,7 @@ function App() {
     setMobilePanelDragY(0);
     setIsMobilePanelDragging(false);
   };
-  const openMobilePanel = (panel: 'park' | 'challenges' | 'research') => {
+  const openMobilePanel = (panel: 'park' | 'challenges' | 'research' | 'thoughts') => {
     if (activeMobilePanel === panel) {
       closeMobileOverlayPanels();
       return;
@@ -368,6 +375,7 @@ function App() {
     setShowParkPanel(panel === 'park');
     setShowChallenges(panel === 'challenges');
     setShowResearch(panel === 'research');
+    setShowThoughtsPanel(panel === 'thoughts');
     setShowBuildMenu(false);
   };
   const mobileSheetTouchHandlers = {
@@ -442,10 +450,19 @@ function App() {
           className={`px-dock-btn px-dock-btn--research${showResearch ? ' px-dock-btn--active' : ''}`}
           title="Lab"
           aria-label="Lab"
-          onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
+          onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); setShowThoughtsPanel(false); }}
         >
           <FlaskConical size={24} />
           <span className="px-dock-btn__label">LAB</span>
+        </button>
+        <button
+          className={`px-dock-btn px-dock-btn--thoughts${showThoughtsPanel ? ' px-dock-btn--active' : ''}`}
+          title="Thoughts Feed"
+          aria-label="Thoughts Feed"
+          onClick={() => { setShowThoughtsPanel(v => !v); setShowParkPanel(false); setShowChallenges(false); setShowResearch(false); }}
+        >
+          <MessageSquare size={24} />
+          <span className="px-dock-btn__label">FEED</span>
         </button>
       </div>
 
@@ -502,6 +519,20 @@ function App() {
             />
           </motion.div>
         )}
+        {showThoughtsPanel && (
+          <motion.div
+            initial={{ opacity: 0, x: -30, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -20, scale: 0.95, transition: { duration: 0.15 } }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="px-dock-panel px-dock-panel--thoughts"
+          >
+            <ThoughtsPanel
+              feed={thoughtsFeed}
+              onClose={() => setShowThoughtsPanel(false)}
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* â”€â”€ Mobile bottom nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -509,7 +540,7 @@ function App() {
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 95 }}>
           {/* Active panel — fullscreen on mobile */}
           <AnimatePresence>
-            {(showParkPanel || showChallenges || showResearch) && (
+            {(showParkPanel || showChallenges || showResearch || showThoughtsPanel) && (
               <motion.div
                 ref={mobileSheetRef}
                 className={mobileSheetClassName}
@@ -562,6 +593,13 @@ function App() {
                     onClose={closeMobileOverlayPanels}
                   />
                 )}
+                {showThoughtsPanel && (
+                  <ThoughtsPanel
+                    style={mobileFullscreenPanelStyle}
+                    feed={thoughtsFeed}
+                    onClose={closeMobileOverlayPanels}
+                  />
+                )}
                 </div>
               </motion.div>
             )}
@@ -593,11 +631,18 @@ function App() {
               <FlaskConical size={16} />
               LAB
             </button>
+            <button
+              className={`px-btn px-mobile-tab px-side-tab--thoughts${showThoughtsPanel ? ' px-btn--active' : ''}`}
+              onClick={() => openMobilePanel('thoughts')}
+            >
+              <MessageSquare size={16} />
+              FEED
+            </button>
           </div>
         </div>
       )}
 
-      {!(isMobile && (showParkPanel || showChallenges || showResearch || showBuildMenu || isPlacing)) && (
+      {!(isMobile && (showParkPanel || showChallenges || showResearch || showThoughtsPanel || showBuildMenu || isPlacing)) && (
         <div className={`px-controls-bar${isMobile ? ' px-controls-bar--mobile' : ''}`}>
           {!isBuildMenuVisible && (
             <>
@@ -624,6 +669,7 @@ function App() {
                     setShowParkPanel(false);
                     setShowChallenges(false);
                     setShowResearch(false);
+                    setShowThoughtsPanel(false);
                   } else {
                     gameRef.current?.cancelBuildMode();
                   }
