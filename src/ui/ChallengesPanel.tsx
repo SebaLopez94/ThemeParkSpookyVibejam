@@ -97,7 +97,7 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
           <span>Clear tiers to grow from cursed fairground to full horror empire.</span>
         </div>
         {onClose && (
-          <button className="px-btn px-btn--sm px-challenge-board__close" aria-label="Close challenges panel" onClick={onClose}>
+          <button className="px-btn px-btn--sm px-challenge-board__close" aria-label="Close challenges panel" onClick={onClose} style={{ color: '#fdba74', borderColor: 'rgba(251,146,60,0.3)' }}>
             <X />
           </button>
         )}

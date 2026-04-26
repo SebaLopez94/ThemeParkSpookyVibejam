@@ -92,11 +92,11 @@ export function ResearchPanel({
     <div className="px-panel px-panel--research px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : 'calc(100vh - 32px)', padding: 0, ...style }}>
       <div className="px-overlay-panel__top">
         <div className="px-overlay-panel__meta">
-          <span className="px-label" style={{ color: 'var(--px-cyan)' }}>Research</span>
+          <span className="px-label" style={{ color: 'var(--px-cyan)' }}>Lab</span>
           <span className="px-overlay-panel__count">{completedCount}/{totalCount}</span>
         </div>
         {onClose && (
-          <button className="px-btn px-btn--sm" aria-label="Close research panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
+          <button className="px-btn px-btn--sm" aria-label="Close lab panel" onClick={onClose} style={{ color: '#67e8f9', borderColor: 'rgba(103,232,249,0.3)', ...(isMobile ? { padding: '4px 8px', minHeight: 32 } : {}) }}>
             <X />
           </button>
         )}
@@ -124,7 +124,7 @@ export function ResearchPanel({
                     lineHeight: 1.7
                   }}
                 >
-                  {activeNode ? activeNode.name : 'NO ACTIVE RESEARCH'}
+                  {activeNode ? activeNode.name : 'NO ACTIVE PROJECT'}
                 </div>
               </div>
 
@@ -166,7 +166,7 @@ export function ResearchPanel({
               </>
             ) : (
               <div className="px-body" style={{ marginTop: 10 }}>
-                No active research. Start one project to unlock the next building.
+                No active project. Start one to unlock the next building.
               </div>
             )}
           </div>

@@ -42,7 +42,7 @@ export function ParkPanel({
           <span className="px-label" style={{ color: 'var(--px-muted)' }}>Manage Park</span>
         </div>
         {onClose && (
-          <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>
+          <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose} style={{ color: '#c4b5fd', borderColor: 'rgba(196,181,253,0.3)', ...(isMobile ? { padding: '4px 8px', minHeight: 32 } : {}) }}>
             <X />
           </button>
         )}

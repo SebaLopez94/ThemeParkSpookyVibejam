@@ -440,8 +440,8 @@ function App() {
         </button>
         <button
           className={`px-dock-btn px-dock-btn--research${showResearch ? ' px-dock-btn--active' : ''}`}
-          title="Research"
-          aria-label="Research"
+          title="Lab"
+          aria-label="Lab"
           onClick={() => { setShowResearch(v => !v); setShowParkPanel(false); setShowChallenges(false); }}
         >
           <FlaskConical size={24} />
@@ -591,7 +591,7 @@ function App() {
               onClick={() => openMobilePanel('research')}
             >
               <FlaskConical size={16} />
-              RESEARCH
+              LAB
             </button>
           </div>
         </div>
@@ -908,7 +908,7 @@ function App() {
                         ['2', 'Place a RIDE connected to the path'],
                         ['3', 'Add FOOD, DRINKS & TOILETS nearby'],
                         ['4', 'OPEN the park — watch income grow'],
-                        ['5', 'Use RESEARCH to unlock stronger rides'],
+                        ['5', 'Use the LAB to unlock stronger rides'],
                         ['6', 'Complete CHALLENGES for bonus cash'],
                       ] as [string, string][]).map(([n, text]) => (
                         <div key={n} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '5px 7px', background: 'rgba(0,0,0,0.28)' }}>
