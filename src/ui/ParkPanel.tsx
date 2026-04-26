@@ -1,3 +1,4 @@
+import { CSSProperties } from 'react';
 import { Coins, Download, FlaskConical, Lock, Ticket, Unlock, Upload, Users, X } from 'lucide-react';
 import { EconomyState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -12,6 +13,7 @@ interface ParkPanelProps {
   onLoadGame: () => void;
   activeResearchLabel: string;
   onClose?: () => void;
+  style?: CSSProperties;
 }
 
 export function ParkPanel({
@@ -23,15 +25,15 @@ export function ParkPanel({
   onSaveGame,
   onLoadGame,
   activeResearchLabel,
-  onClose
+  onClose,
+  style
 }: ParkPanelProps) {
   const isMobile = useIsMobile();
   return (
-    <div className="px-panel px-panel--park px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '52vh', padding: 0 }}>
+    <div className="px-panel px-panel--park px-overlay-panel" style={{ width: '100%', maxHeight: isMobile ? '56vh' : '52vh', padding: 0, ...style }}>
       <div className="px-overlay-panel__top">
         <div className="px-overlay-panel__meta">
           <span className="px-label" style={{ color: 'var(--px-muted)' }}>Manage Park</span>
-          <span className="px-overlay-panel__count">{economy.isOpen ? 'ON' : 'OFF'}</span>
         </div>
         {onClose && (
           <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose} style={isMobile ? { padding: '4px 8px', minHeight: 32 } : undefined}>

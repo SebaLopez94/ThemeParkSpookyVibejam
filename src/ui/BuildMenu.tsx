@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { CSSProperties, HTMLAttributes, useEffect, useMemo, useState } from 'react';
 import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'lucide-react';
 import { getAllCatalogItems } from '../data/buildings';
 import { BuildingCatalogItem, BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
@@ -11,6 +11,9 @@ interface BuildMenuProps {
   canAfford: (cost: number) => boolean;
   unlockedBuildings: PlaceableBuildingKind[];
   bottom?: number | string;
+  mobileSheetClassName?: string;
+  mobileSheetStyle?: CSSProperties;
+  mobileSheetHandlers?: HTMLAttributes<HTMLDivElement>;
 }
 
 type Tab = 'rides' | 'shops' | 'services' | 'decor';
@@ -63,7 +66,16 @@ function findBestTab(groups: Record<Tab, BuildingCatalogItem[]>, preferred: Tab)
   return TABS.find(tab => groups[tab.id].length > 0)?.id ?? preferred;
 }
 
-export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuildings, bottom }: BuildMenuProps) {
+export function BuildMenu({
+  onSelectBuilding,
+  onCancel,
+  canAfford,
+  unlockedBuildings,
+  bottom,
+  mobileSheetClassName,
+  mobileSheetStyle,
+  mobileSheetHandlers
+}: BuildMenuProps) {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<Tab>('rides');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -103,10 +115,12 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
   const shellStyle = isMobile
     ? {
         position: 'fixed' as const,
-        inset: 0,
+        top: 0,
+        bottom: 'calc(56px + var(--safe-bottom))',
         left: 0,
         right: 0,
         zIndex: 80,
+        ...mobileSheetStyle,
       }
     : {
         position: 'fixed' as const,
@@ -117,16 +131,20 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
       };
 
   return (
-    <div style={shellStyle}>
+    <div
+      className={isMobile ? mobileSheetClassName : undefined}
+      style={shellStyle}
+      {...(isMobile ? mobileSheetHandlers : undefined)}
+    >
       <div
-        className="px-panel px-panel--build px-anim-enter-up px-build-menu"
+        className={`px-panel px-panel--build px-build-menu${isMobile ? '' : ' px-anim-enter-up'}`}
         style={{
           width: isMobile ? undefined : 920,
           maxWidth: isMobile ? undefined : '96vw',
-          height: isMobile ? '100dvh' : undefined,
+          height: isMobile ? '100%' : undefined,
           margin: isMobile ? 0 : undefined,
           padding: 0,
-          maxHeight: isMobile ? '100dvh' : 'min(78vh, 760px)',
+          maxHeight: isMobile ? '100%' : 'min(78vh, 760px)',
           display: 'flex',
           flexDirection: 'column',
         }}
