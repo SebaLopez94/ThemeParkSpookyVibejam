@@ -867,6 +867,42 @@ button {
   min-width: 0;
 }
 
+.px-build-menu__tab--rides.px-btn--active {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 24%, transparent 25%),
+    linear-gradient(180deg, #9f6b28 0%, #6f3d14 54%, #3a1b08 100%);
+  border-right-color: var(--px-gold);
+  border-bottom-color: #d97706;
+  box-shadow: inset 0 4px 0 rgba(0,0,0,0.24), 0 0 14px rgba(251,191,36,0.22);
+}
+
+.px-build-menu__tab--shops.px-btn--active {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 24%, transparent 25%),
+    linear-gradient(180deg, #155e75 0%, #164e63 55%, #083344 100%);
+  border-right-color: var(--px-cyan);
+  border-bottom-color: #0891b2;
+  box-shadow: inset 0 4px 0 rgba(0,0,0,0.24), 0 0 14px rgba(103,232,249,0.2);
+}
+
+.px-build-menu__tab--services.px-btn--active {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 24%, transparent 25%),
+    linear-gradient(180deg, #3f6212 0%, #365314 55%, #1a2e05 100%);
+  border-right-color: var(--px-green-hi);
+  border-bottom-color: var(--px-green);
+  box-shadow: inset 0 4px 0 rgba(0,0,0,0.24), 0 0 14px rgba(217,249,157,0.16);
+}
+
+.px-build-menu__tab--decor.px-btn--active {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 24%, transparent 25%),
+    linear-gradient(180deg, #9a3412 0%, #7c2d12 55%, #431407 100%);
+  border-right-color: var(--px-orange);
+  border-bottom-color: #ea580c;
+  box-shadow: inset 0 4px 0 rgba(0,0,0,0.24), 0 0 14px rgba(253,186,116,0.18);
+}
+
 .px-build-menu__tab-main {
   display: inline-flex;
   align-items: center;

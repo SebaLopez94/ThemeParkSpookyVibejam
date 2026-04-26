@@ -109,17 +109,6 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
     reward: { money: 500, rating: 4 },
     tier: 2
   },
-  {
-    id: 'challenge_profit_1',
-    title: 'In the Black',
-    description: 'Keep net profit positive for 45 seconds. Adjust prices and avoid overbuilding too early.',
-    type: 'profit_streak',
-    target: 1,
-    duration: 45,
-    reward: { money: 600, rating: 3 },
-    tier: 2
-  },
-
   // ── TIER III  A Real Nightmare ───────────────────────────────────────────
   {
     id: 'challenge_all_shops',

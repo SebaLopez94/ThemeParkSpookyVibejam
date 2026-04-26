@@ -99,7 +99,9 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
             style={{
               width: logoSize, height: logoSize,
               imageRendering: 'pixelated',
-              filter: 'drop-shadow(0 0 28px rgba(251,113,133,0.95)) drop-shadow(0 0 56px rgba(168,85,247,0.75)) drop-shadow(0 8px 12px rgba(0,0,0,1))',
+              filter: isMobile
+                ? 'drop-shadow(0 0 12px rgba(251,113,133,0.75)) drop-shadow(0 0 24px rgba(168,85,247,0.50)) drop-shadow(0 5px 8px rgba(0,0,0,0.9))'
+                : 'drop-shadow(0 0 28px rgba(251,113,133,0.95)) drop-shadow(0 0 56px rgba(168,85,247,0.75)) drop-shadow(0 8px 12px rgba(0,0,0,1))',
             }}
             draggable={false}
           />

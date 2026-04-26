@@ -49,6 +49,7 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
   const previewPrice = building.currentPrice === null ? null : Math.max(MIN_PRICE, Math.min(MAX_PRICE, Math.round(localPrice || 0)));
   const priceStatus = getPriceStatus(previewPrice, recommendedPrice);
   const isDecoration = building.buildingType === BuildingType.DECORATION;
+  const isRide = building.buildingType === BuildingType.RIDE;
   const priceLabel = building.buildingType === BuildingType.RIDE ? 'Admission Price' : 'Service Price';
 
   const panelStyle = isMobile
@@ -91,11 +92,13 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
             overflowY: isMobile ? 'auto' : undefined,
           }}
         >
-          <div className="px-building-summary">
-            <div className="px-building-summary__copy">
-              <strong>{building.effectSummary}</strong>
+          {!isRide && (
+            <div className="px-building-summary">
+              <div className="px-building-summary__copy">
+                <strong>{building.effectSummary}</strong>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="px-building-metrics" aria-label="Building quick stats">
             <Metric

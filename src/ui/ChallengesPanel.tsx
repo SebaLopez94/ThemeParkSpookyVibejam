@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { CheckCircle2, Coins, Crown, Gem, Skull, Sparkles, TimerReset, Trophy, X } from 'lucide-react';
+import { CheckCircle2, Coins, Gem, Skull, Sparkles, TimerReset, Trophy, X } from 'lucide-react';
 import { ChallengeTier, ChallengeState } from '../types';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -162,7 +162,6 @@ export function ChallengesPanel({ challenges, style, onClose }: ChallengesPanelP
 
                         <div className="px-challenge-card__reward">
                           <span><Coins /> +${challenge.reward.money}</span>
-                          {challenge.reward.rating > 0 && <span><Crown /> +{challenge.reward.rating}</span>}
                         </div>
 
                         <div className="px-challenge-card__footer">

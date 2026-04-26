@@ -190,7 +190,7 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
                 return (
                   <button
                     key={id}
-                    className={`px-btn px-build-menu__tab ${isActive ? 'px-btn--active' : ''}`}
+                    className={`px-btn px-build-menu__tab px-build-menu__tab--${id} ${isActive ? 'px-btn--active' : ''}`}
                     style={{ color: isActive ? '#fff' : tone }}
                     onClick={() => setActiveTab(id)}
                   >
@@ -219,11 +219,6 @@ export function BuildMenu({ onSelectBuilding, onCancel, canAfford, unlockedBuild
                 <span className="px-label">{isMobile ? 'Build' : 'Choose a piece'}</span>
                 <span className="px-build-menu__catalog-title">{isMobile ? activeTabMeta.blurb : 'Select what you want to place'}</span>
               </div>
-              {!isMobile && (
-                <div className="px-build-menu__catalog-hint">
-                  Select an item to review size, cost and placement
-                </div>
-              )}
             </div>
 
             {items.length > 0 ? (
