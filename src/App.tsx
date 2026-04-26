@@ -792,9 +792,9 @@ function App() {
         >
           {isMobile ? (
             /* ── MOBILE HELP ───────────────────────────────────────────── */
-            <div className="px-panel px-panel--help px-scroll-hidden" style={{ width: '100%', padding: 0, maxHeight: '100dvh', overflowY: 'auto', overflowX: 'hidden', borderRadius: 0 }} onClick={e => e.stopPropagation()}>
-              <div className="px-titlebar" style={{ fontSize: 10 }}>HOW TO PLAY</div>
-              <div style={{ padding: '14px 14px 20px' }}>
+            <div className="px-panel px-panel--help px-scroll-hidden" style={{ width: '100%', padding: 0, maxHeight: '100dvh', overflowY: 'auto', overflowX: 'hidden', borderRadius: 0, display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+              <div className="px-titlebar" style={{ fontSize: 10, flexShrink: 0 }}>HOW TO PLAY</div>
+              <div style={{ padding: '14px 14px 0', overflowY: 'auto', flex: 1 }}>
 
                 {/* Controls */}
                 <div className="px-label" style={{ fontSize: 9, marginBottom: 6 }}>CONTROLS</div>
@@ -860,6 +860,10 @@ function App() {
                   GOAL: reach 5 stars ⭐ by keeping guests happy and growing your park.
                 </div>
 
+              </div>
+
+              {/* Sticky close button */}
+              <div style={{ padding: '10px 14px', paddingBottom: 'calc(10px + var(--safe-bottom, 0px))', flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(4,1,12,0.95)' }}>
                 <button className="px-btn" style={{ width: '100%', justifyContent: 'center', fontSize: 10 }} onClick={() => setShowHelp(false)}>
                   OK, LET'S BUILD
                 </button>
@@ -973,34 +977,95 @@ function App() {
         </div>
       )}
 
-      {celebration && (
-        <div
-          style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, pointerEvents: 'auto' }}
-          onClick={() => setCelebration(null)}
-        >
-          <div className="px-celebration" role="button" aria-label="Dismiss challenge celebration">
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                color: 'var(--px-gold)',
-                marginBottom: 10
-              }}
+      <AnimatePresence>
+        {celebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'fixed', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 100,
+              background: 'radial-gradient(ellipse at 50% 60%, rgba(139,92,246,0.12) 0%, rgba(4,1,12,0.72) 70%)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              pointerEvents: 'auto',
+              cursor: 'pointer',
+            }}
+            onClick={() => setCelebration(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.5, y: 40, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.85, y: -20, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+              className="px-celebration"
+              role="alertdialog"
+              aria-label="Challenge complete"
+              onClick={e => e.stopPropagation()}
             >
-              <img src="/ui/AMAZING.webp" alt="Amazing!" style={{ width: 64, height: 'auto', imageRendering: 'pixelated', dropShadow: '0 4px 12px rgba(251,191,36,0.5)' }} />
-            </div>
-            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(14px, 4vw, 22px)', color: 'var(--px-gold)', textShadow: '2px 2px 0 #000', lineHeight: 1.6 }}>
-              {celebrationTitle}
-            </div>
-            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(9px, 2vw, 11px)', color: 'var(--px-green-hi)', marginTop: 12, lineHeight: 1.8 }}>
-              {celebration.sub}
-            </div>
-            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(16px, 4vw, 26px)', color: 'var(--px-green-hi)', textShadow: '2px 2px 0 #000', marginTop: 16 }}>
-              +${celebration.reward.toLocaleString()}
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Top glow bar */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, transparent, var(--px-gold), var(--px-purple), var(--px-gold), transparent)', borderRadius: '12px 12px 0 0' }} />
+
+              {/* Image */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <motion.img
+                  src="/ui/AMAZING.webp"
+                  alt="Amazing!"
+                  initial={{ scale: 0.5, rotate: -12 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 18, delay: 0.1 }}
+                  style={{ width: 72, height: 'auto', imageRendering: 'pixelated', filter: 'drop-shadow(0 0 12px rgba(251,191,36,0.7)) drop-shadow(0 0 24px rgba(168,85,247,0.4))' }}
+                />
+              </div>
+
+              {/* CHALLENGE COMPLETE label */}
+              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 9, color: 'var(--px-purple)', letterSpacing: 2, marginBottom: 10, opacity: 0.85 }}>CHALLENGE COMPLETE</div>
+
+              {/* Title */}
+              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(13px, 3.5vw, 20px)', color: 'var(--px-gold)', textShadow: '0 0 20px rgba(251,191,36,0.6), 2px 2px 0 #000', lineHeight: 1.5 }}>
+                {celebrationTitle}
+              </div>
+
+              {/* Divider */}
+              <div style={{ width: '100%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(251,191,36,0.3), transparent)', margin: '14px 0' }} />
+
+              {/* Sub text */}
+              <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(8px, 1.8vw, 10px)', color: 'rgba(209,250,229,0.75)', lineHeight: 1.9 }}>
+                {celebration.sub}
+              </div>
+
+              {/* Reward badge */}
+              <motion.div
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.25, type: 'spring', stiffness: 320, damping: 20 }}
+                style={{
+                  marginTop: 18,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: 'linear-gradient(135deg, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.06) 100%)',
+                  border: '1px solid rgba(251,191,36,0.4)',
+                  borderRadius: 8,
+                  padding: '10px 20px',
+                  boxShadow: '0 0 20px rgba(251,191,36,0.15)',
+                }}
+              >
+                <span style={{ fontSize: 16 }}>💰</span>
+                <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 'clamp(14px, 3.5vw, 22px)', color: 'var(--px-gold)', textShadow: '0 0 12px rgba(251,191,36,0.8)' }}>
+                  +${celebration.reward.toLocaleString()}
+                </span>
+              </motion.div>
+
+              {/* Dismiss hint */}
+              <div style={{ marginTop: 18, fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'rgba(255,255,255,0.22)', letterSpacing: 1 }}>TAP TO CONTINUE</div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
