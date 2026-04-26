@@ -25,7 +25,6 @@ import { HUD } from './ui/HUD';
 import { ParkPanel } from './ui/ParkPanel';
 import { ResearchPanel } from './ui/ResearchPanel';
 import { BuildingIcon } from './ui/BuildingIcon';
-import { LoadingScreen } from './ui/LoadingScreen';
 import { MainMenu } from './ui/MainMenu';
 import { ToastItem, ToastStack } from './ui/ToastStack';
 import {
@@ -86,10 +85,7 @@ function App() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [celebration, setCelebration] = useState<{ title: string; sub: string; reward: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isLoadingSave, setIsLoadingSave] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [gameCanvasReady, setGameCanvasReady] = useState(false);
-  const [gameLoadProgress, setGameLoadProgress] = useState(0);
   const [pendingSaveData, setPendingSaveData] = useState<unknown | null>(null);
 
   const pushToast = (tone: ToastItem['tone'], message: string) => {
@@ -103,14 +99,12 @@ function App() {
   useEffect(() => {
     if (!gameStarted) return;
     if (!containerRef.current) return;
-    setGameCanvasReady(false);
 
     const game = new Game(containerRef.current);
     gameRef.current = game;
 
     const { events } = game;
     events.on('economyUpdate', state => setEconomy(state));
-    events.on('assetsProgress', progress => setGameLoadProgress(Math.round(progress * 100)));
     events.on('buildingSelected', info => {
       setSelectedBuilding(info);
       if (info !== null) setShowBuildMenu(false);
@@ -306,8 +300,6 @@ function App() {
     if (!file) return;
 
     try {
-      setIsLoadingSave(true);
-      await new Promise(resolve => window.setTimeout(resolve, 60));
       const text = await file.text();
       const parsed = JSON.parse(text) as unknown;
       gameRef.current?.importSaveData(parsed);
@@ -321,7 +313,6 @@ function App() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Could not load save file.';
       pushToast('warning', message);
-      setIsLoadingSave(false);
     }
   };
 
@@ -438,14 +429,10 @@ function App() {
       <MainMenu
         onNewGame={() => {
           setPendingSaveData(null);
-          setGameCanvasReady(false);
-          setGameLoadProgress(0);
           setGameStarted(true);
         }}
         onLoadGame={saveData => {
           setPendingSaveData(saveData);
-          setGameCanvasReady(false);
-          setGameLoadProgress(0);
           setGameStarted(true);
         }}
         onError={msg => pushToast('warning', msg)}
@@ -463,14 +450,6 @@ function App() {
         style={{ display: 'none' }}
         onChange={handleLoadFile}
       />
-      {!gameCanvasReady && (
-        <LoadingScreen
-          mode="boot"
-          progress={gameLoadProgress}
-          onDone={() => setGameCanvasReady(true)}
-        />
-      )}
-      {isLoadingSave && <LoadingScreen mode="transition" onDone={() => setIsLoadingSave(false)} />}
       <ToastStack items={toasts} />
 
       {shouldShowHud && <HUD economy={economy} />}
