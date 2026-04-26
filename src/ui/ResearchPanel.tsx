@@ -102,7 +102,7 @@ export function ResearchPanel({
         )}
       </div>
 
-      <div className="px-overlay-panel__body px-scroll-hidden" style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', gap: isMobile ? 10 : 12 }}>
+      <div className="px-overlay-panel__body px-scroll-hidden" style={{ padding: isMobile ? '10px 12px 14px' : '14px 16px 18px', display: 'grid', alignContent: 'start', gap: isMobile ? 10 : 12 }}>
           <div
             className="px-stat px-soft-block"
             style={{
