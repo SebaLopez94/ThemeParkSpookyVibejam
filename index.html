@@ -37,6 +37,7 @@
             if (getComputedStyle(node).position !== 'fixed') return;
             var mobile = window.innerWidth <= 640;
             var s = node.style;
+            s.zIndex = '50';
             if (mobile) {
               s.bottom = 'calc(136px + env(safe-area-inset-bottom, 0px))';
               s.top = 'auto';

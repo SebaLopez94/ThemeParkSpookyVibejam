@@ -55,7 +55,7 @@ export function MainMenu({ onNewGame, onLoadGame, onError }: MainMenuProps) {
       role="dialog"
       aria-modal="true"
       aria-label="Theme Park Vibes main menu"
-      style={{ position: 'fixed', inset: 0, zIndex: 90, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 40, overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
     >
       {/* Background */}
       <img
