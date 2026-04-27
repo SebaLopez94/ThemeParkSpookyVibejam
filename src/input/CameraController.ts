@@ -30,11 +30,11 @@ export class CameraController {
     const isMobile = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i.test(navigator.userAgent);
     
     if (isMobile) {
-      this.target = new THREE.Vector3(0, 0, 22);
+      this.target = new THREE.Vector3(-5, 0, 16);
       this.currentDistance = 44; // Slightly further back for mobile to fit the entrance
       this.targetDistance = 44;
     } else {
-      this.target = new THREE.Vector3(0, 0, 18);
+      this.target = new THREE.Vector3(0, 0, 12);
     }
     
     this.updateCameraPosition();
