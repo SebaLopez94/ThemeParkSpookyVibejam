@@ -153,6 +153,7 @@ export class EconomySystem {
     this.state.totalVisitors += 1;
     this.state.activeVisitors += 1;
     this.addMoney(this.state.ticketPrice);
+    this.notifyListeners();
   }
 
   public addRestoredVisitor(): void {
@@ -164,6 +165,7 @@ export class EconomySystem {
   public removeVisitor(): void {
     this.state.activeVisitors = Math.max(0, this.state.activeVisitors - 1);
     this.invalidateSnapshot();
+    this.notifyListeners();
   }
 
   public updateParkRating(

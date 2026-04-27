@@ -156,7 +156,6 @@ function App() {
       setActiveBuildDefinition(null);
     });
     events.on('buildingPlaced', () => {
-      if (!isMobile) return;
       game.cancelBuildMode();
       setSelectedBuilding(null);
       setShowBuildMenu(false);
