@@ -837,9 +837,9 @@ export class GameScene {
             color -= hoofMarks * vec3(0.032, 0.022, 0.015);
 
             float centerFalloff = distance(vUv, vec2(0.5));
-            color *= 1.42;
+            color *= 1.72;
             color *= 1.0 - smoothstep(0.2, 0.72, centerFalloff) * 0.09;
-            color = clamp(color, vec3(0.0), vec3(1.0));
+            color = max(color, vec3(0.0));
 
             float edgeX = min(vUv.x, 1.0 - vUv.x);
             float edgeZ = min(vUv.y, 1.0 - vUv.y);
