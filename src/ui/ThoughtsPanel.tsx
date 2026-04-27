@@ -41,7 +41,7 @@ export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
   return (
     <div
       className="px-panel px-overlay-panel px-panel--thoughts"
-      style={{ width: '100%', maxHeight: isMobile ? '56vh' : 'calc(100vh - 32px)', padding: 0, ...style }}
+      style={{ width: '100%', minHeight: isMobile ? undefined : 290, maxHeight: isMobile ? '56vh' : 'calc(100vh - 32px)', padding: 0, ...style }}
     >
       {/* Header */}
       <div className="px-overlay-panel__top">

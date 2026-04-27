@@ -73,7 +73,7 @@ export class VisitorSystem {
   private scene: THREE.Scene;
   private pathfinding: PathfindingSystem;
   private spawnTimer = 0;
-  private spawnInterval = 15 + Math.random() * 8;
+  private spawnInterval = 4 + Math.random() * 3;
   private restoreSpawnRemaining = 0;
   private restoreSpawnTimer = 0;
   private restoreSpawnInterval = 0.22;
@@ -845,7 +845,7 @@ export class VisitorSystem {
     this.visitorDecisionCooldowns.clear();
     this.visitorStuckTimers.clear();
     this.spawnTimer = 0;
-    this.spawnInterval = 15 + Math.random() * 8;
+    this.spawnInterval = 4 + Math.random() * 3;
     this.restoreSpawnRemaining = 0;
     this.restoreSpawnTimer = 0;
     this.densityMapCache.clear();
