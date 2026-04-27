@@ -85,7 +85,6 @@ export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
               return (
                 <motion.div
                   key={msg.id}
-                  layout
                   initial={{ opacity: 0, y: -10, scale: 0.96 }}
                   animate={{ opacity: ageOpacity, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.12 } }}

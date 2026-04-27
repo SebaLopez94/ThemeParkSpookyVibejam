@@ -28,5 +28,29 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Reposition the Vibe Jam widget: top-right on mobile, left on desktop
+      new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (!(node instanceof HTMLElement)) return;
+            if (getComputedStyle(node).position !== 'fixed') return;
+            var mobile = window.innerWidth <= 640;
+            var s = node.style;
+            if (mobile) {
+              s.bottom = 'calc(136px + env(safe-area-inset-bottom, 0px))';
+              s.top = 'auto';
+              s.right = '12px';
+              s.left = 'auto';
+            } else {
+              s.bottom = '16px';
+              s.top = 'auto';
+              s.left = '16px';
+              s.right = 'auto';
+            }
+          });
+        });
+      }).observe(document.body, { childList: true, subtree: false });
+    </script>
   </body>
 </html>
