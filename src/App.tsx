@@ -155,7 +155,8 @@ function App() {
       setIsPlacing(false);
       setActiveBuildDefinition(null);
     });
-    events.on('buildingPlaced', () => {
+    events.on('buildingPlaced', (placedType) => {
+      if (placedType === BuildingType.DECORATION) return;
       game.cancelBuildMode();
       setSelectedBuilding(null);
       setShowBuildMenu(false);

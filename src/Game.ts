@@ -62,7 +62,7 @@ export interface GameEvents {
   economyUpdate: EconomyState;
   buildingSelected: SelectedBuildingInfo | null;
   buildCancel: void;
-  buildingPlaced: void;
+  buildingPlaced: BuildingType;
   rotationChange: number;
   researchUpdate: ResearchState;
   challengesUpdate: ChallengeState[];
@@ -647,13 +647,13 @@ export class Game {
       if (this.movingBuilding) {
         this.movingBuilding = null;
         if (placedType !== BuildingType.PATH) {
-          this.events.emit('buildingPlaced', undefined as void);
+          this.events.emit('buildingPlaced', placedType);
         }
         return;
       }
       this.economySystem.spendMoney(this.selectedBuilding.cost);
       if (placedType !== BuildingType.PATH) {
-        this.events.emit('buildingPlaced', undefined as void);
+        this.events.emit('buildingPlaced', placedType);
       }
     }
   }
