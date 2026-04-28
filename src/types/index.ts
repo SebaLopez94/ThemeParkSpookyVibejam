@@ -106,6 +106,8 @@ export interface SelectedBuildingInfo {
   /** Visual-only stat bars for the tooltip (each filled 0-10). */
   statBars?: Array<{ label: string; filled: number }>;
   capacity?: number;
+  /** Current number of visitors actively riding (rides only). */
+  activeRiders?: number;
 }
 
 export interface BuildingData {
@@ -128,6 +130,8 @@ export interface RideData extends BuildingData {
   reliability: number;
   queue: string[];
   accessCell: GridPosition;
+  /** Visitors currently on this ride (maintained by VisitorSystem). */
+  ridersCount: number;
 }
 
 export interface ShopData extends BuildingData {
@@ -254,6 +258,8 @@ export interface BuildingDefinition {
 export interface BuildingCatalogItem extends BuildingDefinition {
   quality: number;
   valueScore: number;
+  /** Pre-computed visual stat bars shown in the BuildMenu selection card. */
+  statBars?: Array<{ label: string; filled: number }>;
 }
 
 export interface ResearchNode {

@@ -86,7 +86,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[ShopType.FOOD_STALL],
     cost: 240,
     quality: 55,
-    valueScore: 7
+    valueScore: 7,
+    statBars: [{ label: 'HUNGER', filled: 6 }]
   },
   [ShopType.DRINK_STAND]: {
     type: BuildingType.SHOP,
@@ -94,7 +95,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[ShopType.DRINK_STAND],
     cost: 180,
     quality: 50,
-    valueScore: 5
+    valueScore: 5,
+    statBars: [{ label: 'THIRST', filled: 7 }]
   },
   [ShopType.GIFT_SHOP]: {
     type: BuildingType.SHOP,
@@ -102,7 +104,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[ShopType.GIFT_SHOP],
     cost: 360,
     quality: 60,
-    valueScore: 10
+    valueScore: 10,
+    statBars: [{ label: 'FUN', filled: 5 }]
   },
   [ServiceType.RESTROOM]: {
     type: BuildingType.SERVICE,
@@ -110,7 +113,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[ServiceType.RESTROOM],
     cost: 180,
     quality: 52,
-    valueScore: 4
+    valueScore: 4,
+    statBars: [{ label: 'HYGIENE', filled: 7 }]
   },
   [DecorationType.LANTERN]: {
     type: BuildingType.DECORATION,
@@ -118,7 +122,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[DecorationType.LANTERN],
     cost: 45,
     quality: 58,
-    valueScore: 0
+    valueScore: 0,
+    statBars: [{ label: 'APPEAL', filled: 6 }]
   },
   [DecorationType.TRASH_CUBE]: {
     type: BuildingType.DECORATION,
@@ -126,7 +131,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[DecorationType.TRASH_CUBE],
     cost: 70,
     quality: 57,
-    valueScore: 0
+    valueScore: 0,
+    statBars: [{ label: 'APPEAL', filled: 3 }, { label: 'HYGIENE', filled: 8 }]
   },
   [DecorationType.SPOOKY_TREE]: {
     type: BuildingType.DECORATION,
@@ -134,7 +140,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[DecorationType.SPOOKY_TREE],
     cost: 35,
     quality: 45,
-    valueScore: 0
+    valueScore: 0,
+    statBars: [{ label: 'APPEAL', filled: 6 }]
   },
   [DecorationType.PUMPKIN]: {
     type: BuildingType.DECORATION,
@@ -142,7 +149,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[DecorationType.PUMPKIN],
     cost: 30,
     quality: 52,
-    valueScore: 0
+    valueScore: 0,
+    statBars: [{ label: 'APPEAL', filled: 8 }]
   },
   [DecorationType.SKELETON_DECORATION]: {
     type: BuildingType.DECORATION,
@@ -150,7 +158,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[DecorationType.SKELETON_DECORATION],
     cost: 65,
     quality: 54,
-    valueScore: 0
+    valueScore: 0,
+    statBars: [{ label: 'APPEAL', filled: 6 }]
   },
   [DecorationType.FRANKENSTEIN_DECORATION]: {
     type: BuildingType.DECORATION,
@@ -158,7 +167,8 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     ...BUILDING_DISPLAY[DecorationType.FRANKENSTEIN_DECORATION],
     cost: 80,
     quality: 56,
-    valueScore: 0
+    valueScore: 0,
+    statBars: [{ label: 'APPEAL', filled: 8 }]
   }
 };
 

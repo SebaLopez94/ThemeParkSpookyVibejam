@@ -131,6 +131,9 @@ export class VisitorSystem {
   private readonly visitorStuckTimers = new Map<string, number>();
   private static readonly STUCK_TIMEOUT = 8; // seconds before forced despawn
 
+  /** Maps visitor ID → ride ID for visitors currently on a ride. Used to track ridersCount. */
+  private readonly _visitorOnRide = new Map<string, string>();
+
   /**
    * Current frame timestamp (performance.now()/1000), set once at the top of
    * update() and reused by all methods called within the same tick.
@@ -255,6 +258,15 @@ export class VisitorSystem {
       const localHygieneSupport = entities.getLocalHygieneBonus(visitorGridPos);
       const hygieneDecayMultiplier = THREE.MathUtils.clamp(1 - localHygieneSupport / 100, 0.35, 1);
       visitor.update(deltaTime, hygieneDecayMultiplier, now, moodDecay);
+
+      // Decrement ridersCount when a ride activity finishes
+      const onRideId = this._visitorOnRide.get(id);
+      if (onRideId !== undefined && visitor.data.currentActivity !== 'ride') {
+        this._visitorOnRide.delete(id);
+        const ride = this.ridesById.get(onRideId);
+        if (ride) ride.data.ridersCount = Math.max(0, ride.data.ridersCount - 1);
+      }
+
       this.tryShowAmbientMood(visitor, now);
 
       if (visitor.data.needs.money <= 0) {
@@ -386,6 +398,8 @@ export class VisitorSystem {
           }, { cooldownSeconds: 30 }, this.frameNow);
         }
         visitor.startActivity('ride', ride.data.duration);
+        this._visitorOnRide.set(visitor.data.id, ride.data.id);
+        ride.data.ridersCount += 1;
       }
       return;
     }
@@ -814,6 +828,13 @@ export class VisitorSystem {
     const visitor = this.visitors.get(id);
     if (!visitor) return;
 
+    const onRideId = this._visitorOnRide.get(id);
+    if (onRideId !== undefined) {
+      this._visitorOnRide.delete(id);
+      const ride = this.ridesById.get(onRideId);
+      if (ride) ride.data.ridersCount = Math.max(0, ride.data.ridersCount - 1);
+    }
+
     this.scene.remove(visitor.mesh);
     visitor.dispose();
     this.visitors.delete(id);
@@ -844,6 +865,7 @@ export class VisitorSystem {
     this.visitorTargets.clear();
     this.visitorDecisionCooldowns.clear();
     this.visitorStuckTimers.clear();
+    this._visitorOnRide.clear();
     this.spawnTimer = 0;
     this.spawnInterval = 4 + Math.random() * 3;
     this.restoreSpawnRemaining = 0;

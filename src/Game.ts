@@ -212,9 +212,16 @@ export class Game {
   private selectionHighlightEdge: THREE.LineSegments | null = null;
   private selectionHighlightTime = 0;
   private readonly selectionFillMat = new THREE.MeshBasicMaterial({
-    color: 0xfbbf24, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide
+    color: 0xfbbf24,
+    transparent: true,
+    opacity: 0.22,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -4,
+    side: THREE.DoubleSide
   });
-  private readonly selectionEdgeMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
+  private readonly selectionEdgeMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, depthWrite: false });
 
   // UI throttle — emit economyUpdate to React at most every 200 ms (≈5 fps)
   // instead of on every economy mutation (which can fire at 60 fps).
@@ -538,7 +545,8 @@ export class Game {
         maintenancePerMinute: getMaintenancePerMinute(BuildingType.RIDE, rideType),
         effectSummary: `Joy +${funFactor}`,
         statBars: Game.rideStatBars(funFactor),
-        capacity
+        capacity,
+        activeRiders: result.ride.data.ridersCount
       });
       return;
     }
@@ -654,12 +662,13 @@ export class Game {
     if (!result) return null;
 
     if ('ride' in result) {
-      const { id, rideType, price, cost, position: p, quality, valueScore, funFactor, capacity } = result.ride.data;
+      const { id, rideType, price, cost, position: p, quality, valueScore, funFactor, capacity, queue } = result.ride.data;
       const display = BUILDING_DISPLAY[rideType];
       return { id, buildingType: BuildingType.RIDE, subType: rideType, name: display.name, icon: display.icon,
         position: p, currentPrice: price, buildCost: cost, rotationY: result.ride.mesh.rotation.y,
         quality, valueScore, maintenancePerMinute: getMaintenancePerMinute(BuildingType.RIDE, rideType),
-        effectSummary: `Joy +${funFactor}`, statBars: Game.rideStatBars(funFactor), capacity };
+        effectSummary: `Joy +${funFactor}`, statBars: Game.rideStatBars(funFactor), capacity,
+        activeRiders: result.ride.data.ridersCount };
     }
     if ('shop' in result) {
       const { id, shopType, price, cost, position: p, quality, valueScore, satisfactionEffects } = result.shop.data;
@@ -1081,17 +1090,20 @@ export class Game {
 
       this.selectionHighlight = new THREE.Group();
       this.selectionHighlight.add(this.selectionHighlightFill, this.selectionHighlightEdge);
+      this.selectionHighlight.renderOrder = 20;
+      this.selectionHighlightFill.renderOrder = 20;
+      this.selectionHighlightEdge.renderOrder = 21;
       this.scene.scene.add(this.selectionHighlight);
     }
 
     const cellCenter = GridHelper.gridToWorld(position);
     const wx = cellCenter.x + (width  - 1) * GRID_SIZE / 2;
     const wz = cellCenter.z + (height - 1) * GRID_SIZE / 2;
-    const w  = width  * GRID_SIZE - 0.12;
-    const h  = height * GRID_SIZE - 0.12;
+    const w  = width  * GRID_SIZE + 0.18;
+    const h  = height * GRID_SIZE + 0.18;
 
     // Resize fill via scale — avoids recreating PlaneGeometry each time
-    this.selectionHighlightFill!.scale.set(w, 1, h);
+    this.selectionHighlightFill!.scale.set(w, h, 1);
 
     // Update edge vertices in-place — same 8-vertex layout, just different hw/hh
     const hw = w / 2, hh = h / 2;
@@ -1103,7 +1115,7 @@ export class Game {
     v[18]=-hw; v[19]=0; v[20]= hh;  v[21]=-hw; v[22]=0; v[23]=-hh;
     edgeAttr.needsUpdate = true;
 
-    this.selectionHighlight.position.set(wx, 0.06, wz);
+    this.selectionHighlight.position.set(wx, 0.055, wz);
     this.selectionHighlight.visible = true;
     this.selectionHighlightTime = 0;
   }

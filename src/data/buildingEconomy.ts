@@ -31,7 +31,7 @@ export function getMaintenanceChargePerInterval(type: BuildingType, subType: Pla
     case BuildingType.SERVICE:
       return SERVICE_MAINTENANCE[subType as ServiceType] ?? 0;
     case BuildingType.DECORATION:
-      return subType === DecorationType.LANTERN || subType === DecorationType.TRASH_CUBE ? 1 : 0;
+      return 0;
     default:
       return 0;
   }

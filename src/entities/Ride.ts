@@ -28,6 +28,7 @@ export class Ride {
       quality: config.quality,
       valueScore: config.valueScore,
       queue: [],
+      ridersCount: 0,
       accessCell,
       unlockRequirement: config.unlockRequirement
     };

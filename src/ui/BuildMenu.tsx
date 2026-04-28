@@ -3,6 +3,14 @@ import { Hammer, Map, Package, PartyPopper, Store, Trash2, TreePine, X } from 'l
 import { motion } from 'framer-motion';
 import { getAllCatalogItems } from '../data/buildings';
 import { BuildingCatalogItem, BuildingDefinition, BuildingType, PlaceableBuildingKind, RIDE_SIZES, RideType } from '../types';
+
+const STAT_DOT_FILL: Record<string, string> = {
+  FUN:     'linear-gradient(180deg, #e9d5ff 0%, #a78bfa 45%, #5b21b6 100%)',
+  HUNGER:  'linear-gradient(180deg, #fef3c7 0%, #fbbf24 45%, #a16207 100%)',
+  THIRST:  'linear-gradient(180deg, #e0f2fe 0%, #38bdf8 45%, #0369a1 100%)',
+  HYGIENE: 'linear-gradient(180deg, #d1fae5 0%, #4ade80 45%, #15803d 100%)',
+  APPEAL:  'linear-gradient(180deg, #ffedd5 0%, #fb923c 45%, #c2410c 100%)',
+};
 import { useIsMobile } from '../hooks/useIsMobile';
 import { BuildAssetPreview } from './BuildAssetPreview';
 
@@ -342,6 +350,30 @@ function BuildSelectionCard({
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {item.type !== BuildingType.RIDE && item.statBars && item.statBars.length > 0 && (
+        <div className="px-build-selection__fun" style={{ gap: 6 }}>
+          {item.statBars.map(bar => (
+            <div key={bar.label}>
+              <div className="px-build-selection__fun-head">
+                <span>{bar.label}</span>
+                <span>{bar.filled}/10</span>
+              </div>
+              <div className="px-build-selection__fun-dots" aria-label={`${bar.label} ${bar.filled} out of 10`}>
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <span
+                    key={index}
+                    className="px-build-selection__fun-dot"
+                    style={index < bar.filled
+                      ? { background: STAT_DOT_FILL[bar.label] ?? STAT_DOT_FILL.FUN }
+                      : undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

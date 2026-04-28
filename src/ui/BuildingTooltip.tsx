@@ -33,7 +33,7 @@ const TYPE_BG: Record<BuildingType, string> = {
   [BuildingType.DELETE]:     'rgba(239,68,68,0.07)',
 };
 
-const HOVER_DELAY_MS = 380;
+const HOVER_DELAY_MS = 260;
 const OFFSET_X = 16;
 const OFFSET_Y = -8;
 const TOOLTIP_W = 200;
@@ -89,17 +89,34 @@ export function BuildingTooltip({ info, mouseX, mouseY }: BuildingTooltipProps) 
             WebkitBackdropFilter: 'blur(20px)',
             boxShadow: `0 0 12px ${TYPE_COLOR[visibleInfo.buildingType].replace('0.7', '0.18')}, 0 8px 24px rgba(0,0,0,0.5)`,
           }}>
-            {/* Header — name only, no emoji */}
-            <div style={{ marginBottom: 7 }}>
+            {/* Header — name + type tag */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, marginBottom: 7 }}>
               <span style={{
                 fontFamily: "'Press Start 2P', monospace",
                 fontSize: 8,
                 color: 'rgba(226,232,240,0.92)',
                 lineHeight: 1.4,
                 letterSpacing: 0.3,
+                flex: 1,
               }}>
                 {visibleInfo.name}
               </span>
+              {visibleInfo.buildingType !== BuildingType.PATH && visibleInfo.buildingType !== BuildingType.DELETE && (
+                <span style={{
+                  fontFamily: "'Press Start 2P', monospace",
+                  fontSize: 6,
+                  color: TYPE_COLOR[visibleInfo.buildingType].replace('0.7', '0.9'),
+                  background: TYPE_COLOR[visibleInfo.buildingType].replace('0.7', '0.12'),
+                  border: `1px solid ${TYPE_COLOR[visibleInfo.buildingType].replace('0.7', '0.25')}`,
+                  borderRadius: 4,
+                  padding: '2px 4px',
+                  flexShrink: 0,
+                  lineHeight: 1,
+                  alignSelf: 'center',
+                }}>
+                  {visibleInfo.buildingType.toUpperCase()}
+                </span>
+              )}
             </div>
 
             {/* Divider */}
@@ -121,6 +138,13 @@ export function BuildingTooltip({ info, mouseX, mouseY }: BuildingTooltipProps) 
               )}
               {visibleInfo.currentPrice != null && visibleInfo.currentPrice > 0 && (
                 <Row label="Price" value={`$${visibleInfo.currentPrice}`} color="rgba(251,191,36,0.85)" />
+              )}
+              {visibleInfo.activeRiders != null && visibleInfo.capacity != null && (
+                <Row
+                  label="Riding"
+                  value={`${visibleInfo.activeRiders} / ${visibleInfo.capacity}`}
+                  color={visibleInfo.activeRiders === 0 ? 'rgba(148,163,184,0.5)' : 'rgba(167,139,250,0.85)'}
+                />
               )}
             </div>
           </div>

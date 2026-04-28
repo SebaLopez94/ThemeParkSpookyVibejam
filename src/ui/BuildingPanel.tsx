@@ -99,12 +99,8 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
             overflowY: isMobile ? 'auto' : undefined,
           }}
         >
-          {!isRide && (
-            <div className="px-building-summary">
-              <div className="px-building-summary__copy">
-                <strong>{building.effectSummary}</strong>
-              </div>
-            </div>
+          {building.statBars && building.statBars.length > 0 && (
+            <StatBars bars={building.statBars} />
           )}
 
           <div className="px-building-metrics" aria-label="Building quick stats">
@@ -113,9 +109,6 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
               value={building.maintenancePerMinute > 0 ? `${formatMoney(building.maintenancePerMinute)} / min` : '$0 / min'}
               tone={building.maintenancePerMinute > 0 ? 'warn' : 'good'}
             />
-            {isDecoration ? (
-              <Metric label="Effect" value={building.effectSummary} tone="good" />
-            ) : null}
           </div>
 
           {building.currentPrice !== null ? (
@@ -219,6 +212,46 @@ function Metric({
     <div className={`px-building-metric px-building-metric--${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+const STAT_BAR_COLOR: Record<string, string> = {
+  FUN:     'rgba(167,139,250,0.85)',
+  HUNGER:  'rgba(251,191,36,0.85)',
+  THIRST:  'rgba(56,189,248,0.85)',
+  HYGIENE: 'rgba(74,222,128,0.85)',
+  APPEAL:  'rgba(251,146,60,0.85)',
+};
+
+function StatBars({ bars }: { bars: Array<{ label: string; filled: number }> }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+      {bars.map(bar => {
+        const color = STAT_BAR_COLOR[bar.label] ?? 'rgba(148,163,184,0.7)';
+        return (
+          <div key={bar.label}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-muted)' }}>
+                {bar.label}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: 6,
+                    borderRadius: 2,
+                    background: i < bar.filled ? color : 'rgba(148,163,184,0.12)',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
