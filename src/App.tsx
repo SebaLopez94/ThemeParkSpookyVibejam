@@ -31,6 +31,7 @@ import { BuildingIcon } from './ui/BuildingIcon';
 import { BuildingTooltip } from './ui/BuildingTooltip';
 import { MainMenu } from './ui/MainMenu';
 import { ToastItem, ToastStack } from './ui/ToastStack';
+import { GuideCharacter } from './ui/GuideCharacter';
 import {
   BuildingType,
   ChallengeState,
@@ -127,6 +128,7 @@ function App() {
   const [celebration, setCelebration] = useState<{ title: string; sub: string; reward: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [pendingSaveData, setPendingSaveData] = useState<unknown | null>(null);
   const [hoveredBuilding, setHoveredBuilding] = useState<SelectedBuildingInfo | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -433,16 +435,19 @@ function App() {
   };
   const mobileSheetClassName = `px-mobile-panel-sheet${activeMobileSheet === 'build' ? ' px-mobile-panel-sheet--build' : ''}`;
   const mobileSheetDragStyle = {};
+  const guideVisible = showGuide && !showBuildMenu && !selectedBuilding && !isPlacing && !showParkPanel && !showChallenges && !showResearch && !showThoughtsPanel;
 
   if (!gameStarted) {
     return (
       <MainMenu
         onNewGame={() => {
           setPendingSaveData(null);
+          setShowGuide(true);
           setGameStarted(true);
         }}
         onLoadGame={saveData => {
           setPendingSaveData(saveData);
+          setShowGuide(true);
           setGameStarted(true);
         }}
         onError={msg => pushToast('warning', msg)}
@@ -462,7 +467,13 @@ function App() {
       />
       <ToastStack items={toasts} />
 
-      {shouldShowHud && <HUD economy={economy} hideMoney={showParkPanel} />}
+      {shouldShowHud && <HUD economy={economy} hideMoney={showParkPanel} lockCollapsed={isMobile && guideVisible} />}
+
+      <AnimatePresence>
+        {guideVisible && (
+          <GuideCharacter onClose={() => setShowGuide(false)} />
+        )}
+      </AnimatePresence>
 
       {/* â"€â"€ Desktop side tabs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {/* ── Desktop icon dock ──────────────────────────────────────────── */}

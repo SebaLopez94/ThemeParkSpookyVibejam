@@ -78,9 +78,10 @@ function JoyFace({ stars, mobile }: { stars: number; mobile: boolean }) {
 interface HUDProps {
   economy: EconomyState;
   hideMoney?: boolean;
+  lockCollapsed?: boolean;
 }
 
-export function HUD({ economy, hideMoney }: HUDProps) {
+export function HUD({ economy, hideMoney, lockCollapsed = false }: HUDProps) {
   const isMobile = useIsMobile();
   const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isMobile);
@@ -92,6 +93,10 @@ export function HUD({ economy, hideMoney }: HUDProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (lockCollapsed) setCollapsed(true);
+  }, [lockCollapsed]);
 
   useEffect(() => {
     setJoyStars(prev => {
@@ -153,7 +158,9 @@ export function HUD({ economy, hideMoney }: HUDProps) {
             <button
               className="px-btn px-btn--sm"
               aria-label={collapsed ? 'Expand HUD' : 'Collapse HUD'}
+              disabled={lockCollapsed}
               onClick={() => setCollapsed(value => !value)}
+              style={lockCollapsed ? { opacity: 0.42, pointerEvents: 'none' } : undefined}
             >
               {collapsed ? <ChevronDown /> : <ChevronUp />}
             </button>
