@@ -80,7 +80,12 @@ export function GuideCharacter({ onClose, lines = GUIDE_LINES, autoCloseMs }: Gu
         delayChildren: 0.05,
       },
     },
-    exit: { opacity: 0, transition: { duration: 0.16 } },
+    exit: {
+      opacity: 0,
+      y: 14,
+      scale: 0.96,
+      transition: { duration: 0.28, ease: 'easeInOut' },
+    },
   };
 
   useEffect(() => {
@@ -108,6 +113,7 @@ export function GuideCharacter({ onClose, lines = GUIDE_LINES, autoCloseMs }: Gu
       initial="hidden"
       animate="visible"
       exit="exit"
+      style={{ transformOrigin: '80% 100%' }}
       aria-label="Park guide"
     >
       <motion.div

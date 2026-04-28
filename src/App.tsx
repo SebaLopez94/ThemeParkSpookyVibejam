@@ -621,7 +621,7 @@ function App() {
         {guideVisible && (
           <GuideCharacter
             lines={guideLines}
-            autoCloseMs={guideLines ? 5000 : undefined}
+            autoCloseMs={guideLines ? 4000 : undefined}
             onClose={() => {
               setShowGuide(false);
               setGuideLines(undefined);

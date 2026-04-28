@@ -93,6 +93,7 @@ export class Game {
   private readonly windTrack: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly ambience1Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly ambience2Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
+  private ambience2StartTimer: ReturnType<typeof window.setTimeout> | null = null;
   private readonly thunderTrack: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly challengeTrack: { audio: THREE.Audio; baseVolume: number };
   private readonly buildTrack: { audio: THREE.Audio; baseVolume: number };
@@ -299,8 +300,8 @@ export class Game {
     ];
     this.windTrack    = { audio: makeAudio(), baseVolume: 0.06, nextTime: Math.random() * 15 + 10 };
     this.ambience1Track = { audio: makeAudio(), baseVolume: 0.09, nextTime: Math.random() * 10 + 12 };
-    this.ambience2Track = { audio: makeAudio(), baseVolume: 0.08, nextTime: Math.random() * 14 + 20 };
-    this.thunderTrack = { audio: makeAudio(), baseVolume: 0.085, nextTime: Math.random() * 16 + 18 };
+    this.ambience2Track = { audio: makeAudio(), baseVolume: 0.07, nextTime: Math.random() * 14 + 20 };
+    this.thunderTrack = { audio: makeAudio(), baseVolume: 0.105, nextTime: Math.random() * 16 + 18 };
     this.challengeTrack = { audio: makeAudio(), baseVolume: 0.14 };
     this.buildTrack = { audio: makeAudio(), baseVolume: 0.16 };
     this.loadAudio();
@@ -371,9 +372,37 @@ export class Game {
       });
     };
 
+    const playAmbience2Delayed = () => {
+      if (this.ambience2StartTimer) window.clearTimeout(this.ambience2StartTimer);
+      this.ambience2StartTimer = window.setTimeout(() => {
+        this.ambience2StartTimer = null;
+        if (
+          !this.isMuted &&
+          this.ambience2Track.audio.buffer &&
+          !this.ambience2Track.audio.isPlaying &&
+          this.audioListener.context.state === 'running'
+        ) {
+          this.ambience2Track.audio.play();
+        }
+      }, 15000);
+    };
+
+    const loadLoop = (path: string, track: { audio: THREE.Audio; baseVolume: number }, delayedStart = false) => {
+      sharedAudioLoader.load(path, buffer => {
+        track.audio.setBuffer(buffer);
+        track.audio.setLoop(true);
+        track.audio.setVolume(this.isMuted ? 0 : track.baseVolume);
+        if (delayedStart) {
+          if (this.audioListener.context.state === 'running') playAmbience2Delayed();
+        } else if (this.audioListener.context.state === 'running') {
+          track.audio.play();
+        }
+      });
+    };
+
     loadOneShot('/audio/wind.mp3', this.windTrack);
     loadOneShot('/audio/ambience1.mp3', this.ambience1Track);
-    loadOneShot('/audio/ambience2.mp3', this.ambience2Track);
+    loadLoop('/audio/ambience2.mp3', this.ambience2Track, true);
     loadOneShot('/audio/thunder.mp3', this.thunderTrack);
     loadOneShot('/audio/challenges.mp3', this.challengeTrack);
     loadOneShot('/audio/build.mp3', this.buildTrack);
@@ -409,6 +438,14 @@ export class Game {
     };
 
     for (const track of this.loopTracks) tryStart(track.audio);
+    if (this.ambience2Track.audio.buffer && !this.ambience2Track.audio.isPlaying && !this.ambience2StartTimer) {
+      this.ambience2StartTimer = window.setTimeout(() => {
+        this.ambience2StartTimer = null;
+        if (!this.isMuted && this.ambience2Track.audio.buffer && !this.ambience2Track.audio.isPlaying) {
+          try { this.ambience2Track.audio.play(); } catch { /* ignored */ }
+        }
+      }, 15000);
+    }
 
     const allLoopReady = this.loopTracks.every(t => !t.audio.buffer || t.audio.isPlaying);
     if (allLoopReady) this.teardownAudioResume();
@@ -1577,7 +1614,6 @@ export class Game {
 
     this.tickOneShotAudio(this.windTrack, deltaTime, [30, 30]);
     this.tickOneShotAudio(this.ambience1Track, deltaTime, [22, 18]);
-    this.tickOneShotAudio(this.ambience2Track, deltaTime, [28, 22]);
     if (this.scene.consumeLightningTrigger()) {
       this.playInstantOneShot(this.thunderTrack);
     }
@@ -1739,6 +1775,10 @@ export class Game {
     window.removeEventListener('resize', this.resizeHandler);
     window.removeEventListener('keydown', this.keyHandler);
     this.teardownAudioResume();
+    if (this.ambience2StartTimer) {
+      window.clearTimeout(this.ambience2StartTimer);
+      this.ambience2StartTimer = null;
+    }
     this.mouseController.dispose();
     this.disposePreview();
     this.previewModelMat.dispose();
