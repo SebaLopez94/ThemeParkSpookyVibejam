@@ -4633,3 +4633,286 @@ button {
     cursor: url('/ui/pointer-no.png') 12 12, not-allowed !important;
   }
 }
+
+.px-guide {
+  position: fixed;
+  right: 18px;
+  bottom: 96px;
+  z-index: 44;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: min(520px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.px-guide__character {
+  position: relative;
+  width: 124px;
+  height: 132px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: end center;
+}
+
+.px-guide__halo {
+  position: absolute;
+  inset: 18px 10px 2px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.28), rgba(103,232,249,0.12) 38%, transparent 70%),
+    radial-gradient(circle at 50% 70%, rgba(217,249,157,0.18), transparent 62%);
+  filter: blur(8px);
+  opacity: 0.9;
+  animation: pxGuideAura 2.8s ease-in-out infinite;
+}
+
+.px-guide__gif {
+  position: relative;
+  width: 118px;
+  max-height: 130px;
+  object-fit: contain;
+  image-rendering: auto;
+  filter:
+    drop-shadow(0 8px 14px rgba(0, 0, 0, 0.72))
+    drop-shadow(0 0 12px rgba(221, 214, 254, 0.30));
+}
+
+.px-guide__bubble {
+  position: relative;
+  width: 360px;
+  min-height: 150px;
+  padding: 16px 16px 14px;
+  pointer-events: auto;
+  border: 1px solid rgba(217, 249, 157, 0.28);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 32%),
+    radial-gradient(circle at 0% 18%, rgba(103,232,249,0.14), transparent 42%),
+    linear-gradient(180deg, rgba(20, 9, 31, 0.94), rgba(7, 4, 13, 0.92));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.05),
+    0 16px 34px rgba(0,0,0,0.52),
+    0 0 22px rgba(217,249,157,0.16),
+    0 0 42px rgba(103,232,249,0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: pxGuideWakeGlow 0.85s ease-out 2.18s both;
+}
+
+.px-guide__bubble::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  bottom: 34px;
+  width: 18px;
+  height: 18px;
+  transform: rotate(45deg);
+  border-left: 1px solid rgba(217, 249, 157, 0.28);
+  border-bottom: 1px solid rgba(217, 249, 157, 0.28);
+  background: rgba(12, 7, 22, 0.94);
+}
+
+.px-guide__close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(196,181,253,0.18);
+  border-radius: 8px;
+  color: rgba(221,214,254,0.72);
+  background: rgba(0,0,0,0.24);
+}
+
+.px-guide__tag {
+  margin-bottom: 7px;
+  padding-right: 34px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  line-height: 1.4;
+  letter-spacing: 0.7px;
+  color: var(--px-green-hi);
+  text-shadow: 0 0 9px rgba(217,249,157,0.34);
+  text-transform: uppercase;
+}
+
+.px-guide__title {
+  margin: 0 34px 9px 0;
+  color: #fef9c3;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  text-shadow:
+    0 2px 0 rgba(0,0,0,0.85),
+    0 0 14px rgba(251,191,36,0.26);
+}
+
+.px-guide__text {
+  min-height: 62px;
+  margin: 0;
+  color: rgba(243,232,255,0.90);
+  font-family: ui-monospace, 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.px-guide__bullets {
+  display: grid;
+  gap: 6px;
+  margin: -42px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.px-guide__bullets li {
+  position: relative;
+  padding-left: 14px;
+  color: rgba(221,214,254,0.88);
+  font-family: ui-monospace, 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.px-guide__bullets li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--px-green-hi);
+  box-shadow: 0 0 8px rgba(217,249,157,0.55);
+}
+
+.px-guide__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.px-guide__progress {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: rgba(196,181,253,0.62);
+}
+
+.px-guide__next {
+  min-height: 34px;
+  min-width: 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 12px;
+  border: 1px solid rgba(217,249,157,0.36);
+  border-radius: 8px;
+  color: #f7fee7;
+  background:
+    linear-gradient(180deg, rgba(132,204,22,0.22), rgba(34,197,94,0.08)),
+    rgba(0,0,0,0.22);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  box-shadow: 0 0 18px rgba(132,204,22,0.14);
+}
+
+@keyframes pxGuideAura {
+  0%, 100% { opacity: 0.68; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes pxGuideWakeGlow {
+  0% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.05),
+      0 16px 34px rgba(0,0,0,0.52),
+      0 0 18px rgba(217,249,157,0.10),
+      0 0 32px rgba(103,232,249,0.08);
+  }
+  38% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.06),
+      0 17px 36px rgba(0,0,0,0.53),
+      0 0 28px rgba(217,249,157,0.26),
+      0 0 58px rgba(103,232,249,0.18);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.05),
+      0 16px 34px rgba(0,0,0,0.52),
+      0 0 22px rgba(217,249,157,0.16),
+      0 0 42px rgba(103,232,249,0.12);
+  }
+}
+
+@media (max-width: 640px) {
+  .px-guide {
+    left: 10px;
+    right: 10px;
+    top: calc(78px + var(--safe-top));
+    bottom: auto;
+    align-items: flex-end;
+    gap: 6px;
+    max-width: none;
+  }
+
+  .px-guide__character {
+    width: 82px;
+    height: 96px;
+  }
+
+  .px-guide__gif {
+    width: 86px;
+    max-height: 96px;
+  }
+
+  .px-guide__bubble {
+    width: auto;
+    flex: 1;
+    min-height: 132px;
+    padding: 13px 12px 12px;
+    border-radius: 10px;
+  }
+
+  .px-guide__bubble::before {
+    left: -7px;
+    bottom: 28px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .px-guide__tag,
+  .px-guide__progress,
+  .px-guide__next {
+    font-size: 7px;
+  }
+
+  .px-guide__title {
+    margin-right: 28px;
+    font-size: 9px;
+    line-height: 1.45;
+  }
+
+  .px-guide__text {
+    min-height: 68px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .px-guide__bullets {
+    gap: 5px;
+    margin-top: -48px;
+  }
+
+  .px-guide__bullets li {
+    font-size: 10px;
+  }
+}
