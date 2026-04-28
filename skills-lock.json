@@ -6,6 +6,12 @@
       "sourceType": "github",
       "computedHash": "45f92878cd65a38bfa08ff13fba4b9638c0667ca46176b7a9446d825613950a3"
     },
+    "caveman": {
+      "source": "juliusbrussee/caveman",
+      "sourceType": "github",
+      "skillPath": "caveman/SKILL.md",
+      "computedHash": "ac5fb2168c653fa5d660b5f510a4688d210717c7e10eb8fd91ef0d9b59f4e96e"
+    },
     "threejs-fundamentals": {
       "source": "cloudai-x/threejs-skills",
       "sourceType": "github",

@@ -28,6 +28,7 @@ import { ParkPanel } from './ui/ParkPanel';
 import { ResearchPanel } from './ui/ResearchPanel';
 import { ThoughtsPanel } from './ui/ThoughtsPanel';
 import { BuildingIcon } from './ui/BuildingIcon';
+import { BuildingTooltip } from './ui/BuildingTooltip';
 import { MainMenu } from './ui/MainMenu';
 import { ToastItem, ToastStack } from './ui/ToastStack';
 import {
@@ -127,6 +128,8 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [pendingSaveData, setPendingSaveData] = useState<unknown | null>(null);
+  const [hoveredBuilding, setHoveredBuilding] = useState<SelectedBuildingInfo | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const pushToast = (tone: ToastItem['tone'], message: string) => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -154,6 +157,7 @@ function App() {
       setShowBuildMenu(false);
       setIsPlacing(false);
       setActiveBuildDefinition(null);
+      setHoveredBuilding(null);
     });
     events.on('buildingPlaced', (placedType) => {
       if (placedType === BuildingType.DECORATION) return;
@@ -167,6 +171,10 @@ function App() {
     events.on('researchUpdate', state => setResearchState(state));
     events.on('challengesUpdate', state => setChallenges(state));
     events.on('newThought', msg => setThoughtsFeed(prev => mergeFeed(msg, prev)));
+    events.on('buildingHovered', info => setHoveredBuilding(info));
+
+    const onMouseMove = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
+    if (!isMobile) window.addEventListener('mousemove', onMouseMove);
     events.on('challengeCompleted', challenge => {
       const celebrationIds: Record<string, { title: string; sub: string }> = {
         challenge_first_ride:   { title: 'ðŸŽ¡ FIRST RIDE OPEN!',      sub: 'The crowds are flooding in!' },
@@ -206,6 +214,7 @@ function App() {
     }
 
     return () => {
+      if (!isMobile) window.removeEventListener('mousemove', onMouseMove);
       gameRef.current = null;
       game.dispose();
     };
@@ -1146,6 +1155,14 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {!isMobile && (
+        <BuildingTooltip
+          info={hoveredBuilding}
+          mouseX={mousePos.x}
+          mouseY={mousePos.y}
+        />
+      )}
     </div>
   );
 }

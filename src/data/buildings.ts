@@ -116,7 +116,7 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     type: BuildingType.DECORATION,
     subType: DecorationType.LANTERN,
     ...BUILDING_DISPLAY[DecorationType.LANTERN],
-    cost: 60,
+    cost: 45,
     quality: 58,
     valueScore: 0
   },
@@ -140,7 +140,7 @@ const BUILDING_CATALOG: Partial<Record<PlaceableBuildingKind, BuildingCatalogIte
     type: BuildingType.DECORATION,
     subType: DecorationType.PUMPKIN,
     ...BUILDING_DISPLAY[DecorationType.PUMPKIN],
-    cost: 45,
+    cost: 30,
     quality: 52,
     valueScore: 0
   },

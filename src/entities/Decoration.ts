@@ -19,15 +19,15 @@ const APPEAL: Record<DecorationType, [number, number]> = {
   [DecorationType.SPOOKY_TREE]:   [4, 5],
   [DecorationType.JACK_O_LANTERN]:[3, 7],
   [DecorationType.STONE]:         [3, 4],
-  [DecorationType.PUMPKIN]:       [3, 6],
+  [DecorationType.PUMPKIN]:       [3, 4],
   [DecorationType.SKELETON_DECORATION]: [3, 5],
   [DecorationType.FRANKENSTEIN_DECORATION]: [3, 6],
-  [DecorationType.LANTERN]: [3, 5],
-  [DecorationType.TRASH_CUBE]: [2, 2],
+  [DecorationType.LANTERN]: [3, 3],
+  [DecorationType.TRASH_CUBE]: [2, 1],
 };
 
 const HYGIENE_SUPPORT: Partial<Record<DecorationType, [number, number]>> = {
-  [DecorationType.TRASH_CUBE]: [4, 16],
+  [DecorationType.TRASH_CUBE]: [4, 10],
 };
 
 export class Decoration {

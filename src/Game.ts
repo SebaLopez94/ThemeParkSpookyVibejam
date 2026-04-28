@@ -63,6 +63,7 @@ export interface GameEvents {
   buildingSelected: SelectedBuildingInfo | null;
   buildCancel: void;
   buildingPlaced: BuildingType;
+  buildingHovered: SelectedBuildingInfo | null;
   rotationChange: number;
   researchUpdate: ResearchState;
   challengesUpdate: ChallengeState[];
@@ -163,6 +164,8 @@ export class Game {
 
   private hoveredGridPosition: GridPosition | null = null;
   private selectedBuilding: BuildingDefinition | null = null;
+  /** Timestamp after which hover tooltips are allowed again (suppressed post-placement). */
+  private _hoverAllowedAt = 0;
   /** Last grid cell placed during a path drag — used to fill gaps on mobile. */
   private movingBuilding: SelectedBuildingInfo | null = null;
   private buildRotation = 0;
@@ -454,6 +457,9 @@ export class Game {
     this.mouseController.onGridHover = position => {
       this.hoveredGridPosition = position;
       this.updatePreview();
+      if (!this.selectedBuilding && Date.now() >= this._hoverAllowedAt) {
+        this.events.emit('buildingHovered', this.buildingInfoAtCell(position));
+      }
     };
     this.mouseController.onGridClick = position => this.handleGridClick(position);
     this.mouseController.onGridDrag = position => {
@@ -531,6 +537,7 @@ export class Game {
         valueScore,
         maintenancePerMinute: getMaintenancePerMinute(BuildingType.RIDE, rideType),
         effectSummary: `Joy +${funFactor}`,
+        statBars: Game.rideStatBars(funFactor),
         capacity
       });
       return;
@@ -556,7 +563,8 @@ export class Game {
         quality,
         valueScore,
         maintenancePerMinute: getMaintenancePerMinute(BuildingType.SHOP, shopType),
-        effectSummary
+        effectSummary,
+        statBars: Game.shopStatBars(satisfactionEffects as Record<string, number>)
       });
       return;
     }
@@ -581,7 +589,8 @@ export class Game {
         quality,
         valueScore,
         maintenancePerMinute: getMaintenancePerMinute(BuildingType.SERVICE, serviceType),
-        effectSummary
+        effectSummary,
+        statBars: Game.shopStatBars(satisfactionEffects as Record<string, number>)
       });
       return;
     }
@@ -605,8 +614,79 @@ export class Game {
       quality,
       valueScore,
       maintenancePerMinute: getMaintenancePerMinute(BuildingType.DECORATION, decorationType),
-      effectSummary: hygieneRadius ? `${effectSummary} within ${hygieneRadius} tiles` : effectSummary
+      effectSummary: hygieneRadius ? `${effectSummary} within ${hygieneRadius} tiles` : effectSummary,
+      statBars: Game.decorationStatBars(appealBonus, hygieneBonus)
     });
+  }
+
+  // ── Stat-bar helpers ──────────────────────────────────────────────────────
+  /** Normalize a raw value to 1-10 dots. */
+  private static dots(value: number, max: number): number {
+    return Math.max(1, Math.min(10, Math.round(value / max * 10)));
+  }
+
+  private static rideStatBars(funFactor: number): SelectedBuildingInfo['statBars'] {
+    return [{ label: 'FUN', filled: Game.dots(funFactor, 56) }];
+  }
+
+  private static shopStatBars(effects: Partial<Record<string, number>>): SelectedBuildingInfo['statBars'] {
+    const MAX: Record<string, number> = { hunger: 50, thirst: 50, fun: 15, hygiene: 60 };
+    const LABEL: Record<string, string> = { hunger: 'HUNGER', thirst: 'THIRST', fun: 'FUN', hygiene: 'HYGIENE' };
+    return Object.entries(effects).map(([need, val]) => ({
+      label: LABEL[need] ?? need.toUpperCase(),
+      filled: Game.dots(val ?? 0, MAX[need] ?? 100),
+    }));
+  }
+
+  private static decorationStatBars(
+    appealBonus: number, hygieneBonus?: number
+  ): SelectedBuildingInfo['statBars'] {
+    const bars: SelectedBuildingInfo['statBars'] = [
+      { label: 'APPEAL', filled: Game.dots(appealBonus, 8) },
+    ];
+    if (hygieneBonus) bars.push({ label: 'HYGIENE', filled: Game.dots(hygieneBonus, 20) });
+    return bars;
+  }
+
+  /** Returns building info at a grid cell without side-effects (no highlight, no selection). */
+  private buildingInfoAtCell(position: GridPosition): SelectedBuildingInfo | null {
+    const result = this.buildingSystem.getBuildingAtCell(position);
+    if (!result) return null;
+
+    if ('ride' in result) {
+      const { id, rideType, price, cost, position: p, quality, valueScore, funFactor, capacity } = result.ride.data;
+      const display = BUILDING_DISPLAY[rideType];
+      return { id, buildingType: BuildingType.RIDE, subType: rideType, name: display.name, icon: display.icon,
+        position: p, currentPrice: price, buildCost: cost, rotationY: result.ride.mesh.rotation.y,
+        quality, valueScore, maintenancePerMinute: getMaintenancePerMinute(BuildingType.RIDE, rideType),
+        effectSummary: `Joy +${funFactor}`, statBars: Game.rideStatBars(funFactor), capacity };
+    }
+    if ('shop' in result) {
+      const { id, shopType, price, cost, position: p, quality, valueScore, satisfactionEffects } = result.shop.data;
+      const display = BUILDING_DISPLAY[shopType];
+      const effectSummary = Object.entries(satisfactionEffects).map(([n, v]) => `${n} +${v}`).join(', ');
+      return { id, buildingType: BuildingType.SHOP, subType: shopType, name: display.name, icon: display.icon,
+        position: p, currentPrice: price, buildCost: cost, rotationY: result.shop.mesh.rotation.y,
+        quality, valueScore, maintenancePerMinute: getMaintenancePerMinute(BuildingType.SHOP, shopType),
+        effectSummary, statBars: Game.shopStatBars(satisfactionEffects as Record<string, number>) };
+    }
+    if ('service' in result) {
+      const { id, serviceType, price, cost, position: p, quality, valueScore, satisfactionEffects } = result.service.data;
+      const display = BUILDING_DISPLAY[serviceType];
+      const effectSummary = Object.entries(satisfactionEffects).map(([n, v]) => `${n} +${v}`).join(', ');
+      return { id, buildingType: BuildingType.SERVICE, subType: serviceType, name: display.name, icon: display.icon,
+        position: p, currentPrice: price, buildCost: cost, rotationY: result.service.mesh.rotation.y,
+        quality, valueScore, maintenancePerMinute: getMaintenancePerMinute(BuildingType.SERVICE, serviceType),
+        effectSummary, statBars: Game.shopStatBars(satisfactionEffects as Record<string, number>) };
+    }
+    const { id, decorationType, cost, position: p, quality, valueScore, appealBonus, appealRadius, hygieneBonus, hygieneRadius } = result.decoration.data;
+    const display = BUILDING_DISPLAY[decorationType];
+    const base = hygieneBonus ? `Appeal +${appealBonus}, hygiene +${hygieneBonus}` : `Appeal +${appealBonus} within ${appealRadius} tiles`;
+    return { id, buildingType: BuildingType.DECORATION, subType: decorationType, name: display.name, icon: display.icon,
+      position: p, currentPrice: null, buildCost: cost, rotationY: result.decoration.mesh.rotation.y,
+      quality, valueScore, maintenancePerMinute: getMaintenancePerMinute(BuildingType.DECORATION, decorationType),
+      effectSummary: hygieneRadius ? `${base} within ${hygieneRadius} tiles` : base,
+      statBars: Game.decorationStatBars(appealBonus, hygieneBonus) };
   }
 
   private placeBuilding(position: GridPosition): void {
@@ -644,6 +724,9 @@ export class Game {
       this.renderer.invalidateShadowMap();
       const placedType = this.selectedBuilding.type;
       this.playInstantOneShot(this.buildTrack);
+      // Suppress hover tooltip briefly so it doesn't pop on the just-placed building
+      this._hoverAllowedAt = Date.now() + 700;
+      this.events.emit('buildingHovered', null);
       if (this.movingBuilding) {
         this.movingBuilding = null;
         if (placedType !== BuildingType.PATH) {
@@ -1045,6 +1128,7 @@ export class Game {
       this.restoreMovedBuilding();
     }
     this.selectedBuilding = definition;
+    this.events.emit('buildingHovered', null);
     this.buildRotation = 0;
     this.events.emit('rotationChange', 0);
     this.mouseController.onBuildRotate = dir => this.rotateBuild(dir);

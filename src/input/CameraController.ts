@@ -7,7 +7,7 @@ export class CameraController {
   private target: THREE.Vector3;
   private minDistance = 24;
   private maxDistance = 72;
-  private currentDistance = 38; // Starts a bit closer
+  private currentDistance = 34; // Desktop starts with a tighter zoom-in
   private panSpeed = 0.34;
   private readonly zoomStep = 3.2;
   private readonly verticalRatio = 0.95;
@@ -19,7 +19,7 @@ export class CameraController {
    */
   private azimuth = Math.PI / 4;
   /** Lerp targets — actual values ease toward these each update(). */
-  private targetDistance = 38;
+  private targetDistance = 34;
   private targetAzimuth = Math.PI / 4;
 
   constructor(camera: THREE.PerspectiveCamera) {
