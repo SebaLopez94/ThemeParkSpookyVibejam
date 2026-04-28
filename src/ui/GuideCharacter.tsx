@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, X } from 'lucide-react';
 
-const GUIDE_LINES = [
+export interface GuideLine {
+  tag: string;
+  title: string;
+  text: string;
+  bullets?: string[];
+}
+
+const GUIDE_LINES: GuideLine[] = [
   {
     tag: 'Gate Keeper',
     title: 'Welcome to Theme Spooky Park!',
@@ -31,19 +38,6 @@ const GUIDE_LINES = [
   }
 ];
 
-const guideVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      delay: 2,
-      staggerChildren: 0.12,
-      delayChildren: 0.05,
-    },
-  },
-  exit: { opacity: 0, transition: { duration: 0.16 } },
-};
-
 const characterVariants = {
   hidden: { opacity: 0, y: 18, scale: 0.92 },
   visible: {
@@ -67,12 +61,37 @@ const bubbleVariants = {
 
 interface GuideCharacterProps {
   onClose: () => void;
+  lines?: GuideLine[];
+  autoCloseMs?: number;
 }
 
-export function GuideCharacter({ onClose }: GuideCharacterProps) {
+export function GuideCharacter({ onClose, lines = GUIDE_LINES, autoCloseMs }: GuideCharacterProps) {
   const [lineIndex, setLineIndex] = useState(0);
-  const line = GUIDE_LINES[lineIndex];
-  const isLast = lineIndex === GUIDE_LINES.length - 1;
+  const line = lines[lineIndex];
+  const isLast = lineIndex === lines.length - 1;
+  const isAmbient = Boolean(autoCloseMs);
+  const guideVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        delay: isAmbient ? 0 : 2,
+        staggerChildren: 0.12,
+        delayChildren: 0.05,
+      },
+    },
+    exit: { opacity: 0, transition: { duration: 0.16 } },
+  };
+
+  useEffect(() => {
+    setLineIndex(0);
+  }, [lines]);
+
+  useEffect(() => {
+    if (!autoCloseMs) return;
+    const timer = window.setTimeout(onClose, autoCloseMs);
+    return () => window.clearTimeout(timer);
+  }, [autoCloseMs, onClose, lines]);
 
   const handleNext = () => {
     if (isLast) {
@@ -106,7 +125,7 @@ export function GuideCharacter({ onClose }: GuideCharacterProps) {
       </motion.div>
 
       <motion.div
-        className="px-guide__bubble"
+        className={`px-guide__bubble${isAmbient ? ' px-guide__bubble--ambient' : ''}`}
         variants={bubbleVariants}
       >
         <button className="px-guide__close" type="button" aria-label="Close guide" onClick={onClose}>
@@ -133,13 +152,15 @@ export function GuideCharacter({ onClose }: GuideCharacterProps) {
             ))}
           </ul>
         )}
-        <div className="px-guide__footer">
-          <span className="px-guide__progress">{lineIndex + 1}/{GUIDE_LINES.length}</span>
-          <button className="px-guide__next" type="button" onClick={handleNext}>
-            {isLast ? 'Done' : 'Next'}
-            <ChevronRight size={14} />
-          </button>
-        </div>
+        {!autoCloseMs && (
+          <div className="px-guide__footer">
+            <span className="px-guide__progress">{lineIndex + 1}/{lines.length}</span>
+            <button className="px-guide__next" type="button" onClick={handleNext}>
+              {isLast ? 'Done' : 'Next'}
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </motion.div>
     </motion.aside>
   );

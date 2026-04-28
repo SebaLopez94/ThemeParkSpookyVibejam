@@ -4700,6 +4700,10 @@ button {
   animation: pxGuideWakeGlow 0.85s ease-out 2.18s both;
 }
 
+.px-guide__bubble--ambient {
+  animation-delay: 0.18s;
+}
+
 .px-guide__bubble::before {
   content: '';
   position: absolute;

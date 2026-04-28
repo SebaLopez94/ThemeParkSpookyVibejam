@@ -31,7 +31,7 @@ import { BuildingIcon } from './ui/BuildingIcon';
 import { BuildingTooltip } from './ui/BuildingTooltip';
 import { MainMenu } from './ui/MainMenu';
 import { ToastItem, ToastStack } from './ui/ToastStack';
-import { GuideCharacter } from './ui/GuideCharacter';
+import { GuideCharacter, GuideLine } from './ui/GuideCharacter';
 import {
   BuildingType,
   ChallengeState,
@@ -78,10 +78,106 @@ function mergeFeed(msg: FeedMessage, prev: FeedMessage[]): FeedMessage[] {
   return [msg, ...prev].slice(0, 8);
 }
 
+const RANDOM_GATE_KEEPER_LINES: GuideLine[] = [
+  {
+    tag: 'Gate Keeper',
+    title: 'Rate Limit Horror',
+    text: 'This park is scarier than a Claude rate limit.'
+  },
+  {
+    tag: 'Gate Keeper',
+    title: 'Fog report',
+    text: 'The fog looks dramatic today. Also useful for hiding questionable business decisions.'
+  },
+  {
+    tag: 'Gate Keeper',
+    title: 'Professional advice',
+    text: 'If guests scream, good. If they leave hungry, less good. If they do both, check the Feed.'
+  },
+  {
+    tag: 'Gate Keeper',
+    title: 'Operational omen',
+    text: 'A happy guest tells a friend. An angry guest tells the Feed, loudly, forever.'
+  }
+];
+
+const CLAUDE_RATE_LIMIT_LINE: GuideLine = {
+  tag: 'Gate Keeper',
+  title: 'Rate Limit Horror',
+  text: 'This park is scarier than a Claude rate limit.'
+};
+
+function pickRandomGateKeeperJoke(): GuideLine {
+  const pool = RANDOM_GATE_KEEPER_LINES.filter(line => line.text !== CLAUDE_RATE_LIMIT_LINE.text);
+  return pool[Math.floor(Math.random() * pool.length)] ?? CLAUDE_RATE_LIMIT_LINE;
+}
+
+function pickGateKeeperLine(economy: EconomyState, latestThought?: FeedMessage): GuideLine {
+  if (Math.random() < 0.35) return pickRandomGateKeeperJoke();
+
+  if (economy.averageHappiness < 38) {
+    return {
+      tag: 'Gate Keeper',
+      title: 'Mood warning',
+      text: 'Guest joy is getting dangerously low. Check prices, add fun, and listen to the loudest complaints.'
+    };
+  }
+
+  if (latestThought) {
+    const thoughtLines: Partial<Record<VisitorMoodKind, GuideLine>> = {
+      hunger: {
+        tag: 'Gate Keeper',
+        title: 'Stomach trouble',
+        text: 'Guests are hungry. A spooky Burger stand may save more souls than another terrifying ride.'
+      },
+      thirst: {
+        tag: 'Gate Keeper',
+        title: 'Dry screams',
+        text: 'Guests need drinks. Screaming is thirsty work.'
+      },
+      bored: {
+        tag: 'Gate Keeper',
+        title: 'Boredom detected',
+        text: 'Some guests are bored. Add a stronger ride, unlock something in Lab, or sweeten the path with decor.'
+      },
+      sick: {
+        tag: 'Gate Keeper',
+        title: 'Hygiene omen',
+        text: 'Guests are feeling rough. More WC access and trash support should calm the curse.'
+      },
+      price: {
+        tag: 'Gate Keeper',
+        title: 'Wallet panic',
+        text: 'Prices are spooking guests in the wrong way. Fear sells better when people can afford it.'
+      },
+      happy: {
+        tag: 'Gate Keeper',
+        title: 'Good screams',
+        text: 'Guests are enjoying the park. This is suspicious, profitable, and worth encouraging.'
+      },
+      excited: {
+        tag: 'Gate Keeper',
+        title: 'Crowd energy',
+        text: 'The crowd is buzzing. Good moment to expand before the excitement evaporates.'
+      }
+    };
+
+    const line = latestThought.kind === 'park_event' ? undefined : thoughtLines[latestThought.kind];
+    if (line) return line;
+  }
+
+  return pickRandomGateKeeperJoke();
+}
+
 function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Game | null>(null);
   const loadInputRef = useRef<HTMLInputElement>(null);
+  const economyRef = useRef<EconomyState | null>(null);
+  const thoughtsFeedRef = useRef<FeedMessage[]>([]);
+  const guideBlockedRef = useRef(false);
+  const firstAmbientGuideRef = useRef(true);
+  const ambientGuideTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const mobilePanelSwipeStartRef = useRef<{ y: number; fromTop: boolean } | null>(null);
   const mobileSheetRef = useRef<HTMLDivElement>(null);
   const mobilePanelCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
@@ -129,6 +225,7 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [guideLines, setGuideLines] = useState<GuideLine[] | undefined>(undefined);
   const [pendingSaveData, setPendingSaveData] = useState<unknown | null>(null);
   const [hoveredBuilding, setHoveredBuilding] = useState<SelectedBuildingInfo | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -140,6 +237,14 @@ function App() {
       setToasts(current => current.filter(toast => toast.id !== id));
     }, 2600);
   };
+
+  useEffect(() => {
+    economyRef.current = economy;
+  }, [economy]);
+
+  useEffect(() => {
+    thoughtsFeedRef.current = thoughtsFeed;
+  }, [thoughtsFeed]);
 
   useEffect(() => {
     if (!gameStarted) return;
@@ -371,6 +476,45 @@ function App() {
   const canAfford = (cost: number): boolean => gameRef.current?.canAfford(cost) ?? false;
   const isBuildMenuVisible = showBuildMenu && !selectedBuilding;
   const shouldShowHud = !(isMobile && isBuildMenuVisible);
+  const guideUiBlocked = showBuildMenu || Boolean(selectedBuilding) || isPlacing || showParkPanel || showChallenges || showResearch || showThoughtsPanel;
+  useEffect(() => {
+    guideBlockedRef.current = guideUiBlocked || showGuide;
+  }, [guideUiBlocked, showGuide]);
+
+  useEffect(() => {
+    if (!gameStarted) return;
+    const scheduleAmbientGuide = (delay: number) => {
+      ambientGuideTimerRef.current = window.setTimeout(() => {
+        ambientGuideTimerRef.current = null;
+        if (guideBlockedRef.current) {
+          scheduleAmbientGuide(45000);
+          return;
+        }
+
+        const state = economyRef.current;
+        if (!state || state.totalVisitors < 3) {
+          scheduleAmbientGuide(45000);
+          return;
+        }
+
+        const nextLine = firstAmbientGuideRef.current
+          ? CLAUDE_RATE_LIMIT_LINE
+          : pickGateKeeperLine(state, thoughtsFeedRef.current[0]);
+        firstAmbientGuideRef.current = false;
+        setGuideLines([nextLine]);
+        setShowGuide(true);
+        scheduleAmbientGuide(45000);
+      }, delay);
+    };
+
+    scheduleAmbientGuide(firstAmbientGuideRef.current ? 30000 : 45000);
+
+    return () => {
+      if (ambientGuideTimerRef.current) window.clearTimeout(ambientGuideTimerRef.current);
+      ambientGuideTimerRef.current = null;
+    };
+  }, [gameStarted]);
+
   const activeResearchLabel = useMemo(
     () => researchNodes.find(node => node.id === researchState.activeResearchId)?.name ?? 'Idle',
     [researchNodes, researchState.activeResearchId]
@@ -442,11 +586,15 @@ function App() {
       <MainMenu
         onNewGame={() => {
           setPendingSaveData(null);
+          firstAmbientGuideRef.current = true;
+          setGuideLines(undefined);
           setShowGuide(true);
           setGameStarted(true);
         }}
         onLoadGame={saveData => {
           setPendingSaveData(saveData);
+          firstAmbientGuideRef.current = true;
+          setGuideLines(undefined);
           setShowGuide(true);
           setGameStarted(true);
         }}
@@ -471,7 +619,14 @@ function App() {
 
       <AnimatePresence>
         {guideVisible && (
-          <GuideCharacter onClose={() => setShowGuide(false)} />
+          <GuideCharacter
+            lines={guideLines}
+            autoCloseMs={guideLines ? 5000 : undefined}
+            onClose={() => {
+              setShowGuide(false);
+              setGuideLines(undefined);
+            }}
+          />
         )}
       </AnimatePresence>
 
