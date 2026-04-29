@@ -242,6 +242,24 @@ export class GameRenderer {
     this.renderer.render(scene, camera);
   }
 
+  public scheduleShaderWarmup(scene: THREE.Scene, camera: THREE.Camera): void {
+    const warm = () => {
+      try {
+        this.renderer.compile(scene, camera);
+      } catch {
+        // Shader warmup is opportunistic; gameplay should never depend on it.
+      }
+    };
+    const win = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+    };
+    if (win.requestIdleCallback) {
+      win.requestIdleCallback(warm, { timeout: this.mobile ? 5000 : 3000 });
+      return;
+    }
+    window.setTimeout(warm, this.mobile ? 3500 : 2200);
+  }
+
   public onWindowResize(): void {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }

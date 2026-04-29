@@ -27,6 +27,7 @@ import {
 } from './core/AssetLoader';
 import { lanternPool } from './utils/LanternPool';
 import { getMaintenancePerMinute } from './data/buildingEconomy';
+import { INITIAL_UNLOCKED_BUILDINGS } from './data/buildings';
 import {
   BUILDING_DISPLAY,
   BuildingDefinition,
@@ -96,6 +97,9 @@ export class Game {
   private readonly ambience2Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private ambience2StartTimer: ReturnType<typeof window.setTimeout> | null = null;
   private readonly assetWarmupTimers: ReturnType<typeof window.setTimeout>[] = [];
+  private readonly assetWarmupIdleHandles: number[] = [];
+  private readonly warmedAssetPaths = new Set<string>();
+  private shaderWarmupScheduled = false;
   private readonly thunderTrack: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly challengeTrack: { audio: THREE.Audio; baseVolume: number };
   private readonly buildTrack: { audio: THREE.Audio; baseVolume: number };
@@ -146,6 +150,8 @@ export class Game {
     [DecorationType.FRANKENSTEIN_DECORATION]: '/models/frankenstein_decoration.glb',
     [DecorationType.LANTERN]: '/models/lantern.glb',
     [DecorationType.TRASH_CUBE]: '/models/trash_cube.glb',
+    [DecorationType.SPOOKY_TREE]: '/models/tree.glb',
+    [DecorationType.PUMPKIN]: '/models/pumpkin.glb',
   };
 
   private static readonly PREVIEW_TARGET_SIZES: Partial<Record<string, number>> = {
@@ -311,7 +317,6 @@ export class Game {
     this.setupMouseControls();
     this.setupWindowResize();
     this.setupAudioResume();
-    this.scheduleAssetWarmup();
     this.initializeEntrance();
 
     // Store unsubscribe handles so dispose() can cleanly detach listeners.
@@ -320,7 +325,10 @@ export class Game {
     // Store the latest snapshot — the update loop emits it to React at a
     // throttled rate (ECONOMY_UI_INTERVAL) to avoid 60-fps React re-renders.
     this.unsubscribeEconomy   = this.economySystem.subscribe(state => { this.pendingEconomyState = state; });
-    this.unsubscribeResearch  = this.researchSystem.subscribe(state => this.events.emit('researchUpdate', state));
+    this.unsubscribeResearch  = this.researchSystem.subscribe(state => {
+      this.scheduleAssetWarmup(state.unlocked);
+      this.events.emit('researchUpdate', state);
+    });
     this.unsubscribeChallenges = this.challengeSystem.subscribe(state => this.events.emit('challengesUpdate', state));
 
     gameLoadingManager.onStart = () => {
@@ -352,36 +360,46 @@ export class Game {
     this.renderer.invalidateShadowMap();
   }
 
-  private scheduleAssetWarmup(): void {
-    const paths = [
-      '/models/carusel.glb',
-      '/models/pirate_ship.glb',
-      '/models/kraken.glb',
-      '/models/infernal_tower.glb',
-      '/models/food.glb',
-      '/models/drinks.glb',
-      '/models/gift.glb',
-      '/models/wc.glb',
-      '/models/tree.glb',
-      '/models/pumpkin.glb',
-      '/models/skeleton_decoration.glb',
-      '/models/frankenstein_decoration.glb',
-      '/models/lantern.glb',
-      '/models/trash_cube.glb',
-      '/models/noria.glb',
-      '/models/rusa.glb',
-      '/models/house.glb',
-    ];
+  private scheduleAssetWarmup(unlockedKinds: PlaceableBuildingKind[] = INITIAL_UNLOCKED_BUILDINGS): void {
+    const unlockedPaths = unlockedKinds
+      .map(kind => Game.MODEL_PATHS[kind])
+      .filter((path): path is string => Boolean(path));
+    const paths = Array.from(new Set(unlockedPaths));
 
     const startDelay = isMobile() ? 6500 : 4200;
-    const stepDelay = isMobile() ? 1600 : 900;
-    paths.forEach((path, index) => {
-      const timer = window.setTimeout(() => {
-        this.assetWarmupTimers.splice(this.assetWarmupTimers.indexOf(timer), 1);
+    const stepDelay = isMobile() ? 1400 : 800;
+    paths.forEach((path, index) => this.scheduleIdleAssetWarmup(path, startDelay + index * stepDelay));
+  }
+
+  private scheduleIdleAssetWarmup(path: string, delayMs: number): void {
+    if (this.warmedAssetPaths.has(path)) return;
+    this.warmedAssetPaths.add(path);
+
+    const timer = window.setTimeout(() => {
+      const timerIndex = this.assetWarmupTimers.indexOf(timer);
+      if (timerIndex !== -1) this.assetWarmupTimers.splice(timerIndex, 1);
+
+      const win = window as Window & {
+        requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        cancelIdleCallback?: (handle: number) => void;
+      };
+      const warm = () => {
         preloadBuildingGLTF(path);
-      }, startDelay + index * stepDelay);
-      this.assetWarmupTimers.push(timer);
-    });
+      };
+
+      if (win.requestIdleCallback) {
+        const handle = win.requestIdleCallback(() => {
+          const index = this.assetWarmupIdleHandles.indexOf(handle);
+          if (index !== -1) this.assetWarmupIdleHandles.splice(index, 1);
+          warm();
+        }, { timeout: isMobile() ? 5000 : 3000 });
+        this.assetWarmupIdleHandles.push(handle);
+        return;
+      }
+
+      warm();
+    }, delayMs);
+    this.assetWarmupTimers.push(timer);
   }
 
   private loadAudio(): void {
@@ -1784,6 +1802,12 @@ export class Game {
 
   private render(): void {
     this.renderer.render(this.scene.scene, this.scene.camera);
+    if (!this.shaderWarmupScheduled) {
+      this.shaderWarmupScheduled = true;
+      window.setTimeout(() => {
+        this.renderer.scheduleShaderWarmup(this.scene.scene, this.scene.camera);
+      }, isMobile() ? 3200 : 1800);
+    }
   }
 
   public start(): void {
@@ -1816,6 +1840,9 @@ export class Game {
     }
     this.assetWarmupTimers.forEach(timer => window.clearTimeout(timer));
     this.assetWarmupTimers.length = 0;
+    const win = window as Window & { cancelIdleCallback?: (handle: number) => void };
+    this.assetWarmupIdleHandles.forEach(handle => win.cancelIdleCallback?.(handle));
+    this.assetWarmupIdleHandles.length = 0;
     this.mouseController.dispose();
     this.disposePreview();
     this.previewModelMat.dispose();
