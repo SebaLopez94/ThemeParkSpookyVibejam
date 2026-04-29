@@ -56,35 +56,44 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
   const panelStyle = isMobile
     ? {
         position: 'fixed' as const,
-        bottom: 'calc(72px + var(--safe-bottom))',
-        left: 8,
-        right: 8,
-        zIndex: 46,
-        maxHeight: 'calc(100dvh - 120px - var(--safe-bottom))',
+        left: 0,
+        right: 0,
+        bottom: 'calc(56px + var(--safe-bottom))',
+        zIndex: 86,
+        maxHeight: 'calc(72dvh - var(--safe-bottom))',
       }
-    : { position: 'fixed' as const, bottom: 16, left: 16, zIndex: 40 };
+    : { position: 'fixed' as const, bottom: 16, left: 16, zIndex: 60 };
 
   return (
     <motion.div
       style={panelStyle}
-      initial={{ y: 50, opacity: 0 }}
+      initial={{ y: isMobile ? '100%' : 50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 20, opacity: 0, transition: { duration: 0.15 } }}
+      exit={{ y: isMobile ? '100%' : 20, opacity: 0, transition: { duration: isMobile ? 0.24 : 0.15, ease: 'easeInOut' } }}
       transition={{ type: "spring", stiffness: 350, damping: 25 }}
+      drag={isMobile ? 'y' : false}
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={{ top: 0, bottom: 0.78 }}
+      onDragEnd={(_event, info) => {
+        if (!isMobile) return;
+        if (info.offset.y > 90 || info.velocity.y > 480) onClose();
+      }}
     >
       <div
-        className={`px-panel px-panel--manage${isMobile ? '' : ' px-anim-enter-up'}`}
+        className={`px-panel px-panel--manage px-building-panel${isMobile ? ' px-building-panel--mobile' : ' px-anim-enter-up'}`}
         style={{
           padding: 0,
-          width: isMobile ? '100%' : 410,
+          width: isMobile ? '100%' : 430,
           maxHeight: isMobile ? 'inherit' : undefined,
           overflow: 'hidden',
         }}
       >
-        <div className="px-titlebar px-titlebar--manage">
+        <div className="px-titlebar px-titlebar--manage px-building-panel__top">
           <span className="px-titlebar__label px-building-title-label">
-            <Settings2 className="px-icon-sm" />
-            <span style={{ fontSize: isMobile ? 10 : 13 }}>{building.name.toUpperCase()}</span>
+            <span className="px-building-panel__mark">
+              <Settings2 className="px-icon-sm" />
+            </span>
+            <span className="px-building-panel__name">{building.name.toUpperCase()}</span>
             <span className="px-building-type-tag px-building-type-tag--title">{building.buildingType}</span>
           </span>
           <button className="px-btn px-btn--sm" aria-label="Close panel" onClick={onClose}>
@@ -93,10 +102,9 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
         </div>
 
         <div
+          className="px-building-panel__body"
           style={{
-            padding: isMobile ? '10px 12px 12px' : '14px 18px 18px',
-            maxHeight: isMobile ? 'calc(100dvh - 176px - var(--safe-bottom))' : undefined,
-            overflowY: isMobile ? 'auto' : undefined,
+            maxHeight: isMobile ? 'calc(72dvh - 116px - var(--safe-bottom))' : undefined,
           }}
         >
           {building.statBars && building.statBars.length > 0 && (
@@ -154,11 +162,11 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
           )}
 
           {confirmSell ? (
-            <div style={{ background: 'rgba(251,113,133,0.1)', border: '2px solid rgba(251,113,133,0.3)', padding: isMobile ? '10px 12px' : '12px 14px' }}>
+            <div className="px-building-confirm">
               <div className="px-label" style={{ fontSize: isMobile ? 8 : 9, marginBottom: 10, color: 'var(--px-red)' }}>
                 Sell for ${refundAmount}? (50% refund)
               </div>
-              <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
+              <div className="px-building-actions">
                 <button
                   className="px-btn px-btn--danger px-btn--sm"
                   style={{ flex: 1, justifyContent: 'center' }}
@@ -176,7 +184,7 @@ export function BuildingPanel({ building, onClose, onDelete, onMove, onPriceChan
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: isMobile ? 8 : 10, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div className="px-building-actions">
               <button
                 className="px-btn px-btn--sm"
                 style={{ flex: 1, justifyContent: 'center' }}
@@ -226,24 +234,18 @@ const STAT_BAR_COLOR: Record<string, string> = {
 
 function StatBars({ bars }: { bars: Array<{ label: string; filled: number }> }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+    <div className="px-building-statbars">
       {bars.map(bar => {
         const color = STAT_BAR_COLOR[bar.label] ?? 'rgba(148,163,184,0.7)';
         return (
-          <div key={bar.label}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 8, color: 'var(--px-muted)' }}>
-                {bar.label}
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 3 }}>
+          <div key={bar.label} className="px-building-statbar">
+            <span className="px-building-statbar__label">{bar.label}</span>
+            <div className="px-building-statbar__dots">
               {Array.from({ length: 10 }).map((_, i) => (
                 <span
                   key={i}
+                  className="px-building-statbar__dot"
                   style={{
-                    flex: 1,
-                    height: 6,
-                    borderRadius: 2,
                     background: i < bar.filled ? color : 'rgba(148,163,184,0.12)',
                   }}
                 />
