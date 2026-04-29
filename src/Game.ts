@@ -22,6 +22,7 @@ import {
   disposeBuildingGLTFCache,
   loadBuildingGLTF,
   gameLoadingManager,
+  preloadBuildingGLTF,
   sharedAudioLoader
 } from './core/AssetLoader';
 import { lanternPool } from './utils/LanternPool';
@@ -94,6 +95,7 @@ export class Game {
   private readonly ambience1Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly ambience2Track: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private ambience2StartTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private readonly assetWarmupTimers: ReturnType<typeof window.setTimeout>[] = [];
   private readonly thunderTrack: { audio: THREE.Audio; baseVolume: number; nextTime: number };
   private readonly challengeTrack: { audio: THREE.Audio; baseVolume: number };
   private readonly buildTrack: { audio: THREE.Audio; baseVolume: number };
@@ -309,6 +311,7 @@ export class Game {
     this.setupMouseControls();
     this.setupWindowResize();
     this.setupAudioResume();
+    this.scheduleAssetWarmup();
     this.initializeEntrance();
 
     // Store unsubscribe handles so dispose() can cleanly detach listeners.
@@ -347,6 +350,38 @@ export class Game {
     }
     this.visitorSystem.setEntrancePosition({ x: 12, z: 24 });
     this.renderer.invalidateShadowMap();
+  }
+
+  private scheduleAssetWarmup(): void {
+    const paths = [
+      '/models/carusel.glb',
+      '/models/pirate_ship.glb',
+      '/models/kraken.glb',
+      '/models/infernal_tower.glb',
+      '/models/food.glb',
+      '/models/drinks.glb',
+      '/models/gift.glb',
+      '/models/wc.glb',
+      '/models/tree.glb',
+      '/models/pumpkin.glb',
+      '/models/skeleton_decoration.glb',
+      '/models/frankenstein_decoration.glb',
+      '/models/lantern.glb',
+      '/models/trash_cube.glb',
+      '/models/noria.glb',
+      '/models/rusa.glb',
+      '/models/house.glb',
+    ];
+
+    const startDelay = isMobile() ? 6500 : 4200;
+    const stepDelay = isMobile() ? 1600 : 900;
+    paths.forEach((path, index) => {
+      const timer = window.setTimeout(() => {
+        this.assetWarmupTimers.splice(this.assetWarmupTimers.indexOf(timer), 1);
+        preloadBuildingGLTF(path);
+      }, startDelay + index * stepDelay);
+      this.assetWarmupTimers.push(timer);
+    });
   }
 
   private loadAudio(): void {
@@ -1779,6 +1814,8 @@ export class Game {
       window.clearTimeout(this.ambience2StartTimer);
       this.ambience2StartTimer = null;
     }
+    this.assetWarmupTimers.forEach(timer => window.clearTimeout(timer));
+    this.assetWarmupTimers.length = 0;
     this.mouseController.dispose();
     this.disposePreview();
     this.previewModelMat.dispose();

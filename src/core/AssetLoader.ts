@@ -51,6 +51,7 @@ export function configureTextureTranscoding(renderer: THREE.WebGLRenderer): void
 // receives its own independent material objects (textures remain shared).
 // ---------------------------------------------------------------------------
 const _buildingSceneCache = new Map<string, THREE.Group>();
+const _buildingPendingLoads = new Map<string, Array<(model: THREE.Group) => void>>();
 
 function _disposeMaterial(material: THREE.Material, disposedTextures: Set<THREE.Texture>): void {
   Object.values(material).forEach(value => {
@@ -129,13 +130,35 @@ export function loadBuildingGLTF(
     callback(cloneModel(cached));
     return;
   }
+
+  const pending = _buildingPendingLoads.get(url);
+  if (pending) {
+    pending.push(source => callback(cloneModel(source)));
+    return;
+  }
+
+  _buildingPendingLoads.set(url, [source => callback(cloneModel(source))]);
   sharedGLTFLoader.load(url, (gltf) => {
     _buildingSceneCache.set(url, gltf.scene);
-    callback(cloneModel(gltf.scene));
+    const callbacks = _buildingPendingLoads.get(url) ?? [];
+    _buildingPendingLoads.delete(url);
+    callbacks.forEach(entry => entry(gltf.scene));
+  });
+}
+
+export function preloadBuildingGLTF(url: string): void {
+  if (_buildingSceneCache.has(url) || _buildingPendingLoads.has(url)) return;
+  _buildingPendingLoads.set(url, []);
+  sharedGLTFLoader.load(url, (gltf) => {
+    _buildingSceneCache.set(url, gltf.scene);
+    const callbacks = _buildingPendingLoads.get(url) ?? [];
+    _buildingPendingLoads.delete(url);
+    callbacks.forEach(entry => entry(gltf.scene));
   });
 }
 
 export function disposeBuildingGLTFCache(): void {
   _buildingSceneCache.forEach(scene => _disposeSceneResources(scene));
   _buildingSceneCache.clear();
+  _buildingPendingLoads.clear();
 }

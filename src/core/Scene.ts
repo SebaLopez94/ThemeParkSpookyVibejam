@@ -48,6 +48,7 @@ export class GameScene {
   private lightningTimer = 0;
   private lightningFlashTimer = 0;
   private lightningTriggered = false;
+  private deferredTimers: ReturnType<typeof window.setTimeout>[] = [];
   private exteriorMistTexture: THREE.CanvasTexture | null = null;
   private lastShadowTargetX = Number.NaN;
   private lastShadowTargetZ = Number.NaN;
@@ -121,9 +122,9 @@ export class GameScene {
     this.createForestFloor();
     this.createMountains();
     this.createGridLines();
-    this.createEntranceGate();
+    this.deferWork(() => this.createEntranceGate(), 250);
     this.createPerimeterFence();
-    this.createSurroundings();
+    this.deferWork(() => this.createSurroundings(), mobile ? 3200 : 1800);
     this.createExteriorMist();
     this.createMoon();
     this.createRain();
@@ -132,6 +133,14 @@ export class GameScene {
     // Skip on mobile — eliminates a fullscreen shader pass (scanlines + grain)
     // that's purely cosmetic and adds measurable GPU time on low-end devices.
     this.retroOverlay = mobile ? null : new RetroOverlay(this.scene);
+  }
+
+  private deferWork(callback: () => void, delayMs: number): void {
+    const timer = window.setTimeout(() => {
+      this.deferredTimers = this.deferredTimers.filter(entry => entry !== timer);
+      callback();
+    }, delayMs);
+    this.deferredTimers.push(timer);
   }
 
   private enableBackgroundFogLayer(object: THREE.Object3D): void {
@@ -1252,6 +1261,8 @@ export class GameScene {
   }
 
   public dispose(): void {
+    this.deferredTimers.forEach(timer => window.clearTimeout(timer));
+    this.deferredTimers.length = 0;
     this.retroOverlay?.dispose();
     if (this.rainLines) this.scene.remove(this.rainLines);
     if (this.lightningBolt) this.scene.remove(this.lightningBolt);
