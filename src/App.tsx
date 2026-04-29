@@ -82,29 +82,29 @@ const RANDOM_GATE_KEEPER_LINES: GuideLine[] = [
   {
     tag: 'Gate Keeper',
     title: 'Rate Limit Horror',
-    text: 'This park is scarier than a Claude rate limit.'
+    text: 'This park is scarier than a Claude rate limit, and somehow less predictable.'
   },
   {
     tag: 'Gate Keeper',
-    title: 'Fog report',
-    text: 'The fog looks dramatic today. Also useful for hiding questionable business decisions.'
+    title: 'Fog Inspection',
+    text: 'Excellent fog density today. It hides bad decisions and makes cheap paths look mysterious.'
   },
   {
     tag: 'Gate Keeper',
-    title: 'Professional advice',
-    text: 'If guests scream, good. If they leave hungry, less good. If they do both, check the Feed.'
+    title: 'Keeper Wisdom',
+    text: 'Screams mean profit. Silence means trouble. Complaints mean the Feed is doing unpaid QA.'
   },
   {
     tag: 'Gate Keeper',
-    title: 'Operational omen',
-    text: 'A happy guest tells a friend. An angry guest tells the Feed, loudly, forever.'
+    title: 'Guest Lore',
+    text: 'A happy guest brings friends. An angry guest brings reviews, refunds, and dramatic footsteps.'
   }
 ];
 
 const CLAUDE_RATE_LIMIT_LINE: GuideLine = {
   tag: 'Gate Keeper',
   title: 'Rate Limit Horror',
-  text: 'This park is scarier than a Claude rate limit.'
+  text: 'This park is scarier than a Claude rate limit, and somehow less predictable.'
 };
 
 function pickRandomGateKeeperJoke(): GuideLine {
@@ -118,8 +118,8 @@ function pickGateKeeperLine(economy: EconomyState, latestThought?: FeedMessage):
   if (economy.averageHappiness < 38) {
     return {
       tag: 'Gate Keeper',
-      title: 'Mood warning',
-      text: 'Guest joy is getting dangerously low. Check prices, add fun, and listen to the loudest complaints.'
+      title: 'Joy Is Fading',
+      text: 'The crowd mood is sinking. Lower the greed, raise the fun, and inspect the Feed before the whispers become refunds.'
     };
   }
 
@@ -127,38 +127,38 @@ function pickGateKeeperLine(economy: EconomyState, latestThought?: FeedMessage):
     const thoughtLines: Partial<Record<VisitorMoodKind, GuideLine>> = {
       hunger: {
         tag: 'Gate Keeper',
-        title: 'Stomach trouble',
-        text: 'Guests are hungry. A spooky Burger stand may save more souls than another terrifying ride.'
+        title: 'Hungry Shadows',
+        text: 'Guests are hungry. A haunted Burger stand may prevent a very unprofitable uprising.'
       },
       thirst: {
         tag: 'Gate Keeper',
-        title: 'Dry screams',
-        text: 'Guests need drinks. Screaming is thirsty work.'
+        title: 'Dry Screams',
+        text: 'Thirsty guests scream less impressively. Add Drink support before the atmosphere gets crunchy.'
       },
       bored: {
         tag: 'Gate Keeper',
-        title: 'Boredom detected',
-        text: 'Some guests are bored. Add a stronger ride, unlock something in Lab, or sweeten the path with decor.'
+        title: 'Boredom Curse',
+        text: 'Some guests are bored. New rides, Lab unlocks, or darker decorations should wake them up.'
       },
       sick: {
         tag: 'Gate Keeper',
-        title: 'Hygiene omen',
-        text: 'Guests are feeling rough. More WC access and trash support should calm the curse.'
+        title: 'Hygiene Omen',
+        text: 'The air feels cursed. Add WC access and trash support before the park develops its own smell.'
       },
       price: {
         tag: 'Gate Keeper',
-        title: 'Wallet panic',
-        text: 'Prices are spooking guests in the wrong way. Fear sells better when people can afford it.'
+        title: 'Wallet Panic',
+        text: 'Prices are frightening guests in the wrong direction. Fear works best when wallets survive the entrance.'
       },
       happy: {
         tag: 'Gate Keeper',
-        title: 'Good screams',
-        text: 'Guests are enjoying the park. This is suspicious, profitable, and worth encouraging.'
+        title: 'Good Screams',
+        text: 'Guests are enjoying themselves. Disturbing, yes. Profitable, also yes. Keep feeding that momentum.'
       },
       excited: {
         tag: 'Gate Keeper',
-        title: 'Crowd energy',
-        text: 'The crowd is buzzing. Good moment to expand before the excitement evaporates.'
+        title: 'Crowd Energy',
+        text: 'The crowd is buzzing. Expand while they still believe this place is under control.'
       }
     };
 

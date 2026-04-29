@@ -78,23 +78,32 @@ export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
             </span>
           </div>
         ) : (
-          <AnimatePresence initial={false} mode="sync">
+          <motion.div layout className="px-thought-feed-list" style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
+          <AnimatePresence initial={false} mode="popLayout">
             {feed.map((msg, index) => {
               // Newest entry = full opacity; each step down dims slightly
               const ageOpacity = Math.max(0.35, 1 - index * 0.082);
               return (
                 <motion.div
                   key={msg.id}
-                  initial={{ opacity: 0, y: -10, scale: 0.96 }}
-                  animate={{ opacity: ageOpacity, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.12 } }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  layout
+                  initial={{ opacity: 0, y: -18, scale: 0.98, filter: 'brightness(1.35)' }}
+                  animate={{ opacity: ageOpacity, y: 0, scale: 1, filter: 'brightness(1)' }}
+                  exit={{ opacity: 0, x: 18, scale: 0.97, filter: 'brightness(0.85)', transition: { duration: 0.18, ease: 'easeInOut' } }}
+                  transition={{
+                    layout: { type: 'spring', stiffness: 420, damping: 34, mass: 0.75 },
+                    opacity: { duration: 0.2 },
+                    y: { type: 'spring', stiffness: 460, damping: 28, mass: 0.7 },
+                    scale: { duration: 0.2 },
+                    filter: { duration: 0.28 },
+                  }}
                 >
-                  <ThoughtCard msg={msg} isMobile={isMobile} />
+                  <ThoughtCard msg={msg} isMobile={isMobile} fresh={index === 0} />
                 </motion.div>
               );
             })}
           </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </div>
@@ -102,12 +111,12 @@ export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
 }
 
 // ── Individual card ──────────────────────────────────────────────────────────
-function ThoughtCard({ msg, isMobile }: { msg: FeedMessage; isMobile: boolean }) {
+function ThoughtCard({ msg, isMobile, fresh }: { msg: FeedMessage; isMobile: boolean; fresh: boolean }) {
   const { border, bg } = kindStyle(msg.kind);
   const isParkEvent = msg.kind === 'park_event';
 
   return (
-    <div style={{
+    <div className={fresh ? 'px-thought-card px-thought-card--fresh' : 'px-thought-card'} style={{
       display: 'flex',
       gap: 10,
       padding: isMobile ? '9px 10px' : '10px 12px',

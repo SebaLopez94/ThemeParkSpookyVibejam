@@ -4597,6 +4597,41 @@ button {
   }
 }
 
+.px-thought-card {
+  position: relative;
+  overflow: hidden;
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+.px-thought-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,0.12) 42%, transparent 70%);
+  transform: translateX(-120%);
+  opacity: 0;
+}
+
+.px-thought-card--fresh::after {
+  animation: pxThoughtSweep 0.7s ease-out both;
+}
+
+@keyframes pxThoughtSweep {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
 /* ── Custom pixel cursors (desktop only) ─────────────────────────────────
    Requiere que los PNG estén a ≤128 px (recomendado: altura 48 px).
    Archivos: public/ui/pointer-arrow.png  pointer-hand.png  pointer-no.png
