@@ -188,10 +188,10 @@ export const INITIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: 'challenge_profit_2',
     title: 'Sustained Terror',
-    description: 'Positive profit for 120s.',
+    description: 'Positive profit for 5 minutes.',
     type: 'profit_streak',
     target: 1,
-    duration: 120,
+    duration: 300,
     reward: { money: 1500, rating: 5 },
     tier: 4
   },
