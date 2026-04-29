@@ -300,7 +300,7 @@ export class Game {
     ];
     this.windTrack    = { audio: makeAudio(), baseVolume: 0.06, nextTime: Math.random() * 15 + 10 };
     this.ambience1Track = { audio: makeAudio(), baseVolume: 0.09, nextTime: Math.random() * 10 + 12 };
-    this.ambience2Track = { audio: makeAudio(), baseVolume: 0.06, nextTime: Math.random() * 14 + 20 };
+    this.ambience2Track = { audio: makeAudio(), baseVolume: 0.05, nextTime: Math.random() * 14 + 20 };
     this.thunderTrack = { audio: makeAudio(), baseVolume: 0.105, nextTime: Math.random() * 16 + 18 };
     this.challengeTrack = { audio: makeAudio(), baseVolume: 0.14 };
     this.buildTrack = { audio: makeAudio(), baseVolume: 0.16 };
