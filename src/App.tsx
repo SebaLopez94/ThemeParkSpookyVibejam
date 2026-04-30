@@ -622,6 +622,7 @@ function App() {
           <GuideCharacter
             lines={guideLines}
             autoCloseMs={guideLines ? 4000 : undefined}
+            isMuted={isMuted}
             onClose={() => {
               setShowGuide(false);
               setGuideLines(undefined);

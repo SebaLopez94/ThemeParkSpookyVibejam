@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, X } from 'lucide-react';
 
@@ -63,13 +63,25 @@ interface GuideCharacterProps {
   onClose: () => void;
   lines?: GuideLine[];
   autoCloseMs?: number;
+  isMuted?: boolean;
 }
 
-export function GuideCharacter({ onClose, lines = GUIDE_LINES, autoCloseMs }: GuideCharacterProps) {
+export function GuideCharacter({ onClose, lines = GUIDE_LINES, autoCloseMs, isMuted = false }: GuideCharacterProps) {
   const [lineIndex, setLineIndex] = useState(0);
   const line = lines[lineIndex];
   const isLast = lineIndex === lines.length - 1;
   const isAmbient = Boolean(autoCloseMs);
+  const hasPlayedAudioRef = useRef(false);
+
+  useEffect(() => {
+    if (!hasPlayedAudioRef.current && isAmbient && !isMuted) {
+      hasPlayedAudioRef.current = true;
+      const audio = new Audio('/audio/gate keeper.ogg');
+      audio.volume = 0.4;
+      audio.play().catch(e => console.warn('Gate keeper audio play failed', e));
+    }
+  }, [isAmbient, isMuted]);
+
   const guideVariants = {
     hidden: { opacity: 0 },
     visible: {

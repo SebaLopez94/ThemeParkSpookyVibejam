@@ -149,6 +149,48 @@ export class GameScene {
     object.traverse(child => child.layers.enable(BACKGROUND_FOG_LAYER));
   }
 
+  private createFencePatinaTexture(): THREE.CanvasTexture {
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    const base = ctx.createLinearGradient(0, 0, size, size);
+    base.addColorStop(0, '#17100d');
+    base.addColorStop(0.48, '#070606');
+    base.addColorStop(1, '#261611');
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, size, size);
+
+    for (let i = 0; i < 850; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const alpha = 0.035 + Math.random() * 0.08;
+      const warm = Math.random() > 0.78;
+      ctx.fillStyle = warm
+        ? `rgba(145, 68, 31, ${alpha})`
+        : `rgba(230, 219, 178, ${alpha * 0.42})`;
+      ctx.fillRect(x, y, 1 + Math.random() * 2.4, 1 + Math.random() * 2.4);
+    }
+
+    ctx.globalAlpha = 0.28;
+    for (let y = 0; y < size; y += 9) {
+      ctx.fillStyle = y % 18 === 0 ? '#2f1a12' : '#050404';
+      ctx.fillRect(0, y, size, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2, 2);
+    texture.generateMipmaps = true;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
   private createEntrancePathExtension(): void {
     const texture = sharedTextureLoader.load('/models/path.png');
     texture.wrapS = THREE.RepeatWrapping;
@@ -264,7 +306,20 @@ export class GameScene {
     const railH = 0.09;
     const railD = 0.09;
 
-    const mat = new THREE.MeshStandardMaterial({ color: 0x0e0a06, roughness: 0.85, metalness: 0.3 });
+    const fenceTexture = this.createFencePatinaTexture();
+    const postMat = new THREE.MeshStandardMaterial({
+      color: 0x1a120f,
+      map: fenceTexture,
+      bumpMap: fenceTexture,
+      bumpScale: 0.035,
+      roughness: 0.74,
+      metalness: 0.52,
+      envMapIntensity: 0.18,
+      vertexColors: true,
+    });
+    const railMat = postMat.clone();
+    railMat.vertexColors = false;
+    railMat.color.setHex(0x130d0b);
 
     // --- Posts (InstancedMesh) ---
     const postPositions: [number, number][] = []; // [worldX, worldZ]
@@ -290,29 +345,38 @@ export class GameScene {
 
     // Post shafts
     const postGeo = new THREE.BoxGeometry(postW, postH, postW);
-    const postMesh = new THREE.InstancedMesh(postGeo, mat, postPositions.length);
+    const postMesh = new THREE.InstancedMesh(postGeo, postMat, postPositions.length);
     postMesh.castShadow = false;
     const dummy = new THREE.Object3D();
+    const color = new THREE.Color();
     postPositions.forEach(([x, z], i) => {
       dummy.position.set(x, postH / 2, z);
       dummy.updateMatrix();
       postMesh.setMatrixAt(i, dummy.matrix);
+      const shade = 0.72 + ((i * 17) % 11) / 50;
+      color.setRGB(0.11 * shade, 0.075 * shade, 0.055 * shade);
+      postMesh.setColorAt(i, color);
     });
     postMesh.instanceMatrix.needsUpdate = true;
+    if (postMesh.instanceColor) postMesh.instanceColor.needsUpdate = true;
     postMesh.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(postMesh);
 
     // Spike tips on every post
     const spikeGeo = new THREE.ConeGeometry(postW * 0.9, spikeH, 4);
-    const spikeMesh = new THREE.InstancedMesh(spikeGeo, mat, postPositions.length);
+    const spikeMesh = new THREE.InstancedMesh(spikeGeo, postMat, postPositions.length);
     spikeMesh.castShadow = false;
     postPositions.forEach(([x, z], i) => {
       dummy.position.set(x, postH + spikeH / 2, z);
       dummy.rotation.set(0, Math.PI / 4, 0);
       dummy.updateMatrix();
       spikeMesh.setMatrixAt(i, dummy.matrix);
+      const shade = 0.68 + ((i * 13) % 9) / 48;
+      color.setRGB(0.12 * shade, 0.074 * shade, 0.048 * shade);
+      spikeMesh.setColorAt(i, color);
     });
     spikeMesh.instanceMatrix.needsUpdate = true;
+    if (spikeMesh.instanceColor) spikeMesh.instanceColor.needsUpdate = true;
     spikeMesh.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(spikeMesh);
 
@@ -355,7 +419,7 @@ export class GameScene {
     // Merge all 10 rail geometries → 1 draw call
     const mergedRails = mergeGeometries(railGeoAccum, false);
     railGeoAccum.forEach(g => g.dispose()); // free the per-span clones
-    const railMesh = new THREE.Mesh(mergedRails, mat);
+    const railMesh = new THREE.Mesh(mergedRails, railMat);
     railMesh.castShadow = false;
     railMesh.layers.enable(BACKGROUND_FOG_LAYER);
     this.scene.add(railMesh);
