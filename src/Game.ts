@@ -302,7 +302,7 @@ export class Game {
 
     const makeAudio = () => new THREE.Audio(this.audioListener);
     this.loopTracks = [
-      { audio: makeAudio(), baseVolume: 0.12, loop: true },  // background music
+      { audio: makeAudio(), baseVolume: 0.105, loop: true }, // background music
       { audio: makeAudio(), baseVolume: 0.04, loop: true },  // night ambience
       { audio: makeAudio(), baseVolume: 0.06, loop: true }, // rain ambience
     ];
