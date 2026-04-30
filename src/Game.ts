@@ -104,6 +104,19 @@ export class Game {
   private readonly challengeTrack: { audio: THREE.Audio; baseVolume: number };
   private readonly buildTrack: { audio: THREE.Audio; baseVolume: number };
   private isMuted = false;
+  private controlsLocked = false;
+  private openingIntro:
+    | {
+        elapsed: number;
+        duration: number;
+        fromPosition: THREE.Vector3;
+        fromTarget: THREE.Vector3;
+        toPosition: THREE.Vector3;
+        toTarget: THREE.Vector3;
+        onComplete?: () => void;
+        lightningFired: boolean;
+      }
+    | null = null;
   private readonly audioResumeEvents: Array<keyof WindowEventMap> = ['click', 'keydown', 'touchstart', 'touchend', 'pointerdown'];
   private readonly audioResumeHandler = (): void => {
     void this.ensureAudioRunning();
@@ -542,24 +555,35 @@ export class Game {
   }
 
   private setupMouseControls(): void {
-    this.mouseController.onCameraMove = delta => this.cameraController.pan(delta);
-    this.mouseController.onCameraZoom = delta => this.cameraController.zoom(delta);
-    this.mouseController.onCameraRotate = angleDelta => this.cameraController.rotate(angleDelta);
+    this.mouseController.onCameraMove = delta => {
+      if (!this.controlsLocked) this.cameraController.pan(delta);
+    };
+    this.mouseController.onCameraZoom = delta => {
+      if (!this.controlsLocked) this.cameraController.zoom(delta);
+    };
+    this.mouseController.onCameraRotate = angleDelta => {
+      if (!this.controlsLocked) this.cameraController.rotate(angleDelta);
+    };
     this.mouseController.onRightClick = () => {
+      if (this.controlsLocked) return true;
       if (!this.selectedBuilding) return false;
       this.cancelBuildMode();
       this.events.emit('buildCancel', undefined as void);
       return true;
     };
     this.mouseController.onGridHover = position => {
+      if (this.controlsLocked) return;
       this.hoveredGridPosition = position;
       this.updatePreview();
       if (!this.selectedBuilding && Date.now() >= this._hoverAllowedAt) {
-        this.events.emit('buildingHovered', this.buildingInfoAtCell(position));
+        this.events.emit('buildingHovered', position ? this.buildingInfoAtCell(position) : null);
       }
     };
-    this.mouseController.onGridClick = position => this.handleGridClick(position);
+    this.mouseController.onGridClick = position => {
+      if (!this.controlsLocked) this.handleGridClick(position);
+    };
     this.mouseController.onGridDrag = position => {
+      if (this.controlsLocked) return;
       if (
         this.selectedBuilding?.type === BuildingType.PATH ||
         this.selectedBuilding?.type === BuildingType.DELETE
@@ -567,10 +591,13 @@ export class Game {
         this.handleGridClick(position);
       }
     };
-    this.mouseController.onBuildTouchRelease = position => this.handleMobileBuildTouchRelease(position);
+    this.mouseController.onBuildTouchRelease = position => {
+      if (!this.controlsLocked) this.handleMobileBuildTouchRelease(position);
+    };
   }
 
   private keyHandler = (event: KeyboardEvent): void => {
+    if (this.controlsLocked) return;
     if ((event.key === 'r' || event.key === 'R') && this.selectedBuilding) {
       this.rotateBuild(1);
     }
@@ -1629,6 +1656,74 @@ export class Game {
     }
   }
 
+  public playOpeningIntro(onComplete?: () => void): void {
+    const mobile = isMobile();
+    this.controlsLocked = true;
+    this.cancelBuildMode();
+    this.deselectBuilding();
+    void this.ensureAudioRunning();
+
+    const toPosition = this.scene.camera.position.clone();
+    const toTarget = this.cameraController.getTarget().clone();
+    const fromPosition = mobile
+      ? new THREE.Vector3(2, 22, 74)
+      : new THREE.Vector3(0, 21, 70);
+    const fromTarget = mobile
+      ? new THREE.Vector3(0, 4, 28)
+      : new THREE.Vector3(0.5, 4.5, 26);
+
+    this.scene.camera.position.copy(fromPosition);
+    this.scene.camera.lookAt(fromTarget);
+    this.scene.updateShadowFrustum(fromTarget.x, fromTarget.z);
+    this.renderer.invalidateShadowMap();
+
+    this.openingIntro = {
+      elapsed: 0,
+      duration: mobile ? 8.2 : 9.2,
+      fromPosition,
+      fromTarget,
+      toPosition,
+      toTarget,
+      onComplete,
+      lightningFired: false,
+    };
+  }
+
+  private updateOpeningIntro(deltaTime: number): void {
+    if (!this.openingIntro) return;
+
+    const intro = this.openingIntro;
+    intro.elapsed = Math.min(intro.duration, intro.elapsed + deltaTime);
+
+    if (!intro.lightningFired && intro.elapsed >= 2.05) {
+      intro.lightningFired = true;
+      this.scene.forceLightning();
+      this.playInstantOneShot(this.thunderTrack);
+    }
+
+    const raw = intro.elapsed / intro.duration;
+    const eased = THREE.MathUtils.smootherstep(raw, 0, 1);
+    const settle = THREE.MathUtils.smoothstep(raw, 0.64, 1);
+    const lift = Math.sin(raw * Math.PI) * (isMobile() ? 4.2 : 5.2);
+
+    this.scene.camera.position.lerpVectors(intro.fromPosition, intro.toPosition, eased);
+    this.scene.camera.position.y += lift * (1 - settle * 0.7);
+
+    const target = new THREE.Vector3().lerpVectors(intro.fromTarget, intro.toTarget, eased);
+    this.scene.camera.lookAt(target);
+    const shadowTargetChanged = this.scene.updateShadowFrustum(target.x, target.z);
+    if (shadowTargetChanged) this.renderer.invalidateShadowMap();
+
+    if (intro.elapsed < intro.duration) return;
+
+    this.scene.camera.position.copy(intro.toPosition);
+    this.scene.camera.lookAt(intro.toTarget);
+    this.cameraController.setTarget(intro.toTarget);
+    this.controlsLocked = false;
+    this.openingIntro = null;
+    intro.onComplete?.();
+  }
+
   private update(deltaTime: number): void {
     // Pulse the selection highlight
     if (this.selectionHighlight && this.selectionHighlightFill) {
@@ -1637,9 +1732,13 @@ export class Game {
       this.selectionFillMat.opacity = pulse;
     }
 
-    this.cameraController.update(deltaTime);
-    const camTarget = this.cameraController.getTarget();
-    const shadowTargetChanged = this.scene.updateShadowFrustum(camTarget.x, camTarget.z);
+    if (this.openingIntro) {
+      this.updateOpeningIntro(deltaTime);
+    } else {
+      this.cameraController.update(deltaTime);
+    }
+    const camTarget = this.openingIntro ? null : this.cameraController.getTarget();
+    const shadowTargetChanged = camTarget ? this.scene.updateShadowFrustum(camTarget.x, camTarget.z) : false;
     this.scene.updateRetroOverlay(deltaTime);
 
     this.scene.updateWeather(deltaTime);

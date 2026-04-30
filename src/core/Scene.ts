@@ -198,7 +198,7 @@ export class GameScene {
     texture.colorSpace = THREE.SRGBColorSpace;
 
     const pathWidth = GRID_SIZE * 2.05;
-    const pathLength = GRID_SIZE * 3.35;
+    const pathLength = GRID_SIZE * 11.2;
     const startZ = (GRID_HEIGHT * GRID_SIZE) / 2 - 0.28;
     const centerZ = startZ + pathLength / 2;
     const centerX = GRID_SIZE / 2;
@@ -653,10 +653,16 @@ export class GameScene {
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2 + (rng() - 0.5) * 0.65;
         const dist = minDist + rng() * (maxDist - minDist);
-        const x = Math.cos(angle) * dist;
-        const z = Math.sin(angle) * dist;
-        const h = minH + rng() * (maxH - minH);
-        const r = minR + rng() * (maxR - minR);
+        let x = Math.cos(angle) * dist;
+        let z = Math.sin(angle) * dist;
+        const frontZ = z;
+        if (frontZ > 50) {
+          x *= 0.97;
+          z = Math.max(64, frontZ - 4);
+        }
+        const entranceViewScale = frontZ > 48 && Math.abs(x) < 24 ? 0.42 : 1;
+        const h = (minH + rng() * (maxH - minH)) * entranceViewScale;
+        const r = (minR + rng() * (maxR - minR)) * (entranceViewScale < 1 ? 0.62 : 1);
         const stretchX = 0.82 + rng() * 0.42;
         const stretchZ = 0.82 + rng() * 0.42;
         const leanX = (rng() - 0.5) * 0.025;
@@ -1245,6 +1251,10 @@ export class GameScene {
     this.lightningFlashTimer = 0.18 + Math.random() * 0.12;
     this.lightningTimer = 6 + Math.random() * 10;
     this.lightningTriggered = true;
+  }
+
+  public forceLightning(): void {
+    this.triggerLightning();
   }
 
   public consumeLightningTrigger(): boolean {

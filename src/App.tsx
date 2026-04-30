@@ -224,6 +224,8 @@ function App() {
   const [celebration, setCelebration] = useState<{ title: string; sub: string; reward: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
+  const [openingIntroActive, setOpeningIntroActive] = useState(false);
+  const shouldPlayOpeningIntroRef = useRef(false);
   const [showGuide, setShowGuide] = useState(false);
   const [guideLines, setGuideLines] = useState<GuideLine[] | undefined>(undefined);
   const [pendingSaveData, setPendingSaveData] = useState<unknown | null>(null);
@@ -320,8 +322,24 @@ function App() {
       }
     }
 
+    const shouldPlayOpeningIntro = shouldPlayOpeningIntroRef.current && pendingSaveData === null;
+    shouldPlayOpeningIntroRef.current = false;
+    if (shouldPlayOpeningIntro) {
+      setOpeningIntroActive(true);
+      game.playOpeningIntro(() => {
+        setOpeningIntroActive(false);
+        setGuideLines([{
+          tag: 'Gate Keeper',
+          title: 'The Gates Are Open',
+          text: 'Start with paths, add one ride, then let the first brave guests test your nightmare economy.'
+        }]);
+        setShowGuide(true);
+      });
+    }
+
     return () => {
       if (!isMobile) window.removeEventListener('mousemove', onMouseMove);
+      setOpeningIntroActive(false);
       gameRef.current = null;
       game.dispose();
     };
@@ -475,8 +493,8 @@ function App() {
 
   const canAfford = (cost: number): boolean => gameRef.current?.canAfford(cost) ?? false;
   const isBuildMenuVisible = showBuildMenu && !selectedBuilding;
-  const shouldShowHud = !(isMobile && isBuildMenuVisible);
-  const guideUiBlocked = showBuildMenu || Boolean(selectedBuilding) || isPlacing || showParkPanel || showChallenges || showResearch || showThoughtsPanel;
+  const shouldShowHud = !openingIntroActive && !(isMobile && isBuildMenuVisible);
+  const guideUiBlocked = openingIntroActive || showBuildMenu || Boolean(selectedBuilding) || isPlacing || showParkPanel || showChallenges || showResearch || showThoughtsPanel;
   useEffect(() => {
     guideBlockedRef.current = guideUiBlocked || showGuide;
   }, [guideUiBlocked, showGuide]);
@@ -579,20 +597,22 @@ function App() {
   };
   const mobileSheetClassName = `px-mobile-panel-sheet${activeMobileSheet === 'build' ? ' px-mobile-panel-sheet--build' : ''}`;
   const mobileSheetDragStyle = {};
-  const guideVisible = showGuide && !showBuildMenu && !selectedBuilding && !isPlacing && !showParkPanel && !showChallenges && !showResearch && !showThoughtsPanel;
+  const guideVisible = showGuide && !openingIntroActive && !showBuildMenu && !selectedBuilding && !isPlacing && !showParkPanel && !showChallenges && !showResearch && !showThoughtsPanel;
 
   if (!gameStarted) {
     return (
       <MainMenu
         onNewGame={() => {
           setPendingSaveData(null);
+          shouldPlayOpeningIntroRef.current = true;
           firstAmbientGuideRef.current = true;
           setGuideLines(undefined);
-          setShowGuide(true);
+          setShowGuide(false);
           setGameStarted(true);
         }}
         onLoadGame={saveData => {
           setPendingSaveData(saveData);
+          shouldPlayOpeningIntroRef.current = false;
           firstAmbientGuideRef.current = true;
           setGuideLines(undefined);
           setShowGuide(true);
@@ -604,7 +624,7 @@ function App() {
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden">
+    <div className={`relative w-screen h-screen overflow-hidden${openingIntroActive ? ' px-game--intro' : ''}`}>
       <div ref={containerRef} className="w-full h-full" />
       <input
         ref={loadInputRef}
@@ -614,6 +634,28 @@ function App() {
         onChange={handleLoadFile}
       />
       <ToastStack items={toasts} />
+
+      <AnimatePresence>
+        {openingIntroActive && (
+          <motion.div
+            className="px-opening-intro"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.55 } }}
+            aria-hidden="true"
+          >
+            <motion.div
+              className="px-opening-intro__caption"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.8 }}
+            >
+              <span className="px-opening-intro__kicker">THE GATE KEEPER IS WAITING FOR YOU</span>
+              <span className="px-opening-intro__title">THEME PARK SPOOKY IS OPENING</span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {shouldShowHud && <HUD economy={economy} hideMoney={showParkPanel} lockCollapsed={isMobile && guideVisible} />}
 
@@ -633,7 +675,7 @@ function App() {
 
       {/* â"€â"€ Desktop side tabs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {/* ── Desktop icon dock ──────────────────────────────────────────── */}
-      <div className="px-icon-dock">
+      {!openingIntroActive && <div className="px-icon-dock">
         <button
           className={`px-dock-btn px-dock-btn--park${showParkPanel ? ' px-dock-btn--active' : ''}`}
           title="Manage Park"
@@ -674,7 +716,7 @@ function App() {
           <MessageSquare size={24} />
           <span className="px-dock-btn__label">FEED</span>
         </button>
-      </div>
+      </div>}
 
       {/* ── Desktop panels ─────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -746,7 +788,7 @@ function App() {
       </AnimatePresence>
 
       {/* â"€â"€ Mobile bottom nav â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
-      {isMobile && (
+      {!openingIntroActive && isMobile && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 95 }}>
           {/* Active panel — fullscreen on mobile */}
           <AnimatePresence>
@@ -852,7 +894,7 @@ function App() {
         </div>
       )}
 
-      {!(isMobile && (showParkPanel || showChallenges || showResearch || showThoughtsPanel || showBuildMenu || isPlacing)) && (
+      {!openingIntroActive && !(isMobile && (showParkPanel || showChallenges || showResearch || showThoughtsPanel || showBuildMenu || isPlacing)) && (
         <div className={`px-controls-bar${isMobile ? ' px-controls-bar--mobile' : ''}`}>
           {!isBuildMenuVisible && (
             <>
@@ -912,7 +954,7 @@ function App() {
       )}
 
       <AnimatePresence>
-        {isBuildMenuVisible && (
+        {!openingIntroActive && isBuildMenuVisible && (
           <BuildMenu
             onSelectBuilding={handleSelectBuilding}
             onCancel={isMobile ? closeMobileOverlayPanels : handleCancelBuildMode}
@@ -928,7 +970,7 @@ function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {selectedBuilding && (
+        {!openingIntroActive && selectedBuilding && (
           <BuildingPanel
             building={selectedBuilding}
             onClose={handleClosePanel}
@@ -939,7 +981,7 @@ function App() {
         )}
       </AnimatePresence>
 
-      {isPlacing && activeBuildDefinition && (
+      {!openingIntroActive && isPlacing && activeBuildDefinition && (
         isMobile ? (
           /* Mobile: build bar with tap-to-rotate button */
           <div style={{ position: 'fixed', bottom: 90, left: 8, right: 8, zIndex: 46 }}>
@@ -1041,7 +1083,7 @@ function App() {
 
       {/* rotation hint is shown inside the build mode panel on the left */}
 
-      {showHelp && (
+      {!openingIntroActive && showHelp && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
           onClick={() => setShowHelp(false)}
@@ -1323,7 +1365,7 @@ function App() {
         )}
       </AnimatePresence>
 
-      {!isMobile && (
+      {!openingIntroActive && !isMobile && (
         <BuildingTooltip
           info={hoveredBuilding}
           mouseX={mousePos.x}
