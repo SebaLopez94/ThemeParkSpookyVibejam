@@ -6,7 +6,7 @@ export class CameraController {
   private camera: THREE.PerspectiveCamera;
   private target: THREE.Vector3;
   private minDistance = 24;
-  private maxDistance = 72;
+  private maxDistance = 60;
   private currentDistance = 34; // Desktop starts with a tighter zoom-in
   private panSpeed = 0.34;
   private readonly zoomStep = 3.2;
