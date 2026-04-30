@@ -224,8 +224,11 @@ function App() {
   const [celebration, setCelebration] = useState<{ title: string; sub: string; reward: number } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
+  const [menuTransitioning, setMenuTransitioning] = useState(false);
   const [openingIntroActive, setOpeningIntroActive] = useState(false);
+  const [openingIntroLoading, setOpeningIntroLoading] = useState(false);
   const shouldPlayOpeningIntroRef = useRef(false);
+  const menuTransitionTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [guideLines, setGuideLines] = useState<GuideLine[] | undefined>(undefined);
   const [pendingSaveData, setPendingSaveData] = useState<unknown | null>(null);
@@ -326,16 +329,33 @@ function App() {
     shouldPlayOpeningIntroRef.current = false;
     if (shouldPlayOpeningIntro) {
       setOpeningIntroActive(true);
-      game.playOpeningIntro(() => {
-        setOpeningIntroActive(false);
-        setGuideLines(undefined);
-        setShowGuide(true);
+      setOpeningIntroLoading(true);
+      Promise.race([
+        game.waitForOpeningVisuals(),
+        new Promise<void>(resolve => window.setTimeout(resolve, 700)),
+      ]).then(() => {
+        if (gameRef.current !== game) return;
+        setOpeningIntroLoading(false);
+        window.setTimeout(() => {
+          if (gameRef.current === game) setMenuTransitioning(false);
+        }, 260);
+        game.playOpeningIntro(() => {
+          setOpeningIntroActive(false);
+          setOpeningIntroLoading(false);
+          setMenuTransitioning(false);
+          setGuideLines(undefined);
+          setShowGuide(true);
+        });
       });
+    } else {
+      setMenuTransitioning(false);
     }
 
     return () => {
       if (!isMobile) window.removeEventListener('mousemove', onMouseMove);
       setOpeningIntroActive(false);
+      setOpeningIntroLoading(false);
+      setMenuTransitioning(false);
       gameRef.current = null;
       game.dispose();
     };
@@ -368,6 +388,7 @@ function App() {
   useEffect(() => {
     return () => {
       if (mobilePanelCloseTimerRef.current) window.clearTimeout(mobilePanelCloseTimerRef.current);
+      if (menuTransitionTimerRef.current) window.clearTimeout(menuTransitionTimerRef.current);
     };
   }, []);
 
@@ -594,28 +615,55 @@ function App() {
   const mobileSheetClassName = `px-mobile-panel-sheet${activeMobileSheet === 'build' ? ' px-mobile-panel-sheet--build' : ''}`;
   const mobileSheetDragStyle = {};
   const guideVisible = showGuide && !openingIntroActive && !showBuildMenu && !selectedBuilding && !isPlacing && !showParkPanel && !showChallenges && !showResearch && !showThoughtsPanel;
+  const finishMenuTransition = () => {
+    if (menuTransitionTimerRef.current) window.clearTimeout(menuTransitionTimerRef.current);
+    menuTransitionTimerRef.current = window.setTimeout(() => {
+      menuTransitionTimerRef.current = null;
+      setGameStarted(true);
+    }, 650);
+  };
 
   if (!gameStarted) {
     return (
-      <MainMenu
-        onNewGame={() => {
-          setPendingSaveData(null);
-          shouldPlayOpeningIntroRef.current = true;
-          firstAmbientGuideRef.current = true;
-          setGuideLines(undefined);
-          setShowGuide(false);
-          setGameStarted(true);
-        }}
-        onLoadGame={saveData => {
-          setPendingSaveData(saveData);
-          shouldPlayOpeningIntroRef.current = false;
-          firstAmbientGuideRef.current = true;
-          setGuideLines(undefined);
-          setShowGuide(true);
-          setGameStarted(true);
-        }}
-        onError={msg => pushToast('warning', msg)}
-      />
+      <>
+        <MainMenu
+          onNewGame={() => {
+            if (menuTransitioning) return;
+            setMenuTransitioning(true);
+            setPendingSaveData(null);
+            shouldPlayOpeningIntroRef.current = true;
+            firstAmbientGuideRef.current = true;
+            setGuideLines(undefined);
+            setShowGuide(false);
+            setOpeningIntroActive(true);
+            setOpeningIntroLoading(true);
+            finishMenuTransition();
+          }}
+          onLoadGame={saveData => {
+            if (menuTransitioning) return;
+            setMenuTransitioning(true);
+            setPendingSaveData(saveData);
+            shouldPlayOpeningIntroRef.current = false;
+            firstAmbientGuideRef.current = true;
+            setGuideLines(undefined);
+            setShowGuide(true);
+            finishMenuTransition();
+          }}
+          onError={msg => pushToast('warning', msg)}
+        />
+        <AnimatePresence>
+          {menuTransitioning && (
+            <motion.div
+              className="px-main-menu-fade"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.62, ease: 'easeInOut' }}
+              aria-hidden="true"
+            />
+          )}
+        </AnimatePresence>
+      </>
     );
   }
 
@@ -634,21 +682,31 @@ function App() {
       <AnimatePresence>
         {openingIntroActive && (
           <motion.div
-            className="px-opening-intro"
+            className={`px-opening-intro${openingIntroLoading ? ' px-opening-intro--loading' : ''}`}
             initial={{ opacity: 1 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.55 } }}
             aria-hidden="true"
           >
-            <motion.div
-              className="px-opening-intro__caption"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.8 }}
-            >
-              <span className="px-opening-intro__kicker">THE GATE KEEPER IS WAITING FOR YOU</span>
-              <span className="px-opening-intro__title">THEME PARK SPOOKY IS OPENING</span>
-            </motion.div>
+            {!openingIntroLoading && (
+              <>
+                <motion.div
+                  className="px-opening-intro__reveal"
+                  initial={{ opacity: 1, scale: 1 }}
+                  animate={{ opacity: 0, scale: 1.28 }}
+                  transition={{ duration: 1.25, ease: [0.22, 1, 0.36, 1] }}
+                />
+                <motion.div
+                  className="px-opening-intro__caption"
+                  initial={{ opacity: 0, y: 12, filter: 'blur(3px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{ delay: 0.65, duration: 0.85, ease: 'easeOut' }}
+                >
+                  <span className="px-opening-intro__kicker">THE GATE KEEPER IS WAITING FOR YOU</span>
+                  <span className="px-opening-intro__title">THEME PARK SPOOKY IS OPENING</span>
+                </motion.div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

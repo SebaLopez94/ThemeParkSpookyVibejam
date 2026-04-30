@@ -1689,6 +1689,10 @@ export class Game {
     };
   }
 
+  public waitForOpeningVisuals(): Promise<void> {
+    return this.scene.waitForOpeningVisuals();
+  }
+
   private updateOpeningIntro(deltaTime: number): void {
     if (!this.openingIntro) return;
 

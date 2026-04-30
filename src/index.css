@@ -4405,6 +4405,14 @@ button {
   animation: px-loading-fade 0.4s ease forwards;
 }
 
+.px-main-menu-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  pointer-events: all;
+  background: #000;
+}
+
 .px-opening-intro {
   position: fixed;
   inset: 0;
@@ -4413,6 +4421,15 @@ button {
   background:
     linear-gradient(180deg, rgba(3, 2, 8, 0.74) 0%, rgba(3, 2, 8, 0.08) 34%, rgba(3, 2, 8, 0.16) 66%, rgba(3, 2, 8, 0.78) 100%),
     linear-gradient(90deg, rgba(3, 2, 8, 0.56) 0%, transparent 26%, transparent 74%, rgba(3, 2, 8, 0.56) 100%);
+}
+
+.px-opening-intro--loading {
+  background: #000;
+}
+
+.px-opening-intro--loading::before,
+.px-opening-intro--loading::after {
+  display: none;
 }
 
 .px-opening-intro::before,
@@ -4429,10 +4446,22 @@ button {
 .px-opening-intro::before { top: 0; }
 .px-opening-intro::after { bottom: 0; }
 
+.px-opening-intro__reveal {
+  position: absolute;
+  inset: -14%;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 58% 42% at 50% 58%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.72) 63%, #000 100%),
+    #000;
+  transform-origin: 50% 58%;
+}
+
 .px-opening-intro__caption {
   position: absolute;
   left: clamp(18px, 5vw, 72px);
   bottom: calc(clamp(72px, 14vh, 150px) + var(--safe-bottom));
+  z-index: 2;
   display: grid;
   gap: 12px;
   font-family: 'Press Start 2P', monospace;

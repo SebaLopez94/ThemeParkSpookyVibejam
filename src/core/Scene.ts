@@ -51,6 +51,7 @@ export class GameScene {
   private exteriorMistTexture: THREE.CanvasTexture | null = null;
   private lastShadowTargetX = Number.NaN;
   private lastShadowTargetZ = Number.NaN;
+  private openingVisualsReady: Promise<void>;
 
 
   constructor() {
@@ -117,9 +118,11 @@ export class GameScene {
     this.createMountains();
     this.createEntrancePathExtension();
     this.createGridLines();
-    this.deferWork(() => this.createEntranceGate(), 250);
     this.createPerimeterFence();
-    this.deferWork(() => this.createSurroundings(), mobile ? 3200 : 1800);
+    this.openingVisualsReady = Promise.all([
+      this.createEntranceGate(),
+      this.createSurroundings(),
+    ]).then(() => undefined);
     this.createExteriorMist();
     this.createMoon();
     this.createRain();
@@ -136,6 +139,10 @@ export class GameScene {
       callback();
     }, delayMs);
     this.deferredTimers.push(timer);
+  }
+
+  public waitForOpeningVisuals(): Promise<void> {
+    return this.openingVisualsReady;
   }
 
   private enableBackgroundFogLayer(object: THREE.Object3D): void {
@@ -233,8 +240,9 @@ export class GameScene {
     this.scene.add(feather);
   }
 
-  private createEntranceGate(): void {
-    sharedGLTFLoader.load('/models/entrance.glb', (gltf) => {
+  private createEntranceGate(): Promise<void> {
+    return new Promise(resolve => {
+      sharedGLTFLoader.load('/models/entrance.glb', (gltf) => {
       const model = gltf.scene;
 
       const box = new THREE.Box3().setFromObject(model);
@@ -287,6 +295,8 @@ export class GameScene {
       rightLight.castShadow = false;
       rightLight.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(rightLight);
+        resolve();
+      }, undefined, () => resolve());
     });
   }
 
@@ -419,7 +429,7 @@ export class GameScene {
     this.scene.add(railMesh);
   }
 
-  private createSurroundings(): void {
+  private createSurroundings(): Promise<void> {
     const mobile = this.mobile;
     let seed = 42;
     const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
@@ -437,7 +447,7 @@ export class GameScene {
      */
     const placeInstanced = (
       path: string, count: number, maxDist: number, targetH: number, scaleVar: number, sink = 0
-    ) => {
+    ): Promise<void> => {
       // Pre-generate all instance data synchronously using the seeded RNG
       // so the call order is deterministic regardless of async GLTF load timing.
       type InstanceData = { x: number; z: number; sv: number; rotY: number };
@@ -455,7 +465,8 @@ export class GameScene {
         instances.push({ x, z, sv, rotY });
       }
 
-      sharedGLTFLoader.load(path, (gltf) => {
+      return new Promise(resolve => {
+        sharedGLTFLoader.load(path, (gltf) => {
         const tmpl = gltf.scene;
         this._box3.setFromObject(tmpl);
         const baseScale = targetH / Math.max(this._box3.getSize(this._vec3).y, 0.01);
@@ -491,6 +502,8 @@ export class GameScene {
           this.surroundingClones.push(instMesh);
           this.scene.add(instMesh);
         });
+          resolve();
+        }, undefined, () => resolve());
       });
     };
 
@@ -498,9 +511,11 @@ export class GameScene {
     // Mobile uses far fewer to keep draw calls and memory manageable.
     const treeCount = mobile ? 30 : 120;
     const pumpkinCount = mobile ? 6 : 20;
-    placeInstanced('/models/tree.glb',    treeCount,    fence + 14, 6.0, 0.45, 0.04);
-    placeInstanced('/models/tree2.glb',   treeCount,    fence + 14, 6.5, 0.45, 0.04);
-    placeInstanced('/models/pumpkin.glb', pumpkinCount, fence + 10, 0.5, 0.4);
+    return Promise.all([
+      placeInstanced('/models/tree.glb',    treeCount,    fence + 14, 6.0, 0.45, 0.04),
+      placeInstanced('/models/tree2.glb',   treeCount,    fence + 14, 6.5, 0.45, 0.04),
+      placeInstanced('/models/pumpkin.glb', pumpkinCount, fence + 10, 0.5, 0.4),
+    ]).then(() => undefined);
   }
 
   private createMountains(): void {
