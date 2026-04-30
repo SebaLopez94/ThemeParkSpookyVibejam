@@ -67,7 +67,7 @@ export function ThoughtsPanel({ feed, onClose, style }: ThoughtsPanelProps) {
       >
         {feed.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 16px' }}>
-            <span style={{ fontSize: 32, display: 'block', marginBottom: 14, opacity: 0.35 }}>👻</span>
+            <span style={{ fontSize: 32, display: 'block', marginBottom: 14, opacity: 0.35 }}>{'\u{1F47B}'}</span>
             <span style={{
               fontFamily: "'Press Start 2P', monospace",
               fontSize: 8,

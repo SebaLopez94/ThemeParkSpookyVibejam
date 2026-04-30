@@ -530,14 +530,14 @@ export class VisitorSystem {
     if (reason === 'broke') {
       this.showPriorityMood(visitor, {
         kind: 'broke',
-        emoji: 'ðŸ˜”',
+        emoji: '\u{1F614}',
         message: pickMsg(MSG_BROKE),
         duration: 2.0,
       });
     } else if (reason === 'unhappy') {
       this.showPriorityMood(visitor, {
         kind: 'sad',
-        emoji: 'â˜¹ï¸',
+        emoji: '\u2639\uFE0F',
         message: pickMsg(MSG_SAD),
         duration: 2.0,
       });
