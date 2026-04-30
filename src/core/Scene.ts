@@ -213,6 +213,7 @@ export class GameScene {
 
       // Center on the double-wide entrance path (grid x=12+13 → world X=0)
       model.position.x -= center.x;
+      model.position.x += 0.8;
 
       // Place OUTSIDE the grid — grid bottom edge is world Z=50, gate sits just beyond it
       model.position.z -= center.z;
@@ -240,13 +241,13 @@ export class GameScene {
 
       // Warm torch glow — one light per pillar of the entrance arch
       const leftLight  = new THREE.PointLight(0xff7020, 6.0, 28);
-      leftLight.position.set(-3.5, 4.92, 26.2);
+      leftLight.position.set(-3.15, 4.92, 26.2);
       leftLight.castShadow = false;
       leftLight.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(leftLight);
 
       const rightLight = new THREE.PointLight(0xff7020, 6.0, 28);
-      rightLight.position.set(3.5, 4.92, 26.2);
+      rightLight.position.set(3.85, 4.92, 26.2);
       rightLight.castShadow = false;
       rightLight.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(rightLight);
