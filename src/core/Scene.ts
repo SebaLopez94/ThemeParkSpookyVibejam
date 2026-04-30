@@ -14,7 +14,6 @@ export class GameScene {
   public directionalLight: THREE.DirectionalLight;
   public hemisphereLight: THREE.HemisphereLight;
   private fillLight: THREE.DirectionalLight;
-  private rimLight: THREE.DirectionalLight;
   private groundBounceLight: THREE.DirectionalLight;
   /** null on mobile — saves a fullscreen shader pass every frame. */
   private retroOverlay: RetroOverlay | null;
@@ -107,11 +106,6 @@ export class GameScene {
     this.fillLight.position.set(-42, 34, -22);
     this.fillLight.castShadow = false;
     this.scene.add(this.fillLight);
-
-    this.rimLight = new THREE.DirectionalLight(0x95d9ff, mobile ? 0.20 : 0.32);
-    this.rimLight.position.set(-26, 42, 54);
-    this.rimLight.castShadow = false;
-    this.scene.add(this.rimLight);
 
     this.groundBounceLight = new THREE.DirectionalLight(0xff9f5c, mobile ? 0.08 : 0.12);
     this.groundBounceLight.position.set(14, 10, 28);

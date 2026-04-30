@@ -1666,8 +1666,8 @@ export class Game {
     const toPosition = this.scene.camera.position.clone();
     const toTarget = this.cameraController.getTarget().clone();
     const fromPosition = mobile
-      ? new THREE.Vector3(2, 22, 74)
-      : new THREE.Vector3(0, 21, 70);
+      ? new THREE.Vector3(2, 21, 66)
+      : new THREE.Vector3(0, 20, 62);
     const fromTarget = mobile
       ? new THREE.Vector3(0, 4, 28)
       : new THREE.Vector3(0.5, 4.5, 26);

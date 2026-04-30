@@ -328,11 +328,7 @@ function App() {
       setOpeningIntroActive(true);
       game.playOpeningIntro(() => {
         setOpeningIntroActive(false);
-        setGuideLines([{
-          tag: 'Gate Keeper',
-          title: 'The Gates Are Open',
-          text: 'Start with paths, add one ride, then let the first brave guests test your nightmare economy.'
-        }]);
+        setGuideLines(undefined);
         setShowGuide(true);
       });
     }
