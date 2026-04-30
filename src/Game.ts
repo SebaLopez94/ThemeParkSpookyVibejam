@@ -1679,7 +1679,7 @@ export class Game {
 
     this.openingIntro = {
       elapsed: 0,
-      duration: mobile ? 8.2 : 9.2,
+      duration: mobile ? 7.6 : 8.5,
       fromPosition,
       fromTarget,
       toPosition,
