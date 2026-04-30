@@ -332,7 +332,7 @@ function App() {
       setOpeningIntroLoading(true);
       Promise.race([
         game.waitForOpeningVisuals(),
-        new Promise<void>(resolve => window.setTimeout(resolve, 500)),
+        new Promise<void>(resolve => window.setTimeout(resolve, 400)),
       ]).then(() => {
         if (gameRef.current !== game) return;
         setOpeningIntroLoading(false);
