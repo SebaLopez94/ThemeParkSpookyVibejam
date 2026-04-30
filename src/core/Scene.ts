@@ -121,6 +121,7 @@ export class GameScene {
     this.createGround();
     this.createForestFloor();
     this.createMountains();
+    this.createEntrancePathExtension();
     this.createGridLines();
     this.deferWork(() => this.createEntranceGate(), 250);
     this.createPerimeterFence();
@@ -148,6 +149,54 @@ export class GameScene {
     object.traverse(child => child.layers.enable(BACKGROUND_FOG_LAYER));
   }
 
+  private createEntrancePathExtension(): void {
+    const texture = sharedTextureLoader.load('/models/path.png');
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const pathWidth = GRID_SIZE * 2.05;
+    const pathLength = GRID_SIZE * 3.35;
+    const startZ = (GRID_HEIGHT * GRID_SIZE) / 2 - 0.28;
+    const centerZ = startZ + pathLength / 2;
+    const centerX = GRID_SIZE / 2;
+
+    const pathGeo = new THREE.PlaneGeometry(pathWidth, pathLength, 1, 8);
+    const uv = pathGeo.attributes.uv as THREE.BufferAttribute;
+    const pos = pathGeo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i++) {
+      const worldX = centerX + pos.getX(i);
+      const worldZ = centerZ + pos.getY(i);
+      uv.setXY(i, worldX / GRID_SIZE, worldZ / GRID_SIZE);
+    }
+    uv.needsUpdate = true;
+
+    const pathMat = new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.9,
+      metalness: 0.04,
+    });
+    const path = new THREE.Mesh(pathGeo, pathMat);
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(centerX, 0.092, centerZ);
+    path.receiveShadow = true;
+    path.layers.enable(BACKGROUND_FOG_LAYER);
+    this.scene.add(path);
+
+    const featherGeo = new THREE.PlaneGeometry(pathWidth + 0.9, pathLength + 0.7, 1, 1);
+    const featherMat = new THREE.MeshBasicMaterial({
+      color: 0x0c0910,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+    });
+    const feather = new THREE.Mesh(featherGeo, featherMat);
+    feather.rotation.x = -Math.PI / 2;
+    feather.position.set(centerX, 0.071, centerZ + 0.08);
+    feather.layers.enable(BACKGROUND_FOG_LAYER);
+    this.scene.add(feather);
+  }
+
   private createEntranceGate(): void {
     sharedGLTFLoader.load('/models/entrance.glb', (gltf) => {
       const model = gltf.scene;
@@ -167,9 +216,9 @@ export class GameScene {
 
       // Place OUTSIDE the grid — grid bottom edge is world Z=50, gate sits just beyond it
       model.position.z -= center.z;
-      model.position.z += 27;
+      model.position.z += 26.2;
 
-      model.position.y -= scaledBox.min.y;
+      model.position.y -= scaledBox.min.y + 0.08;
 
       model.traverse(child => {
         if (!(child instanceof THREE.Mesh)) return;
@@ -191,13 +240,13 @@ export class GameScene {
 
       // Warm torch glow — one light per pillar of the entrance arch
       const leftLight  = new THREE.PointLight(0xff7020, 6.0, 28);
-      leftLight.position.set(-3.5, 5.0, 27);
+      leftLight.position.set(-3.5, 4.92, 26.2);
       leftLight.castShadow = false;
       leftLight.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(leftLight);
 
       const rightLight = new THREE.PointLight(0xff7020, 6.0, 28);
-      rightLight.position.set(3.5, 5.0, 27);
+      rightLight.position.set(3.5, 4.92, 26.2);
       rightLight.castShadow = false;
       rightLight.layers.enable(BACKGROUND_FOG_LAYER);
       this.scene.add(rightLight);
