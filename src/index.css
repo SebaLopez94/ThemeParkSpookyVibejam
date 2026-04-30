@@ -4469,7 +4469,7 @@ button {
 }
 
 .px-opening-intro__kicker {
-  color: var(--px-cyan);
+  color: #d9f99d;
   font-size: clamp(7px, 1.5vw, 10px);
   letter-spacing: 3px;
 }
