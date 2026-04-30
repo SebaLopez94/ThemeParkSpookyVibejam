@@ -5071,6 +5071,52 @@ button {
   }
 }
 
+@media (min-width: 641px) {
+  .px-guide {
+    right: 22px;
+    bottom: 104px;
+    gap: 14px;
+    max-width: min(610px, calc(100vw - 40px));
+  }
+
+  .px-guide__character {
+    width: 148px;
+    height: 158px;
+  }
+
+  .px-guide__halo {
+    inset: 20px 10px 0;
+    filter: blur(10px);
+  }
+
+  .px-guide__gif {
+    width: 142px;
+    max-height: 156px;
+  }
+
+  .px-guide__bubble {
+    width: 408px;
+    min-height: 166px;
+    padding: 18px 18px 16px;
+  }
+
+  .px-guide__bubble::before {
+    left: -11px;
+    bottom: 40px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .px-guide__title {
+    font-size: 12px;
+  }
+
+  .px-guide__text {
+    min-height: 68px;
+    font-size: 14px;
+  }
+}
+
 @media (max-width: 640px) {
   .px-guide {
     left: 10px;

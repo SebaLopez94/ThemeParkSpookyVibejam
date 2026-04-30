@@ -8,6 +8,7 @@ import { isMobile } from '../utils/platform';
 
 const PERSONALITIES: VisitorPersonality[] = ['thrill_seeker', 'foodie', 'relaxer'];
 const VISITOR_MODEL_PATHS = ['/models/kid1.glb', '/models/kid2.glb', '/models/kid3.glb'] as const;
+export type VisitorKidNumber = 1 | 2 | 3;
 const MOBILE_DEVICE_REGEX = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile/i;
 
 /**
@@ -164,11 +165,11 @@ export class Visitor {
   private static readonly RIDE_COOLDOWN = 60; // seconds before re-entering same ride
   private rideLastUsed: Map<string, number> = new Map();
 
-  constructor(id: string, startPosition: GridPosition) {
+  constructor(id: string, startPosition: GridPosition, forcedKidNumber?: VisitorKidNumber) {
     const worldPos = GridHelper.gridToWorld(startPosition);
 
     const personality = pickRandomPersonality();
-    this.kidNumber = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+    this.kidNumber = forcedKidNumber ?? ((Math.floor(Math.random() * 3) + 1) as VisitorKidNumber);
 
     // Bake personality multipliers once — never recomputed per frame.
     this.funMult    = personality === 'thrill_seeker' ? 1.25 : personality === 'relaxer' ? 0.80 : 1.0;

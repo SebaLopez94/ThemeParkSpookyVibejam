@@ -3,13 +3,13 @@ import { Decoration } from '../entities/Decoration';
 import { Ride } from '../entities/Ride';
 import { Service } from '../entities/Service';
 import { Shop } from '../entities/Shop';
-import { Visitor } from '../entities/Visitor';
+import { Visitor, VisitorKidNumber } from '../entities/Visitor';
 import { PathfindingSystem } from './PathfindingSystem';
 import { GridHelper } from '../utils/GridHelper';
 import { GridPosition, ShopType, VisitorNeedType, VisitorThought } from '../types';
 import { isMobile } from '../utils/platform';
 
-type VisitorTargetType = 'ride' | 'shop' | 'service' | 'wander';
+type VisitorTargetType = 'ride' | 'shop' | 'service' | 'wander' | 'exit';
 
 interface VisitorTarget {
   type: VisitorTargetType;
@@ -79,6 +79,8 @@ export class VisitorSystem {
   private restoreSpawnInterval = 0.22;
   private entrancePosition: GridPosition = { x: 0, z: 0 };
   private visitorIdCounter = 0;
+  private firstGuestModelIndex = 0;
+  private readonly firstGuestModelOrder: VisitorKidNumber[] = [1, 2, 3];
   // Mobile: 20 visitors use only shared fallback meshes (no GLTF/SkinnedMesh),
   // keeping GPU + RAM well within the browser's tab-kill threshold.
   private readonly maxVisitors = isMobile() ? 20 : 200;
@@ -129,6 +131,7 @@ export class VisitorSystem {
    * their own way out.  Cleared when the visitor receives a new path or leaves.
    */
   private readonly visitorStuckTimers = new Map<string, number>();
+  private readonly visitorsLeaving = new Set<string>();
   private static readonly STUCK_TIMEOUT = 8; // seconds before forced despawn
 
   /** Maps visitor ID → ride ID for visitors currently on a ride. Used to track ridersCount. */
@@ -269,22 +272,51 @@ export class VisitorSystem {
 
       this.tryShowAmbientMood(visitor, now);
 
-      if (visitor.data.needs.money <= 0) {
-        toRemove.push(id);
+      const distToEntrance = Math.abs(visitorGridPos.x - this.entrancePosition.x) + Math.abs(visitorGridPos.z - this.entrancePosition.z);
+      if (this.visitorsLeaving.has(id)) {
+        if (!visitor.data.currentActivity && !visitor.data.targetPosition && distToEntrance < 2) {
+          toRemove.push(id);
+          return;
+        }
+
+        if (!visitor.data.currentActivity && !visitor.data.targetPosition) {
+          this.visitorTargets.delete(id);
+          if (!this.sendVisitorToExit(visitor, visitorGridPos, 'leaving') && this.shouldRemoveStrandedVisitor(id, visitorGridPos, now)) {
+            toRemove.push(id);
+          }
+        }
         return;
       }
 
-      // Natural leave arc: overtime in the park gradually lowers the leave threshold
-      const overstayFactor = Math.max(0, visitor.data.timeInPark - visitor.data.naturalLeaveDuration) / 120;
-      const leaveThreshold = 15 + overstayFactor * 25;
-      if (visitor.data.needs.happiness < leaveThreshold) {
-        toRemove.push(id);
-        return;
+      if (!visitor.data.currentActivity) {
+        if (visitor.data.needs.money <= 0) {
+          if (distToEntrance < 2) {
+            toRemove.push(id);
+            return;
+          }
+          if (!this.sendVisitorToExit(visitor, visitorGridPos, 'broke') && this.shouldRemoveStrandedVisitor(id, visitorGridPos, now)) {
+            toRemove.push(id);
+          }
+          return;
+        }
+
+        // Natural leave arc: overtime in the park gradually lowers the leave threshold
+        const overstayFactor = Math.max(0, visitor.data.timeInPark - visitor.data.naturalLeaveDuration) / 120;
+        const leaveThreshold = 15 + overstayFactor * 25;
+        if (visitor.data.needs.happiness < leaveThreshold) {
+          if (distToEntrance < 2) {
+            toRemove.push(id);
+            return;
+          }
+          if (!this.sendVisitorToExit(visitor, visitorGridPos, 'unhappy') && this.shouldRemoveStrandedVisitor(id, visitorGridPos, now)) {
+            toRemove.push(id);
+          }
+          return;
+        }
       }
 
       // If park is closed, visitors head to the entrance and leave gradually
       if (!entities.isOpen) {
-        const distToEntrance = Math.abs(visitorGridPos.x - this.entrancePosition.x) + Math.abs(visitorGridPos.z - this.entrancePosition.z);
         if (distToEntrance < 2) {
           toRemove.push(id);
           return;
@@ -296,9 +328,7 @@ export class VisitorSystem {
         // beneath them was demolished) they can never get a new target.
         // Track how long they've been stuck; despawn after STUCK_TIMEOUT seconds.
         if (!this.pathfinding.hasPath(visitorGridPos)) {
-          if (!this.visitorStuckTimers.has(id)) {
-            this.visitorStuckTimers.set(id, now);
-          } else if (now - this.visitorStuckTimers.get(id)! >= VisitorSystem.STUCK_TIMEOUT) {
+          if (this.shouldRemoveStrandedVisitor(id, visitorGridPos, now)) {
             toRemove.push(id);
           }
           return; // can't assign activity — skip normal decision logic
@@ -308,7 +338,10 @@ export class VisitorSystem {
 
         const target = this.visitorTargets.get(id);
         if (target) {
-          this.handleArrival(visitor, target, entities, densityMap, visitorGridPos);
+          if (this.handleArrival(visitor, target, entities, densityMap, visitorGridPos)) {
+            toRemove.push(id);
+            return;
+          }
           if (!visitor.data.currentActivity) {
             // Pass the already-computed grid pos — avoids a duplicate worldToGrid call inside.
             this.assignNewActivity(visitor, visitorGridPos, entities, densityMap);
@@ -366,17 +399,22 @@ export class VisitorSystem {
     entities: SimulationEntities,
     densityMap: Map<number, number>,
     visitorGridPos: GridPosition
-  ): void {
+  ): boolean {
     this.visitorTargets.delete(visitor.data.id);
+
+    if (target.type === 'exit') {
+      this.visitorsLeaving.add(visitor.data.id);
+      return true;
+    }
 
     if (target.type === 'ride') {
       const ride = this.ridesById.get(target.id);
-      if (!ride) return;
+      if (!ride) return false;
 
       visitor.faceWorldPosition(ride.mesh.position);
 
       const fairness = this.getPriceFairness(ride.data.price, ride.data.valueScore, ride.data.quality);
-      if (!this.acceptPrice(visitor, fairness, 'price')) return;
+      if (!this.acceptPrice(visitor, fairness, 'price')) return false;
       if (visitor.spendMoney(ride.data.price)) {
         this.onVisitorSpend?.(ride.data.price);
         const decorBonus = Math.min(entities.getLocalDecorationBonus(ride.data.accessCell), 20);
@@ -401,15 +439,15 @@ export class VisitorSystem {
         this._visitorOnRide.set(visitor.data.id, ride.data.id);
         ride.data.ridersCount += 1;
       }
-      return;
+      return false;
     }
 
     if (target.type === 'shop') {
       const shop = this.shopsById.get(target.id);
-      if (!shop) return;
+      if (!shop) return false;
 
       const fairness = this.getPriceFairness(shop.data.price, shop.data.valueScore, shop.data.quality);
-      if (!this.acceptPrice(visitor, fairness, 'price')) return;
+      if (!this.acceptPrice(visitor, fairness, 'price')) return false;
       if (visitor.spendMoney(shop.data.price)) {
         visitor.faceWorldPosition(shop.mesh.position);
         this.onVisitorSpend?.(shop.data.price);
@@ -434,15 +472,15 @@ export class VisitorSystem {
         }, { force: true, cooldownSeconds: 2 }, this.frameNow);
         visitor.startActivity('shop', 10);
       }
-      return;
+      return false;
     }
 
     if (target.type === 'service') {
       const service = this.servicesById.get(target.id);
-      if (!service) return;
+      if (!service) return false;
 
       const fairness = this.getPriceFairness(service.data.price, service.data.valueScore, service.data.quality);
-      if (!this.acceptPrice(visitor, fairness, 'price')) return;
+      if (!this.acceptPrice(visitor, fairness, 'price')) return false;
       if (visitor.spendMoney(service.data.price)) {
         visitor.faceWorldPosition(service.mesh.position);
         this.onVisitorSpend?.(service.data.price);
@@ -458,7 +496,7 @@ export class VisitorSystem {
         }, { force: true, cooldownSeconds: 2 }, this.frameNow);
         visitor.startActivity('service', 8);
       }
-      return;
+      return false;
     }
 
     // visitorGridPos is the scratch already computed in the outer update() loop — no extra alloc.
@@ -472,18 +510,71 @@ export class VisitorSystem {
       });
       visitor.adjustHappiness(-2);
     }
+    return false;
+  }
+
+  private sendVisitorToExit(visitor: Visitor, currentGridPos: GridPosition, reason: 'broke' | 'unhappy' | 'leaving'): boolean {
+    if (!this.pathfinding.hasPath(currentGridPos) || !this.pathfinding.hasPath(this.entrancePosition)) {
+      return false;
+    }
+
+    const path = this.pathfinding.findPath(currentGridPos, this.entrancePosition);
+    if (path.length === 0) return false;
+
+    visitor.setPath(path);
+    this.visitorsLeaving.add(visitor.data.id);
+    this.visitorTargets.set(visitor.data.id, { type: 'exit', id: reason });
+    this.visitorDecisionCooldowns.delete(visitor.data.id);
+    this.visitorStuckTimers.delete(visitor.data.id);
+
+    if (reason === 'broke') {
+      this.showPriorityMood(visitor, {
+        kind: 'broke',
+        emoji: 'ðŸ˜”',
+        message: pickMsg(MSG_BROKE),
+        duration: 2.0,
+      });
+    } else if (reason === 'unhappy') {
+      this.showPriorityMood(visitor, {
+        kind: 'sad',
+        emoji: 'â˜¹ï¸',
+        message: pickMsg(MSG_SAD),
+        duration: 2.0,
+      });
+    }
+
+    return true;
+  }
+
+  private shouldRemoveStrandedVisitor(id: string, visitorGridPos: GridPosition, now: number): boolean {
+    if (this.pathfinding.hasPath(visitorGridPos)) {
+      this.visitorStuckTimers.delete(id);
+      return false;
+    }
+
+    const stuckSince = this.visitorStuckTimers.get(id);
+    if (stuckSince === undefined) {
+      this.visitorStuckTimers.set(id, now);
+      return false;
+    }
+
+    return now - stuckSince >= VisitorSystem.STUCK_TIMEOUT;
   }
 
   public scheduleRestoreVisitors(count: number): void {
     this.restoreSpawnRemaining = Math.max(0, Math.min(Math.round(count), this.maxVisitors));
     this.restoreSpawnTimer = 0;
+    if (this.restoreSpawnRemaining > 0) {
+      this.firstGuestModelIndex = this.firstGuestModelOrder.length;
+    }
   }
 
   private spawnVisitor(isRestoreSpawn: boolean): void {
     if (!this.pathfinding.hasPath(this.entrancePosition)) return;
 
     const id = `visitor_${this.visitorIdCounter++}`;
-    const visitor = new Visitor(id, this.entrancePosition);
+    const forcedKidNumber = isRestoreSpawn ? undefined : this.firstGuestModelOrder[this.firstGuestModelIndex++];
+    const visitor = new Visitor(id, this.entrancePosition, forcedKidNumber);
     this.visitors.set(id, visitor);
     this.visitorDecisionCooldowns.set(id, 0);
     this.scene.add(visitor.mesh);
@@ -841,6 +932,7 @@ export class VisitorSystem {
     this.visitorTargets.delete(id);
     this.visitorDecisionCooldowns.delete(id);
     this.visitorStuckTimers.delete(id);
+    this.visitorsLeaving.delete(id);
   }
 
   public getVisitorCount(): number {
@@ -865,9 +957,11 @@ export class VisitorSystem {
     this.visitorTargets.clear();
     this.visitorDecisionCooldowns.clear();
     this.visitorStuckTimers.clear();
+    this.visitorsLeaving.clear();
     this._visitorOnRide.clear();
     this.spawnTimer = 0;
     this.spawnInterval = 4 + Math.random() * 3;
+    this.firstGuestModelIndex = 0;
     this.restoreSpawnRemaining = 0;
     this.restoreSpawnTimer = 0;
     this.densityMapCache.clear();
