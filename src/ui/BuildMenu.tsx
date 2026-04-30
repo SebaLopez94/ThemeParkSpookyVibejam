@@ -286,7 +286,6 @@ export function BuildMenu({
                         {isMobile && active && (
                           <div className="px-build-item__mobile-detail">
                             <span className="px-build-item__mobile-desc">{item.description}</span>
-                            {!affordable && <span className="px-build-item__mobile-lock">Not enough money</span>}
                           </div>
                         )}
                       </div>
@@ -381,12 +380,6 @@ function BuildSelectionCard({
         <span>${item.cost}</span>
         <span>{getSizeLabel(item)}</span>
       </div>
-      {!canAfford && (
-        <div className="px-build-selection__status px-build-selection__status--locked">
-          <Hammer className="px-icon-sm" />
-          <span>Not enough money for this item</span>
-        </div>
-      )}
     </div>
   );
 }

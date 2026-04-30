@@ -60,6 +60,22 @@ interface AudioTrack {
   loop: boolean;
 }
 
+interface ConstructionParticle {
+  offset: THREE.Vector3;
+  velocity: THREE.Vector3;
+  scale: number;
+  spin: THREE.Vector3;
+}
+
+interface ConstructionBurst {
+  group: THREE.Group;
+  dust: THREE.InstancedMesh;
+  dustMaterial: THREE.MeshBasicMaterial;
+  dustParticles: ConstructionParticle[];
+  elapsed: number;
+  duration: number;
+}
+
 export interface GameEvents {
   economyUpdate: EconomyState;
   buildingSelected: SelectedBuildingInfo | null;
@@ -146,6 +162,9 @@ export class Game {
   private readonly previewEdgeRedMat  = new THREE.LineBasicMaterial({ color: 0xff3355 });
   private previewWidth = 1;
   private previewHeight = 1;
+  private readonly constructionBursts: ConstructionBurst[] = [];
+  private readonly constructionDustGeo = new THREE.SphereGeometry(1, 6, 4);
+  private readonly constructionMatrixObject = new THREE.Object3D();
 
   private static readonly MODEL_PATHS: Partial<Record<string, string>> = {
     [RideType.CAROUSEL]:         '/models/carusel.glb',
@@ -849,6 +868,8 @@ export class Game {
     if (success) {
       this.renderer.invalidateShadowMap();
       const placedType = this.selectedBuilding.type;
+      const placedSubType = this.selectedBuilding.subType as PlaceableBuildingKind | undefined;
+      this.spawnConstructionBurst(position, placedType, placedSubType);
       this.playInstantOneShot(this.buildTrack);
       // Suppress hover tooltip briefly so it doesn't pop on the just-placed building
       this._hoverAllowedAt = Date.now() + 700;
@@ -950,6 +971,118 @@ export class Game {
       ],
       { duration: 1500, easing: 'ease-out', fill: 'forwards' }
     ).finished.then(() => element.remove());
+  }
+
+  private spawnConstructionBurst(position: GridPosition, type: BuildingType, subType?: PlaceableBuildingKind): void {
+    if (type === BuildingType.DELETE) return;
+
+    const size = type === BuildingType.RIDE && subType
+      ? RIDE_SIZES[subType as RideType] ?? { width: 1, height: 1 }
+      : { width: 1, height: 1 };
+    const worldPos = GridHelper.gridToWorld(position);
+    const centerX = worldPos.x + (size.width - 1) * GRID_SIZE / 2;
+    const centerZ = worldPos.z + (size.height - 1) * GRID_SIZE / 2;
+    const footprintW = size.width * GRID_SIZE;
+    const footprintH = size.height * GRID_SIZE;
+    const isPath = type === BuildingType.PATH;
+    const dustCount = isPath ? 8 : 18;
+
+    const dustMaterial = new THREE.MeshBasicMaterial({
+      color: 0x9b8066,
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false,
+    });
+    const dust = new THREE.InstancedMesh(this.constructionDustGeo, dustMaterial, dustCount);
+    dust.frustumCulled = false;
+
+    const makeParticles = (count: number): ConstructionParticle[] => {
+      const particles: ConstructionParticle[] = [];
+      for (let i = 0; i < count; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * Math.max(footprintW, footprintH) * 0.42;
+        const outward = 0.35 + Math.random() * 0.75;
+        particles.push({
+          offset: new THREE.Vector3(
+            Math.cos(angle) * radius,
+            0.06 + Math.random() * 0.2,
+            Math.sin(angle) * radius
+          ),
+          velocity: new THREE.Vector3(
+            Math.cos(angle) * outward,
+            0.45 + Math.random() * 0.85,
+            Math.sin(angle) * outward
+          ),
+          scale: 0.16 + Math.random() * 0.16,
+          spin: new THREE.Vector3(Math.random() * 4, Math.random() * 5, Math.random() * 4),
+        });
+      }
+      return particles;
+    };
+
+    const burst: ConstructionBurst = {
+      group: new THREE.Group(),
+      dust,
+      dustMaterial,
+      dustParticles: makeParticles(dustCount),
+      elapsed: 0,
+      duration: isPath ? 0.55 : 0.85,
+    };
+    burst.group.position.set(centerX, 0.06, centerZ);
+    burst.group.add(dust);
+    this.scene.scene.add(burst.group);
+    this.constructionBursts.push(burst);
+    this.updateConstructionBurst(burst, 0);
+  }
+
+  private updateConstructionBursts(deltaTime: number): void {
+    for (let i = this.constructionBursts.length - 1; i >= 0; i -= 1) {
+      const burst = this.constructionBursts[i];
+      this.updateConstructionBurst(burst, deltaTime);
+      if (burst.elapsed < burst.duration) continue;
+
+      this.scene.scene.remove(burst.group);
+      burst.dustMaterial.dispose();
+      this.constructionBursts.splice(i, 1);
+    }
+  }
+
+  private updateConstructionBurst(burst: ConstructionBurst, deltaTime: number): void {
+    burst.elapsed = Math.min(burst.duration, burst.elapsed + deltaTime);
+    const t = burst.elapsed / burst.duration;
+    const fade = 1 - t;
+    burst.dustMaterial.opacity = 0.42 * fade;
+    this.updateConstructionParticleMesh(burst.dust, burst.dustParticles, burst.elapsed, 2.0, 1.4, false);
+  }
+
+  private updateConstructionParticleMesh(
+    mesh: THREE.InstancedMesh,
+    particles: ConstructionParticle[],
+    elapsed: number,
+    gravity: number,
+    scaleGrow: number,
+    spark: boolean
+  ): void {
+    for (let i = 0; i < particles.length; i += 1) {
+      const particle = particles[i];
+      this.constructionMatrixObject.position.set(
+        particle.offset.x + particle.velocity.x * elapsed,
+        particle.offset.y + particle.velocity.y * elapsed - gravity * elapsed * elapsed,
+        particle.offset.z + particle.velocity.z * elapsed
+      );
+      this.constructionMatrixObject.rotation.set(
+        particle.spin.x * elapsed,
+        particle.spin.y * elapsed,
+        particle.spin.z * elapsed
+      );
+      const scale = spark
+        ? Math.max(0.02, particle.scale * (1.15 - elapsed * 0.9))
+        : particle.scale * (1 + elapsed * scaleGrow);
+      this.constructionMatrixObject.scale.setScalar(scale);
+      this.constructionMatrixObject.updateMatrix();
+      mesh.setMatrixAt(i, this.constructionMatrixObject.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
   }
 
   public startMoveBuilding(info: SelectedBuildingInfo): void {
@@ -1746,6 +1879,7 @@ export class Game {
     this.scene.updateRetroOverlay(deltaTime);
 
     this.scene.updateWeather(deltaTime);
+    this.updateConstructionBursts(deltaTime);
     this.buildingSystem.update(deltaTime);
     // Use direct getters — no per-frame object spread (getState() copies the whole state).
     const sim = this.simulationEntities;
@@ -1953,6 +2087,12 @@ export class Game {
     this.previewRedMat.dispose();
     this.previewEdgeGreenMat.dispose();
     this.previewEdgeRedMat.dispose();
+    for (const burst of this.constructionBursts) {
+      this.scene.scene.remove(burst.group);
+      burst.dustMaterial.dispose();
+    }
+    this.constructionBursts.length = 0;
+    this.constructionDustGeo.dispose();
     this.selectionFillMat.dispose();
     this.selectionEdgeMat.dispose();
     if (this.selectionHighlight) {
